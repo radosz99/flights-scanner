@@ -408,6 +408,103 @@ def extract_cookies_from_ryanair(wait_time: int = 30, save_to_db: bool = True) -
         driver.quit()
 
 
+def get_valid_cookie(auto_refresh: bool = True) -> Optional[str]:
+    """
+    Get a valid Ryanair cookie with automatic testing and refresh.
+
+    This is the main method users should call to get a working cookie.
+
+    Workflow:
+    1. Check MongoDB for the most recent active cookie
+    2. Test the cookie with a real API request
+    3. If valid, return it
+    4. If invalid and auto_refresh=True, extract a new cookie from browser
+    5. Return the validated cookie or None if all attempts fail
+
+    Args:
+        auto_refresh: Automatically extract new cookie if existing ones are invalid (default: True)
+
+    Returns:
+        Valid cookie string or None if unable to get a valid cookie
+
+    Example:
+        # Simple usage - automatically handles everything
+        cookie = get_valid_cookie()
+        if cookie:
+            flights = get_ryanair_flights("WRO", "ALC", "2026-03-06", "2026-03-08", cookies=cookie)
+    """
+    print("=" * 80)
+    print("GETTING VALID RYANAIR COOKIE")
+    print("=" * 80)
+
+    # Step 1: Try to get latest cookie from MongoDB
+    print("\n1️⃣  Checking MongoDB for active cookies...")
+    cookie = get_latest_valid_cookie()
+
+    if cookie:
+        print(f"   ✓ Found active cookie in database")
+        print(f"   Cookie preview: {cookie[:60]}...")
+
+        # Step 2: Test the cookie
+        print("\n2️⃣  Testing cookie validity...")
+        try:
+            test_flights = get_ryanair_flights(
+                origin="WRO",
+                destination="ALC",
+                date_out="2026-03-06",
+                date_in="2026-03-08",
+                adt=1,
+                cookies=cookie
+            )
+
+            print(f"\n{'🎉'*40}")
+            print("✓ COOKIE IS VALID AND READY TO USE!")
+            print(f"{'🎉'*40}")
+            print(f"Fetched {len(test_flights.trips)} trips")
+            return cookie
+
+        except Exception as e:
+            print(f"\n   ✗ Cookie test failed: {str(e)[:100]}")
+            print(f"   Cookie marked as invalid in database")
+
+            if not auto_refresh:
+                print("\n   Auto-refresh disabled. Returning None.")
+                return None
+
+            print(f"\n   Will attempt to extract fresh cookie...")
+    else:
+        print(f"   ⚠ No active cookies found in database")
+
+        if not auto_refresh:
+            print("\n   Auto-refresh disabled. Returning None.")
+            return None
+
+        print(f"\n   Will attempt to extract fresh cookie...")
+
+    # Step 3: Extract new cookie if needed
+    if auto_refresh:
+        print("\n3️⃣  Extracting fresh cookie from browser...")
+        print("   (This will open a Chrome window)")
+
+        try:
+            new_cookie = extract_cookies_from_ryanair(wait_time=30, save_to_db=True)
+
+            if new_cookie:
+                print(f"\n{'🎉'*40}")
+                print("✓ NEW COOKIE EXTRACTED AND VALIDATED!")
+                print(f"{'🎉'*40}")
+                return new_cookie
+            else:
+                print("\n✗ Failed to extract new cookie")
+                return None
+
+        except Exception as e:
+            print(f"\n✗ Error extracting cookie: {str(e)[:100]}")
+            return None
+
+    return None
+
+
 def get_ryanair_flights(
     origin: str,
     destination: str,
@@ -482,22 +579,10 @@ def get_ryanair_flights(
         "ToUs": "AGREED",
     }
 
-    # Browser-like headers matching actual browser request
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:144.0) Gecko/20100101 Firefox/144.0',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.5',
-        'Accept-Encoding': 'gzip, deflate, br, zstd',
-        'Upgrade-Insecure-Requests': '1',
-        'Sec-Fetch-Dest': 'document',
-        'Sec-Fetch-Mode': 'navigate',
-        'Sec-Fetch-Site': 'none',
-        'Sec-Fetch-User': '?1',
-        'Connection': 'keep-alive',
-        'TE': 'trailers',
-    }
+    # Minimal headers - only cookie is required for bot protection bypass
+    headers = {}
 
-    # Add cookies if provided
+    # Add cookies if provided (required for bypassing bot protection)
     if cookies:
         headers['Cookie'] = cookies
 
