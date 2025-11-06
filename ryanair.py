@@ -30,6 +30,7 @@ import json
 from typing import Optional
 from datetime import datetime
 from ryanair_models import RyanairResponse
+from loguru import logger
 
 # Selenium imports (optional - only needed for automation)
 try:
@@ -80,7 +81,7 @@ def save_cookie_to_mongodb(
         True if successful, False otherwise
     """
     if not MONGODB_AVAILABLE:
-        print("⚠ MongoDB not available. Cookie not saved.")
+        logger.warning("MongoDB not available. Cookie not saved.")
         return False
 
     try:
@@ -104,14 +105,14 @@ def save_cookie_to_mongodb(
         result = cookies_col.insert_one(cookie_doc)
         client.close()
 
-        print(f"✓ Cookie saved to MongoDB (ID: {result.inserted_id})")
+        logger.success(f"Cookie saved to MongoDB (ID: {result.inserted_id})")
         return True
 
     except PyMongoError as e:
-        print(f"✗ MongoDB error: {e}")
+        logger.error(f"MongoDB error: {e}")
         return False
     except Exception as e:
-        print(f"✗ Unexpected error: {e}")
+        logger.error(f"Unexpected error: {e}")
         return False
 
 
@@ -126,7 +127,7 @@ def get_latest_valid_cookie(mongo_uri: Optional[str] = None) -> Optional[str]:
         Cookie string or None if not found
     """
     if not MONGODB_AVAILABLE:
-        print("⚠ MongoDB not available.")
+        logger.warning("MongoDB not available.")
         return None
 
     try:
@@ -144,17 +145,17 @@ def get_latest_valid_cookie(mongo_uri: Optional[str] = None) -> Optional[str]:
         client.close()
 
         if cookie_doc:
-            print(f"✓ Found active cookie (fetched: {cookie_doc['fetched']})")
+            logger.success(f"Found active cookie (fetched: {cookie_doc['fetched']})")
             return cookie_doc["cookie"]
         else:
-            print("⚠ No active cookies found in MongoDB")
+            logger.warning("No active cookies found in MongoDB")
             return None
 
     except PyMongoError as e:
-        print(f"✗ MongoDB error: {e}")
+        logger.error(f"MongoDB error: {e}")
         return None
     except Exception as e:
-        print(f"✗ Unexpected error: {e}")
+        logger.error(f"Unexpected error: {e}")
         return None
 
 
@@ -298,17 +299,17 @@ def extract_cookies_from_ryanair(wait_time: int = 30, save_to_db: bool = True) -
         if cookies:
             flights = get_ryanair_flights("WRO", "ALC", "2025-12-11", "2025-12-15", cookies=cookies)
     """
-    print("🌐 Starting Chrome browser with network logging...")
+    logger.info("Starting Chrome browser with network logging...")
     driver = setup_driver(enable_network_capture=True)
 
     try:
         url = settings.RYANAIR_COOKIE_URL
-        print(f"🔍 Navigating to Ryanair flight selection page...")
-        print(f"   URL: {url[:80]}...")
+        logger.info(f"Navigating to Ryanair flight selection page...")
+        logger.info(f"URL: {url[:80]}...")
         driver.get(url)
 
-        print(f"⏳ Waiting up to {wait_time} seconds to find fr-correlation-id cookie...")
-        print("   Monitoring ALL network requests for fr-correlation-id cookie...")
+        logger.info(f"Waiting up to {wait_time} seconds to find fr-correlation-id cookie...")
+        logger.info("Monitoring ALL network requests for fr-correlation-id cookie...")
 
         fr_correlation_id = None
         start_time = time.time()
@@ -339,9 +340,9 @@ def extract_cookies_from_ryanair(wait_time: int = 30, save_to_db: bool = True) -
 
                                 if cookie_name == 'fr-correlation-id' and cookie_value:
                                     fr_correlation_id = cookie_value
-                                    print(f"\n✓ Found fr-correlation-id cookie!")
-                                    print(f"   Value: {fr_correlation_id}")
-                                    print(f"   Found in request after checking {checked_requests} requests")
+                                    logger.success(f"Found fr-correlation-id cookie!")
+                                    logger.info(f"Value: {fr_correlation_id}")
+                                    logger.info(f"Found in request after checking {checked_requests} requests")
                                     break
 
                             if fr_correlation_id:
@@ -358,16 +359,16 @@ def extract_cookies_from_ryanair(wait_time: int = 30, save_to_db: bool = True) -
             time.sleep(0.5)
 
         if not fr_correlation_id:
-            print(f"\n✗ fr-correlation-id cookie not found after {wait_time} seconds")
-            print(f"   Checked {checked_requests} network requests")
-            print("   The page may not have loaded properly or the cookie name might be different.")
-            print("   Try increasing wait_time or verify the cookie name.")
+            logger.error(f"fr-correlation-id cookie not found after {wait_time} seconds")
+            logger.info(f"Checked {checked_requests} network requests")
+            logger.warning("The page may not have loaded properly or the cookie name might be different.")
+            logger.warning("Try increasing wait_time or verify the cookie name.")
             return None
 
-        print(f"\n{'='*80}")
-        print(f"✓ Found fr-correlation-id cookie: {fr_correlation_id}")
-        print(f"{'='*80}")
-        print("\n🧪 Testing cookie validity with API request...")
+        logger.info(f"{'='*80}")
+        logger.success(f"Found fr-correlation-id cookie: {fr_correlation_id}")
+        logger.info(f"{'='*80}")
+        logger.info("Testing cookie validity with API request...")
 
         # Build cookie string with fr-correlation-id
         cookie_string = f"fr-correlation-id={fr_correlation_id}"
@@ -381,30 +382,30 @@ def extract_cookies_from_ryanair(wait_time: int = 30, save_to_db: bool = True) -
                 adt=1,
                 cookies=cookie_string
             )
-            print(f"\n{'🎉'*40}")
-            print(f"✓ FR-CORRELATION-ID COOKIE IS VALID!")
-            print(f"{'🎉'*40}")
-            print(f"Successfully fetched {len(test_flights.trips)} trips")
-            print(f"Currency: {test_flights.currency}")
+            logger.info(f"{'='*80}")
+            logger.success(f"FR-CORRELATION-ID COOKIE IS VALID!")
+            logger.info(f"{'='*80}")
+            logger.success(f"Successfully fetched {len(test_flights.trips)} trips")
+            logger.info(f"Currency: {test_flights.currency}")
 
             # Save to MongoDB if requested
             if save_to_db and MONGODB_AVAILABLE:
-                print("\n💾 Saving validated cookie to MongoDB...")
+                logger.info("Saving validated cookie to MongoDB...")
                 save_cookie_to_mongodb(cookie_string)
 
-            print("\n✓ Cookie extraction and validation completed successfully")
+            logger.success("Cookie extraction and validation completed successfully")
             return cookie_string
 
         except Exception as e:
-            print(f"\n{'='*80}")
-            print(f"✗ FR-CORRELATION-ID COOKIE IS INVALID")
-            print(f"{'='*80}")
-            print(f"Error: {str(e)[:200]}")
-            print("The cookie may have expired or might not be sufficient alone.")
+            logger.info(f"{'='*80}")
+            logger.error(f"FR-CORRELATION-ID COOKIE IS INVALID")
+            logger.info(f"{'='*80}")
+            logger.error(f"Error: {str(e)[:200]}")
+            logger.warning("The cookie may have expired or might not be sufficient alone.")
             return None
 
     finally:
-        print("\n🔒 Closing browser...")
+        logger.info("Closing browser...")
         driver.quit()
 
 
@@ -433,20 +434,20 @@ def get_valid_cookie(auto_refresh: bool = True) -> Optional[str]:
         if cookie:
             flights = get_ryanair_flights("WRO", "ALC", "2026-03-06", "2026-03-08", cookies=cookie)
     """
-    print("=" * 80)
-    print("GETTING VALID RYANAIR COOKIE")
-    print("=" * 80)
+    logger.info("=" * 80)
+    logger.info("GETTING VALID RYANAIR COOKIE")
+    logger.info("=" * 80)
 
     # Step 1: Try to get latest cookie from MongoDB
-    print("\n1️⃣  Checking MongoDB for active cookies...")
+    logger.info("1️⃣  Checking MongoDB for active cookies...")
     cookie = get_latest_valid_cookie()
 
     if cookie:
-        print(f"   ✓ Found active cookie in database")
-        print(f"   Cookie preview: {cookie[:60]}...")
+        logger.success(f"Found active cookie in database")
+        logger.info(f"Cookie preview: {cookie[:60]}...")
 
         # Step 2: Test the cookie
-        print("\n2️⃣  Testing cookie validity...")
+        logger.info("2️⃣  Testing cookie validity...")
         try:
             test_flights = get_ryanair_flights(
                 origin="WRO",
@@ -457,49 +458,49 @@ def get_valid_cookie(auto_refresh: bool = True) -> Optional[str]:
                 cookies=cookie
             )
 
-            print(f"\n{'🎉'*40}")
-            print("✓ COOKIE IS VALID AND READY TO USE!")
-            print(f"{'🎉'*40}")
-            print(f"Fetched {len(test_flights.trips)} trips")
+            logger.info(f"{'='*80}")
+            logger.success("COOKIE IS VALID AND READY TO USE!")
+            logger.info(f"{'='*80}")
+            logger.success(f"Fetched {len(test_flights.trips)} trips")
             return cookie
 
         except Exception as e:
-            print(f"\n   ✗ Cookie test failed: {str(e)[:100]}")
-            print(f"   Cookie marked as invalid in database")
+            logger.error(f"Cookie test failed: {str(e)[:100]}")
+            logger.warning(f"Cookie marked as invalid in database")
 
             if not auto_refresh:
-                print("\n   Auto-refresh disabled. Returning None.")
+                logger.warning("Auto-refresh disabled. Returning None.")
                 return None
 
-            print(f"\n   Will attempt to extract fresh cookie...")
+            logger.info(f"Will attempt to extract fresh cookie...")
     else:
-        print(f"   ⚠ No active cookies found in database")
+        logger.warning(f"No active cookies found in database")
 
         if not auto_refresh:
-            print("\n   Auto-refresh disabled. Returning None.")
+            logger.warning("Auto-refresh disabled. Returning None.")
             return None
 
-        print(f"\n   Will attempt to extract fresh cookie...")
+        logger.info(f"Will attempt to extract fresh cookie...")
 
     # Step 3: Extract new cookie if needed
     if auto_refresh:
-        print("\n3️⃣  Extracting fresh cookie from browser...")
-        print("   (This will open a Chrome window)")
+        logger.info("3️⃣  Extracting fresh cookie from browser...")
+        logger.info("(This will open a Chrome window)")
 
         try:
             new_cookie = extract_cookies_from_ryanair(wait_time=30, save_to_db=True)
 
             if new_cookie:
-                print(f"\n{'🎉'*40}")
-                print("✓ NEW COOKIE EXTRACTED AND VALIDATED!")
-                print(f"{'🎉'*40}")
+                logger.info(f"{'='*80}")
+                logger.success("NEW COOKIE EXTRACTED AND VALIDATED!")
+                logger.info(f"{'='*80}")
                 return new_cookie
             else:
-                print("\n✗ Failed to extract new cookie")
+                logger.error("Failed to extract new cookie")
                 return None
 
         except Exception as e:
-            print(f"\n✗ Error extracting cookie: {str(e)[:100]}")
+            logger.error(f"Error extracting cookie: {str(e)[:100]}")
             return None
 
     return None
@@ -601,7 +602,7 @@ def get_ryanair_flights(
     except requests.exceptions.HTTPError as e:
         # If 403, mark cookie as invalid
         if e.response.status_code == 403 and cookies:
-            print(f"⚠ Cookie returned 403 Forbidden - marking as invalid")
+            logger.warning(f"Cookie returned 403 Forbidden - marking as invalid")
             mark_cookie_invalid(cookies)
         raise
 
@@ -617,30 +618,28 @@ def main():
     2. Set the cookies variable below
     3. Run: python3 ryanair.py
     """
-    print("Ryanair Flight Scanner")
-    print("=" * 60)
-    print()
+    logger.info("Ryanair Flight Scanner")
+    logger.info("=" * 60)
 
     # IMPORTANT: Replace with actual cookies from your browser
     cookies = None  # Set to your cookie string: "sid=...; rid=...; ..."
 
     if not cookies:
-        print("⚠️  Cookies required!")
-        print()
-        print("To extract cookies from browser:")
-        print("1. Open https://www.ryanair.com in Firefox/Chrome")
-        print("2. Open Developer Tools (F12) → Network tab")
-        print("3. Search for a flight")
-        print("4. Find GET request to '/api/booking/v4/.../availability'")
-        print("5. Copy the Cookie header value")
-        print("6. Set cookies variable in this script")
-        print()
-        print("Example cookies string:")
-        print('cookies = "sid=xxx; rid=yyy; xid=zzz; PIM-SESSION-ID=abc; ..."')
+        logger.warning("Cookies required!")
+        logger.info("To extract cookies from browser:")
+        logger.info("1. Open https://www.ryanair.com in Firefox/Chrome")
+        logger.info("2. Open Developer Tools (F12) → Network tab")
+        logger.info("3. Search for a flight")
+        logger.info("4. Find GET request to '/api/booking/v4/.../availability'")
+        logger.info("5. Copy the Cookie header value")
+        logger.info("6. Set cookies variable in this script")
+        logger.info("")
+        logger.info("Example cookies string:")
+        logger.info('cookies = "sid=xxx; rid=yyy; xid=zzz; PIM-SESSION-ID=abc; ..."')
         return
 
     try:
-        print("Fetching Ryanair flights...")
+        logger.info("Fetching Ryanair flights...")
         flights_data = get_ryanair_flights(
             origin="WRO",
             destination="ALC",
@@ -649,32 +648,32 @@ def main():
             cookies=cookies
         )
 
-        print(f"\n✓ Successfully fetched flights!")
-        print(f"Currency: {flights_data.currency}")
-        print(f"Number of trips: {len(flights_data.trips)}")
+        logger.success("Successfully fetched flights!")
+        logger.info(f"Currency: {flights_data.currency}")
+        logger.info(f"Number of trips: {len(flights_data.trips)}")
 
         for trip in flights_data.trips:
-            print(f"\n{trip.origin} ({trip.originName}) → {trip.destination} ({trip.destinationName})")
+            logger.info(f"{trip.origin} ({trip.originName}) → {trip.destination} ({trip.destinationName})")
 
             for date_info in trip.dates:
                 if date_info.flights:
-                    print(f"\n  Date: {date_info.dateOut}")
+                    logger.info(f"  Date: {date_info.dateOut}")
                     for flight in date_info.flights[:2]:  # Show first 2 per date
                         price = flight.regularFare.fares[0].amount if flight.regularFare.fares else "N/A"
-                        print(f"    Flight {flight.flightNumber}: {flight.time[0]} → {flight.time[1]}")
-                        print(f"    Duration: {flight.duration}, Price: {price} {flights_data.currency}")
+                        logger.info(f"    Flight {flight.flightNumber}: {flight.time[0]} → {flight.time[1]}")
+                        logger.info(f"    Duration: {flight.duration}, Price: {price} {flights_data.currency}")
 
-        print(f"\n✓ Successfully parsed {len(flights_data.trips)} trips!")
+        logger.success(f"Successfully parsed {len(flights_data.trips)} trips!")
 
     except requests.exceptions.HTTPError as e:
-        print(f"\n✗ HTTP Error: {e}")
+        logger.error(f"HTTP Error: {e}")
         if e.response.status_code == 403:
-            print("\nPossible reasons:")
-            print("- Cookies are missing or expired")
-            print("- Extract fresh cookies from browser")
-            print("- Bot protection detected the request")
+            logger.error("Possible reasons:")
+            logger.error("- Cookies are missing or expired")
+            logger.error("- Extract fresh cookies from browser")
+            logger.error("- Bot protection detected the request")
     except Exception as e:
-        print(f"\n✗ Error: {e}")
+        logger.error(f"Error: {e}")
 
 
 if __name__ == "__main__":
