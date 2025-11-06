@@ -44,7 +44,11 @@ class Airport(BaseModel):
 
 class AirlineRoutes(BaseModel):
     """Represents airline route data from FlightConnections API."""
-    routes: List[Dict[str, List[int]]] = Field(default_factory=list)
+    routes: List[Dict[str, List]] = Field(default_factory=list)
+
+    class Config:
+        # Allow extra fields and be flexible with types
+        extra = "allow"
 
 
 class FlightConnectionsDatabase(BaseModel):

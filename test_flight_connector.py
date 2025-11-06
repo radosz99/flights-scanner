@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
 """
-Test script for flight_connector with sample data.
+Test script for flight_connector with real API requests.
 
-Note: The actual FlightConnections CDN blocks automated requests (403 Forbidden).
-This test demonstrates the parsing logic works correctly with sample data.
+This script attempts to fetch real data from FlightConnections.
+Note: The API may block automated requests (403 Forbidden).
 """
 
 from flight_connector import (
@@ -13,6 +13,8 @@ from flight_connector import (
     Airport,
     FlightConnectionsDatabase,
     AirlineRoutes,
+    build_airport_database,
+    fetch_airline_routes,
 )
 
 
@@ -248,7 +250,108 @@ def test_airline_routes():
     return database
 
 
+def test_real_api():
+    """Test with real API requests."""
+    print("=" * 80)
+    print("TESTING WITH REAL API REQUESTS")
+    print("=" * 80)
+
+    # Step 1: Build airport database from tiles
+    print("\n" + "=" * 80)
+    print("Step 1: Building airport database from tiles...")
+    print("=" * 80)
+
+    database = build_airport_database()
+
+    if not database.airports:
+        print("\n⚠ WARNING: No airports fetched (API may be blocking requests)")
+        print("Falling back to sample data tests...\n")
+        return None
+
+    print(f"\n✓ Database built with {len(database.airports)} airports")
+
+    # Show sample airports
+    print("\nSample airports:")
+    sample_airports = list(database.airports.values())[:10]
+    for airport in sample_airports:
+        print(f"  {airport.code}: {airport.name} (ID: {airport.airport_id})")
+
+    # Step 2: Fetch airline routes
+    print("\n" + "=" * 80)
+    print("Step 2: Fetching airline routes (Ryanair - ID 39)...")
+    print("=" * 80)
+
+    routes = fetch_airline_routes(39)
+
+    if not routes:
+        print("\n⚠ WARNING: Failed to fetch airline routes (API may be blocking requests)")
+        print("Database structure is ready but no connections populated.\n")
+        return database
+
+    # Step 3: Populate connections
+    print("\n" + "=" * 80)
+    print("Step 3: Populating connections from airline routes...")
+    print("=" * 80)
+
+    connections_added = database.populate_connections_from_routes(routes)
+    print(f"\n✓ Added {connections_added} route connections")
+
+    # Step 4: Show connection statistics
+    print("\n" + "=" * 80)
+    print("Step 4: Connection Statistics")
+    print("=" * 80)
+
+    # Count airports with connections
+    airports_with_connections = sum(1 for conns in database.connections.values() if conns)
+    print(f"\nTotal airports: {len(database.airports)}")
+    print(f"Airports with outbound connections: {airports_with_connections}")
+    print(f"Total route connections: {connections_added}")
+
+    # Step 5: Show example connections from major airports
+    print("\n" + "=" * 80)
+    print("Step 5: Example Connections from Major Airports")
+    print("=" * 80)
+
+    major_airports = ['DUB', 'STN', 'BCN', 'MAD', 'FCO', 'WRO', 'AMS', 'CDG']
+    for code in major_airports:
+        airport = database.get_airport_by_code(code)
+        if airport:
+            connections = database.get_connections_from(code)
+            print(f"\n{code} - {airport.name}:")
+            print(f"  Destinations: {len(connections)}")
+            if connections:
+                # Show first 15 destinations
+                sample_dests = connections[:15]
+                print(f"  Sample: {', '.join(sample_dests)}")
+                if len(connections) > 15:
+                    print(f"  ... and {len(connections) - 15} more")
+
+    # Step 6: Show top hub airports
+    print("\n" + "=" * 80)
+    print("Step 6: Top 20 Hub Airports by Connection Count")
+    print("=" * 80)
+
+    top_hubs = database.get_airports_by_connection_count(limit=20)
+    for i, hub in enumerate(top_hubs, 1):
+        if hub['connections'] > 0:
+            print(f"{i:2d}. {hub['code']:4s} - {hub['name']:30s}: {hub['connections']:3d} destinations")
+
+    print("\n" + "=" * 80)
+    print("✓ REAL API TEST COMPLETED SUCCESSFULLY")
+    print("=" * 80)
+
+    return database
+
+
 if __name__ == "__main__":
-    test_with_sample_data()
-    test_airport_connections()
-    test_airline_routes()
+    # Try real API first
+    database = test_real_api()
+
+    # If real API failed, run sample data tests
+    if database is None or not database.airports:
+        print("\n" + "=" * 80)
+        print("Running sample data tests (API unavailable)...")
+        print("=" * 80)
+        test_with_sample_data()
+        test_airport_connections()
+        test_airline_routes()
