@@ -53,15 +53,16 @@ pip install -r requirements.txt
 Test the API:
 
 ```bash
-python3 ryanair.py
+python3 ryanair.py  # Will show instructions for extracting cookies
 ```
 
-For using with browser-extracted cookies, see `ryanair_browser_cookies.py` for detailed instructions.
-
-Example usage (when API access is available):
+Example usage with browser-extracted cookies:
 
 ```python
 from ryanair import get_ryanair_flights
+
+# Extract cookies from browser DevTools (see module docstring for instructions)
+cookies = "sid=xxx; rid=yyy; xid=zzz; PIM-SESSION-ID=abc; ..."
 
 # Search for flights
 flights_data = get_ryanair_flights(
@@ -69,7 +70,8 @@ flights_data = get_ryanair_flights(
     destination="ALC",
     date_out="2025-12-11",
     date_in="2025-12-15",
-    adt=1  # Number of adults
+    adt=1,
+    cookies=cookies  # Required for bot protection bypass
 )
 
 # Access flight information
@@ -77,21 +79,20 @@ for trip in flights_data.trips:
     print(f"{trip.origin} -> {trip.destination}")
     for date_info in trip.dates:
         for flight in date_info.flights:
-            print(f"  Flight {flight.flightNumber}: {flight.time[0]} -> {flight.time[1]}")
+            price = flight.regularFare.fares[0].amount
+            print(f"  Flight {flight.flightNumber}: {price} {flights_data.currency}")
 ```
 
 ### Wizz Air Flight Search
 
-**Note:** Wizz Air uses bot protection (Kasada SDK + Akamai Bot Manager) that blocks automated requests. There are two approaches:
+**Note:** Wizz Air uses bot protection (Kasada SDK + Akamai Bot Manager) that blocks automated requests.
 
-#### Approach 1: Use Browser-Extracted Headers (Quick but Temporary)
-
-Extract headers and cookies from a real browser session:
+Extract headers and cookies from browser and use with the API:
 
 ```python
 from wizz_air import WizzAirAPI
 
-# Headers extracted from browser DevTools
+# Headers extracted from browser DevTools (see wizz_air.py docstring for instructions)
 bot_protection_headers = {
     'X-RequestVerificationToken': 'YOUR_TOKEN',
     'x-kpsdk-ct': 'YOUR_KASADA_TOKEN',
@@ -112,41 +113,19 @@ api = WizzAirAPI(
     cookies=cookies
 )
 
-# Now use normally
+# Use the API
 flight_dates = api.get_flight_dates("WRO", "NCE", "2025-12-13", "2026-01-13")
 ```
 
-See `wizz_air_browser_headers.py` for detailed instructions on extracting headers.
-
 ⚠️ **Warning**: Headers expire quickly (minutes to hours) and this may violate Terms of Service.
 
-#### Approach 2: Browser Automation (Recommended for Production)
-
-Use Selenium/Playwright to run a real browser:
-
-```python
-import undetected_chromedriver as uc
-import time
-
-# Launch undetected Chrome
-driver = uc.Chrome()
-driver.get('https://www.wizzair.com')
-time.sleep(5)  # Let bot protection initialize
-
-# Extract cookies and use with requests
-cookies = {c['name']: c['value'] for c in driver.get_cookies()}
-# Use cookies with WizzAirAPI...
-```
-
-#### Testing with Sample Data
-
-To test the parsing logic without API access:
+Test with sample data (no API access needed):
 
 ```bash
 python3 test_wizz_air.py
 ```
 
-Example usage (with valid headers/cookies or browser automation):
+Example usage:
 
 ```python
 from wizz_air import WizzAirAPI
@@ -300,12 +279,10 @@ for hub in top_hubs:
 
 ## Files
 
-- `ryanair.py` - Ryanair API integration module
+- `ryanair.py` - Ryanair API integration module (includes cookie instructions)
 - `ryanair_models.py` - Pydantic models for Ryanair API responses
-- `ryanair_browser_cookies.py` - Helper script for using browser-extracted cookies
-- `wizz_air.py` - Wizz Air API integration module with bot protection support
+- `wizz_air.py` - Wizz Air API integration module (includes header/cookie support)
 - `wizz_air_models.py` - Pydantic models for Wizz Air API responses
-- `wizz_air_browser_headers.py` - Helper script for using browser-extracted headers
 - `test_wizz_air.py` - Test script for Wizz Air with sample data
 - `flight_connector.py` - FlightConnections data scraper
 - `test_flight_connector.py` - Test script for FlightConnections with sample data
