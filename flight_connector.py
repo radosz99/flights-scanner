@@ -3,8 +3,17 @@
 import re
 import requests
 from typing import List, Dict, Optional, Set
+from datetime import datetime
 from pydantic import BaseModel, Field, field_validator
 from concurrent.futures import ThreadPoolExecutor, as_completed
+
+# MongoDB imports (optional - only needed for database persistence)
+try:
+    from pymongo import MongoClient, ASCENDING
+    from pymongo.errors import PyMongoError
+    MONGODB_AVAILABLE = True
+except ImportError:
+    MONGODB_AVAILABLE = False
 
 
 class AirportGeometry(BaseModel):
@@ -408,6 +417,270 @@ def build_airport_database() -> FlightConnectionsDatabase:
     print(f"{'='*60}")
 
     return database
+
+
+def fetch_ryanair_routes() -> Optional[AirlineRoutes]:
+    """
+    Fetch Ryanair airline routes (ID: 39).
+
+    Returns:
+        AirlineRoutes object or None if fetch fails
+    """
+    print("Fetching Ryanair routes (airline ID: 39)...")
+    return fetch_airline_routes(39)
+
+
+def fetch_wizzair_routes() -> Optional[AirlineRoutes]:
+    """
+    Fetch Wizz Air airline routes (IDs: 52, 6002, 6092).
+
+    Wizz Air operates under multiple airline IDs:
+    - 52: Wizz Air
+    - 6002: Wizz Air UK
+    - 6092: Wizz Air Abu Dhabi
+
+    Returns:
+        Combined AirlineRoutes object or None if fetch fails
+    """
+    print("Fetching Wizz Air routes (airline IDs: 52, 6002, 6092)...")
+
+    # Fetch routes for all Wizz Air airline IDs
+    all_routes = []
+    airline_ids = [52, 6002, 6092]
+
+    for airline_id in airline_ids:
+        print(f"  Fetching routes for airline ID {airline_id}...")
+        routes = fetch_airline_routes(airline_id)
+        if routes and routes.routes:
+            all_routes.extend(routes.routes)
+            print(f"  ✓ Fetched {len(routes.routes)} route entries")
+        else:
+            print(f"  ✗ Failed to fetch routes for airline ID {airline_id}")
+
+    if all_routes:
+        print(f"\n✓ Total Wizz Air route entries: {len(all_routes)}")
+        return AirlineRoutes(routes=all_routes)
+    else:
+        print("\n✗ Failed to fetch any Wizz Air routes")
+        return None
+
+
+def save_to_mongodb(
+    database: FlightConnectionsDatabase,
+    airline_name: str,
+    mongo_uri: str = "mongodb://localhost:27017/flights_scanner",
+) -> bool:
+    """
+    Save airport database and connections to MongoDB.
+
+    Creates two collections per airline:
+    - {airline}_airports: Airport information
+    - {airline}_connections: Flight route connections
+
+    Args:
+        database: FlightConnectionsDatabase to save
+        airline_name: Name of airline (e.g., "ryanair", "wizzair")
+        mongo_uri: MongoDB connection URI
+
+    Returns:
+        True if successful, False otherwise
+
+    Example:
+        database = build_airport_database()
+        routes = fetch_ryanair_routes()
+        database.populate_connections_from_routes(routes)
+        save_to_mongodb(database, "ryanair")
+    """
+    if not MONGODB_AVAILABLE:
+        print("✗ MongoDB not available. Install with: pip install pymongo")
+        return False
+
+    try:
+        # Connect to MongoDB
+        client = MongoClient(mongo_uri)
+        db = client.get_default_database()
+
+        # Collection names
+        airports_collection_name = f"{airline_name}_airports"
+        connections_collection_name = f"{airline_name}_connections"
+
+        airports_col = db[airports_collection_name]
+        connections_col = db[connections_collection_name]
+
+        print(f"\n{'='*60}")
+        print(f"Saving {airline_name.upper()} data to MongoDB...")
+        print(f"{'='*60}")
+
+        # Create indexes
+        airports_col.create_index([("code", ASCENDING)], unique=True)
+        airports_col.create_index([("airport_id", ASCENDING)])
+        connections_col.create_index([("from_airport", ASCENDING)])
+        connections_col.create_index([("to_airport", ASCENDING)])
+
+        # Save airports
+        print(f"\nSaving airports to '{airports_collection_name}' collection...")
+        airports_saved = 0
+        airports_updated = 0
+
+        for code, airport in database.airports.items():
+            airport_doc = {
+                "code": airport.code,
+                "name": airport.name,
+                "airport_id": airport.airport_id,
+                "size": airport.size,
+                "coordinates": airport.coordinates,
+                "tile": airport.tile,
+                "updated_at": datetime.utcnow(),
+            }
+
+            # Upsert (update or insert)
+            result = airports_col.update_one(
+                {"code": code},
+                {"$set": airport_doc},
+                upsert=True
+            )
+
+            if result.upserted_id:
+                airports_saved += 1
+            elif result.modified_count > 0:
+                airports_updated += 1
+
+        print(f"✓ Airports: {airports_saved} inserted, {airports_updated} updated")
+
+        # Save connections
+        print(f"\nSaving connections to '{connections_collection_name}' collection...")
+
+        # Clear old connections for this airline
+        connections_col.delete_many({})
+        print(f"  Cleared old connections")
+
+        connections_saved = 0
+        for from_code, destinations in database.connections.items():
+            if not destinations:
+                continue
+
+            for to_code in destinations:
+                connection_doc = {
+                    "from_airport": from_code,
+                    "to_airport": to_code,
+                    "airline": airline_name,
+                    "updated_at": datetime.utcnow(),
+                }
+
+                connections_col.insert_one(connection_doc)
+                connections_saved += 1
+
+        print(f"✓ Connections: {connections_saved} inserted")
+
+        # Save metadata
+        metadata_col = db["metadata"]
+        metadata_doc = {
+            "airline": airline_name,
+            "airports_count": len(database.airports),
+            "connections_count": connections_saved,
+            "last_updated": datetime.utcnow(),
+        }
+        metadata_col.update_one(
+            {"airline": airline_name},
+            {"$set": metadata_doc},
+            upsert=True
+        )
+
+        print(f"\n{'='*60}")
+        print(f"✓ {airline_name.upper()} data saved to MongoDB successfully!")
+        print(f"{'='*60}")
+
+        client.close()
+        return True
+
+    except PyMongoError as e:
+        print(f"\n✗ MongoDB error: {e}")
+        return False
+    except Exception as e:
+        print(f"\n✗ Unexpected error: {e}")
+        return False
+
+
+def load_from_mongodb(
+    airline_name: str,
+    mongo_uri: str = "mongodb://localhost:27017/flights_scanner",
+) -> Optional[FlightConnectionsDatabase]:
+    """
+    Load airport database and connections from MongoDB.
+
+    Args:
+        airline_name: Name of airline (e.g., "ryanair", "wizzair")
+        mongo_uri: MongoDB connection URI
+
+    Returns:
+        FlightConnectionsDatabase or None if load fails
+
+    Example:
+        database = load_from_mongodb("ryanair")
+        if database:
+            connections = database.get_connections_from("WRO")
+    """
+    if not MONGODB_AVAILABLE:
+        print("✗ MongoDB not available. Install with: pip install pymongo")
+        return None
+
+    try:
+        # Connect to MongoDB
+        client = MongoClient(mongo_uri)
+        db = client.get_default_database()
+
+        airports_collection_name = f"{airline_name}_airports"
+        connections_collection_name = f"{airline_name}_connections"
+
+        airports_col = db[airports_collection_name]
+        connections_col = db[connections_collection_name]
+
+        print(f"\n{'='*60}")
+        print(f"Loading {airline_name.upper()} data from MongoDB...")
+        print(f"{'='*60}")
+
+        # Load airports
+        database = FlightConnectionsDatabase()
+
+        airports_cursor = airports_col.find({})
+        for airport_doc in airports_cursor:
+            airport = Airport(
+                code=airport_doc["code"],
+                name=airport_doc["name"],
+                airport_id=airport_doc["airport_id"],
+                size=airport_doc["size"],
+                coordinates=airport_doc["coordinates"],
+                tile=airport_doc["tile"],
+            )
+            database.add_airport(airport)
+
+        print(f"✓ Loaded {len(database.airports)} airports")
+
+        # Load connections
+        connections_cursor = connections_col.find({})
+        connections_count = 0
+
+        for conn_doc in connections_cursor:
+            from_code = conn_doc["from_airport"]
+            to_code = conn_doc["to_airport"]
+            database.add_connection(from_code, to_code)
+            connections_count += 1
+
+        print(f"✓ Loaded {connections_count} connections")
+
+        print(f"\n{'='*60}")
+        print(f"✓ {airline_name.upper()} data loaded successfully!")
+        print(f"{'='*60}")
+
+        client.close()
+        return database
+
+    except PyMongoError as e:
+        print(f"\n✗ MongoDB error: {e}")
+        return None
+    except Exception as e:
+        print(f"\n✗ Unexpected error: {e}")
+        return None
 
 
 def main():
