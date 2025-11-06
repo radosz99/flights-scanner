@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 
 """
-Ryanair API integration module.
+Ryanair API integration module with Selenium automation support.
 
 Note: Ryanair uses bot protection that blocks automated requests.
-You need to extract cookies from a browser session to successfully make requests.
+You can either:
+1. Extract cookies manually from browser (see module docstring)
+2. Use Selenium automation to get cookies automatically (recommended)
 
 Required cookies from browser:
 - sid: Session ID
@@ -15,17 +17,185 @@ Required cookies from browser:
 - RY_COOKIE_CONSENT: Cookie consent
 - _cc: Cookie consent confirmation
 
-How to extract cookies:
+How to extract cookies manually:
 1. Open https://www.ryanair.com in Firefox/Chrome
 2. Open Developer Tools (F12) → Network tab
 3. Search for a flight
 4. Find the GET request to "/api/booking/v4/.../availability"
 5. Copy the Cookie header value
+
+Or use Selenium automation (recommended):
+- Use get_ryanair_flights_with_selenium() function
+- Automatically navigates to Ryanair and extracts cookies
+- Requires selenium and chromedriver
 """
 
 import requests
+import time
 from typing import Optional
 from ryanair_models import RyanairResponse
+
+# Selenium imports (optional - only needed for automation)
+try:
+    from selenium import webdriver
+    from selenium.webdriver.chrome.options import Options
+    SELENIUM_AVAILABLE = True
+except ImportError:
+    SELENIUM_AVAILABLE = False
+
+
+def setup_driver():
+    """
+    Setup Chrome WebDriver for Selenium automation.
+
+    Returns:
+        webdriver.Chrome: Configured Chrome driver
+
+    Raises:
+        ImportError: If selenium is not installed
+        Exception: If chromedriver is not found or other setup issues
+    """
+    if not SELENIUM_AVAILABLE:
+        raise ImportError(
+            "Selenium is not installed. Install with: pip install selenium"
+        )
+
+    chrome_options = Options()
+    # chrome_options.add_argument("--headless")  # Uncomment for headless mode
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+    chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+    chrome_options.add_experimental_option('useAutomationExtension', False)
+
+    driver = webdriver.Chrome(options=chrome_options)
+    return driver
+
+
+def extract_cookies_from_ryanair(wait_time: int = 10) -> str:
+    """
+    Use Selenium to navigate to Ryanair and extract cookies.
+
+    This function:
+    1. Opens Chrome browser
+    2. Navigates to Ryanair website
+    3. Waits for page to load and cookies to be set
+    4. Extracts all cookies
+    5. Returns cookie string for API use
+
+    Args:
+        wait_time: Seconds to wait for page load and cookie generation (default: 10)
+
+    Returns:
+        Cookie string formatted for HTTP requests (e.g., "sid=xxx; rid=yyy; ...")
+
+    Raises:
+        ImportError: If selenium is not installed
+        Exception: If browser fails to start or navigate
+
+    Example:
+        cookies = extract_cookies_from_ryanair(wait_time=15)
+        flights = get_ryanair_flights("WRO", "ALC", "2025-12-11", "2025-12-15", cookies=cookies)
+    """
+    print("🌐 Starting Chrome browser...")
+    driver = setup_driver()
+
+    try:
+        print("🔍 Navigating to Ryanair...")
+        driver.get("https://www.ryanair.com")
+
+        # Wait for page to load and cookies to be set
+        print(f"⏳ Waiting {wait_time} seconds for cookies to be set...")
+        time.sleep(wait_time)
+
+        # Extract all cookies
+        selenium_cookies = driver.get_cookies()
+        print(f"✓ Extracted {len(selenium_cookies)} cookies")
+
+        # Format cookies as HTTP Cookie header string
+        cookie_string = "; ".join([f"{cookie['name']}={cookie['value']}" for cookie in selenium_cookies])
+
+        print("✓ Cookies extracted successfully")
+        return cookie_string
+
+    finally:
+        print("🔒 Closing browser...")
+        driver.quit()
+
+
+def get_ryanair_flights_with_selenium(
+    origin: str,
+    destination: str,
+    date_out: str,
+    date_in: str,
+    adt: int = 1,
+    teen: int = 0,
+    chd: int = 0,
+    inf: int = 0,
+    flex_days_before_out: int = 2,
+    flex_days_out: int = 2,
+    flex_days_before_in: int = 2,
+    flex_days_in: int = 2,
+    wait_time: int = 10,
+) -> RyanairResponse:
+    """
+    Fetch Ryanair flights using Selenium automation to get cookies.
+
+    This is a convenience function that:
+    1. Uses Selenium to extract cookies from Ryanair
+    2. Calls get_ryanair_flights() with the extracted cookies
+
+    Args:
+        origin: Origin airport code (e.g., 'WRO')
+        destination: Destination airport code (e.g., 'ALC')
+        date_out: Outbound date (YYYY-MM-DD format)
+        date_in: Return date (YYYY-MM-DD format)
+        adt: Number of adults
+        teen: Number of teens
+        chd: Number of children
+        inf: Number of infants
+        flex_days_before_out: Flex days before outbound
+        flex_days_out: Flex days after outbound
+        flex_days_before_in: Flex days before return
+        flex_days_in: Flex days after return
+        wait_time: Seconds to wait for cookies (default: 10)
+
+    Returns:
+        RyanairResponse: Parsed Pydantic model with flight data
+
+    Raises:
+        ImportError: If selenium is not installed
+        requests.exceptions.HTTPError: If API request fails
+
+    Example:
+        # Automatically get cookies and fetch flights
+        flights = get_ryanair_flights_with_selenium(
+            origin="WRO",
+            destination="ALC",
+            date_out="2025-12-11",
+            date_in="2025-12-15"
+        )
+    """
+    # Extract cookies using Selenium
+    cookies = extract_cookies_from_ryanair(wait_time=wait_time)
+
+    # Use extracted cookies to fetch flights
+    print("\n🛫 Fetching flights with extracted cookies...")
+    return get_ryanair_flights(
+        origin=origin,
+        destination=destination,
+        date_out=date_out,
+        date_in=date_in,
+        adt=adt,
+        teen=teen,
+        chd=chd,
+        inf=inf,
+        flex_days_before_out=flex_days_before_out,
+        flex_days_out=flex_days_out,
+        flex_days_before_in=flex_days_before_in,
+        flex_days_in=flex_days_in,
+        cookies=cookies,
+    )
 
 
 def get_ryanair_flights(

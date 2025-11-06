@@ -41,14 +41,42 @@ A Python application for fetching and analyzing flight data from Ryanair, Wizz A
 pip install -r requirements.txt
 ```
 
+**For Ryanair Selenium automation**, you also need ChromeDriver:
+- Linux: `sudo apt-get install chromium-chromedriver` or download from [ChromeDriver](https://chromedriver.chromium.org/)
+- macOS: `brew install chromedriver`
+- Windows: Download from [ChromeDriver](https://chromedriver.chromium.org/) and add to PATH
+
 ## Usage
 
 ### Ryanair Flight Search
 
-**Note:** Ryanair API also uses bot protection that blocks automated requests (403 Forbidden). The code includes browser-like headers but may still be blocked. Similar to Wizz Air, you may need to:
-- Extract headers/cookies from a browser session
-- Use browser automation (Selenium/Playwright)
-- Access from environments that aren't flagged as bots
+**Note:** Ryanair API uses bot protection that blocks automated requests (403 Forbidden).
+
+**Recommended approach: Selenium automation** (automatically extracts cookies):
+
+```python
+from ryanair import get_ryanair_flights_with_selenium
+
+# Automatically extract cookies and fetch flights
+flights_data = get_ryanair_flights_with_selenium(
+    origin="WRO",
+    destination="ALC",
+    date_out="2025-12-11",
+    date_in="2025-12-15",
+    adt=1,
+    wait_time=10  # Seconds to wait for cookies
+)
+
+# Access flight information
+for trip in flights_data.trips:
+    print(f"{trip.origin} -> {trip.destination}")
+    for date_info in trip.dates:
+        for flight in date_info.flights:
+            price = flight.regularFare.fares[0].amount
+            print(f"  Flight {flight.flightNumber}: {price} {flights_data.currency}")
+```
+
+**Alternative: Manual cookie extraction** (if you don't want to use Selenium):
 
 Test the API:
 
@@ -56,7 +84,7 @@ Test the API:
 python3 ryanair.py  # Will show instructions for extracting cookies
 ```
 
-Example usage with browser-extracted cookies:
+Example usage with manually extracted cookies:
 
 ```python
 from ryanair import get_ryanair_flights
@@ -279,7 +307,7 @@ for hub in top_hubs:
 
 ## Files
 
-- `ryanair.py` - Ryanair API integration module (includes cookie instructions)
+- `ryanair.py` - Ryanair API integration module with Selenium automation support
 - `ryanair_models.py` - Pydantic models for Ryanair API responses
 - `wizz_air.py` - Wizz Air API integration module (includes header/cookie support)
 - `wizz_air_models.py` - Pydantic models for Wizz Air API responses
@@ -292,6 +320,7 @@ for hub in top_hubs:
 
 - `requests` - HTTP requests
 - `pydantic` - Data validation and parsing
+- `selenium` - Browser automation for Ryanair (requires ChromeDriver)
 
 ## Example Output
 
@@ -372,17 +401,19 @@ Testing Airport Connections:
 
    **Ryanair**:
    - Uses bot protection that blocks automated requests (403 Forbidden / "Access denied")
-   - Code includes browser-like headers but still gets blocked
-   - May require browser automation or running from non-flagged environments
+   - **Solution implemented**: Selenium automation automatically extracts cookies
+   - Use `get_ryanair_flights_with_selenium()` for automated cookie extraction
+   - Alternatively, manually extract cookies from browser session
 
    **Wizz Air**:
    - Uses Kasada SDK + Akamai Bot Manager for advanced bot detection
    - Blocks automated requests with 403 Forbidden
    - Headers include: `x-kpsdk-*` (Kasada), `X-RequestVerificationToken` (CSRF)
 
-   **Solutions for both**:
-   - Extract headers/cookies from browser session (temporary, expires in minutes/hours)
-   - Use browser automation (Selenium with undetected-chromedriver recommended)
+   **Solutions**:
+   - **Ryanair**: Use built-in Selenium automation (`get_ryanair_flights_with_selenium()`)
+   - **Wizz Air**: Extract headers/cookies from browser session (temporary, expires in minutes/hours)
+   - Consider browser automation with undetected-chromedriver for more robust solutions
    - Consider official API access if available
    - Run from environments not flagged as datacenter/VPS IPs
    - **Warning**: Bypassing bot protection may violate Terms of Service
