@@ -265,6 +265,19 @@ print(f"JFK has {count} destinations")
 top_hubs = database.get_airports_by_connection_count(limit=10)
 for hub in top_hubs:
     print(f"{hub['code']} ({hub['name']}): {hub['connections']} destinations")
+
+# 9. Fetch airline routes and populate connections
+from flight_connector import fetch_airline_routes
+
+# Fetch routes for a specific airline (e.g., Ryanair = 39)
+routes = fetch_airline_routes(39)
+if routes:
+    connections_added = database.populate_connections_from_routes(routes)
+    print(f"Added {connections_added} route connections")
+
+# Now you can query actual flight routes
+destinations = database.get_connections_from("WRO")
+print(f"Ryanair flights from Wrocław: {destinations}")
 ```
 
 ## Data Models
@@ -289,6 +302,7 @@ for hub in top_hubs:
 ### FlightConnections Models (`flight_connector.py`)
 - `AirportGeometry`: Raw airport data from tiles
 - `Airport`: Parsed airport information
+- `AirlineRoutes`: Airline route data from FlightConnections API
 - `FlightConnectionsDatabase`: Airport database with:
   - Airport storage and lookup by code/ID
   - Connection/route management
@@ -304,6 +318,11 @@ for hub in top_hubs:
 - `add_bidirectional_connection(a, b)`: Add round-trip route
 - `get_connection_count(code)`: Count destinations from airport
 - `get_airports_by_connection_count(limit)`: Find major hubs
+- `populate_connections_from_routes(routes)`: Populate connections from airline route data
+
+**Key Functions**:
+- `fetch_airline_routes(airline_id)`: Fetch airline routes from FlightConnections API
+- `build_airport_database()`: Build airport database from tile data
 
 ## Files
 
@@ -418,10 +437,11 @@ Testing Airport Connections:
    - Run from environments not flagged as datacenter/VPS IPs
    - **Warning**: Bypassing bot protection may violate Terms of Service
 
-2. **FlightConnections CDN Access**:
-   - CDN blocks automated requests with 403 Forbidden
-   - Alternative solutions needed for live data access
+2. **FlightConnections API Access**:
+   - Both tile data CDN and airline routes API block automated requests with 403 Forbidden
+   - Alternative solutions needed for live data access (browser automation, proxy services, etc.)
    - Code structure complete and tested with sample data
+   - `test_flight_connector.py` demonstrates full functionality with sample data
 
 3. **Rate Limiting**:
    - Be mindful of API rate limits when making multiple requests

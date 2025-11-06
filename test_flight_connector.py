@@ -12,6 +12,7 @@ from flight_connector import (
     TileData,
     Airport,
     FlightConnectionsDatabase,
+    AirlineRoutes,
 )
 
 
@@ -162,6 +163,92 @@ def test_airport_connections():
     return database
 
 
+def test_airline_routes():
+    """Test populating connections from airline routes data."""
+    print("\n\nTesting Airline Routes Population")
+    print("=" * 60)
+
+    # Create a database with sample airports
+    database = FlightConnectionsDatabase()
+
+    # Add sample airports with their IDs (matching FlightConnections structure)
+    airports_data = [
+        {"code": "WRO", "name": "Wrocław", "id": 2, "coords": [100, 200]},
+        {"code": "LTN", "name": "London Luton", "id": 76, "coords": [120, 150]},
+        {"code": "STN", "name": "London Stansted", "id": 107, "coords": [121, 150]},
+        {"code": "DUB", "name": "Dublin", "id": 175, "coords": [115, 140]},
+        {"code": "BCN", "name": "Barcelona", "id": 188, "coords": [105, 180]},
+        {"code": "ALC", "name": "Alicante", "id": 232, "coords": [103, 185]},
+        {"code": "MAD", "name": "Madrid", "id": 256, "coords": [100, 180]},
+        {"code": "LPA", "name": "Gran Canaria", "id": 333, "coords": [95, 205]},
+    ]
+
+    for apt_data in airports_data:
+        airport = Airport(
+            code=apt_data["code"],
+            name=apt_data["name"],
+            airport_id=apt_data["id"],
+            size=4,
+            coordinates=apt_data["coords"],
+            tile="test",
+        )
+        database.add_airport(airport)
+
+    print(f"Created database with {len(database.airports)} airports\n")
+
+    # Sample airline routes data (simulating FlightConnections API response)
+    # Format: dep[i] -> des[i] represents a route
+    sample_routes_data = {
+        "routes": [
+            {
+                "dep": [2, 2, 2, 76, 76, 107, 175, 175, 188, 188],
+                "des": [76, 107, 175, 188, 232, 256, 333, 9, 98, 150]
+                # WRO -> LTN, WRO -> STN, WRO -> DUB, LTN -> BCN, LTN -> ALC, STN -> MAD, DUB -> LPA, ...
+                # Some destinations (9, 98, 150) don't exist in our database to test skipping
+            }
+        ]
+    }
+
+    # Parse routes data
+    airline_routes = AirlineRoutes(**sample_routes_data)
+
+    print("Populating connections from airline routes...")
+    connections_added = database.populate_connections_from_routes(airline_routes)
+    print(f"✓ Added {connections_added} connections\n")
+
+    # Show connections for each airport
+    print("Connections by airport:")
+    print("-" * 60)
+    for code in sorted(database.airports.keys()):
+        connections = database.get_connections_from(code)
+        conn_with_names = database.get_connections_from_with_names(code)
+        if connections:
+            print(f"\n{code} - {database.get_airport_by_code(code).name}:")
+            for conn in conn_with_names:
+                print(f"  → {conn['code']} ({conn['name']})")
+        else:
+            print(f"\n{code} - {database.get_airport_by_code(code).name}: No outbound connections")
+
+    # Show statistics
+    print("\n" + "=" * 60)
+    print("Statistics:")
+    print("-" * 60)
+    print(f"Total airports: {len(database.airports)}")
+    print(f"Total connections: {connections_added}")
+    print(f"Airports with connections: {sum(1 for c in database.connections.values() if c)}")
+
+    # Show top hubs
+    print("\nTop hub airports:")
+    print("-" * 60)
+    top_hubs = database.get_airports_by_connection_count(limit=5)
+    for i, hub in enumerate(top_hubs, 1):
+        if hub['connections'] > 0:
+            print(f"{i}. {hub['code']} - {hub['name']}: {hub['connections']} destinations")
+
+    return database
+
+
 if __name__ == "__main__":
     test_with_sample_data()
     test_airport_connections()
+    test_airline_routes()

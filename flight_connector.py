@@ -42,6 +42,11 @@ class Airport(BaseModel):
     tile: str = Field(description="Tile where this airport was found (e.g., '0-0')")
 
 
+class AirlineRoutes(BaseModel):
+    """Represents airline route data from FlightConnections API."""
+    routes: List[Dict[str, List[int]]] = Field(default_factory=list)
+
+
 class FlightConnectionsDatabase(BaseModel):
     """Database of all airports and their connections."""
     airports: Dict[str, Airport] = Field(default_factory=dict)
@@ -174,6 +179,46 @@ class FlightConnectionsDatabase(BaseModel):
             return results[:limit]
         return results
 
+    def populate_connections_from_routes(self, airline_routes: AirlineRoutes) -> int:
+        """
+        Populate connections from airline route data.
+
+        Args:
+            airline_routes: AirlineRoutes object containing route data
+
+        Returns:
+            Number of connections added
+        """
+        connections_added = 0
+        skipped = 0
+
+        for route_data in airline_routes.routes:
+            dep_ids = route_data.get("dep", [])
+            des_ids = route_data.get("des", [])
+
+            # Both arrays should have the same length
+            if len(dep_ids) != len(des_ids):
+                print(f"Warning: Mismatched route data lengths (dep: {len(dep_ids)}, des: {len(des_ids)})")
+                continue
+
+            # Process each route
+            for dep_id, des_id in zip(dep_ids, des_ids):
+                # Look up airport codes from IDs
+                dep_code = self.airports_by_id.get(dep_id)
+                des_code = self.airports_by_id.get(des_id)
+
+                if dep_code and des_code:
+                    # Add connection
+                    self.add_connection(dep_code, des_code)
+                    connections_added += 1
+                else:
+                    skipped += 1
+
+        if skipped > 0:
+            print(f"Skipped {skipped} routes with unknown airport IDs")
+
+        return connections_added
+
 
 def fetch_tile(n: int, m: int) -> Optional[TileData]:
     """
@@ -255,6 +300,67 @@ def fetch_all_tiles(max_workers: int = 4) -> List[tuple[str, TileData]]:
     return tiles
 
 
+def fetch_airline_routes(airline_id: int) -> Optional[AirlineRoutes]:
+    """
+    Fetch airline route data from FlightConnections API.
+
+    Args:
+        airline_id: The ID of the airline to fetch routes for
+
+    Returns:
+        AirlineRoutes object or None if fetch fails
+
+    Example:
+        routes = fetch_airline_routes(39)  # Ryanair
+    """
+    url = "https://www.flightconnections.com/airline_routes.php"
+
+    params = {
+        'v': '1097',
+        'lang': 'en',
+        'type': 'ar',
+        'ids': str(airline_id),
+        'cl': '',
+        'flight_direction': 'from',
+        'flight_type': 'round',
+        'airlines': str(airline_id),
+        'alliance': '',
+        'classes': '',
+        'dates': '',
+        'dates_type': '',
+        'days_in_destination': '',
+        'aircrafts': '',
+        'dep_country': '',
+        'des_country': '',
+    }
+
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'application/json, text/plain, */*',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Referer': 'https://www.flightconnections.com/',
+        'Origin': 'https://www.flightconnections.com',
+        'DNT': '1',
+        'Connection': 'keep-alive',
+        'Sec-Fetch-Dest': 'empty',
+        'Sec-Fetch-Mode': 'cors',
+        'Sec-Fetch-Site': 'same-origin',
+    }
+
+    try:
+        response = requests.get(url, params=params, headers=headers, timeout=15)
+        response.raise_for_status()
+        data = response.json()
+        return AirlineRoutes(**data)
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching airline routes: {e}")
+        return None
+    except Exception as e:
+        print(f"Error parsing airline routes: {e}")
+        return None
+
+
 def build_airport_database() -> FlightConnectionsDatabase:
     """
     Fetch all tiles and build a comprehensive airport database.
@@ -323,6 +429,42 @@ def main():
 
     for size in sorted(size_counts.keys(), reverse=True):
         print(f"  Size {size}: {size_counts[size]} airports")
+
+    # Fetch airline routes (example: Ryanair with ID 39)
+    print(f"\n{'='*60}")
+    print("Fetching airline routes (Ryanair - ID 39)...")
+    print(f"{'='*60}")
+
+    routes = fetch_airline_routes(39)
+    if routes:
+        connections_added = database.populate_connections_from_routes(routes)
+        print(f"✓ Added {connections_added} route connections to database")
+
+        # Show some example connections
+        print(f"\n{'='*60}")
+        print("Example connections:")
+        print(f"{'='*60}")
+
+        # Find some major airports and show their connections
+        major_airports = ['DUB', 'STN', 'BCN', 'MAD', 'FCO']
+        for code in major_airports:
+            airport = database.get_airport_by_code(code)
+            if airport:
+                connections = database.get_connections_from(code)
+                print(f"\n{code} - {airport.name}:")
+                print(f"  Total destinations: {len(connections)}")
+                if connections:
+                    print(f"  Sample destinations: {', '.join(connections[:10])}")
+
+        # Show top hubs by connection count
+        print(f"\n{'='*60}")
+        print("Top 10 hub airports by connections:")
+        print(f"{'='*60}")
+        top_hubs = database.get_airports_by_connection_count(limit=10)
+        for i, hub in enumerate(top_hubs, 1):
+            print(f"{i:2d}. {hub['code']} - {hub['name']}: {hub['connections']} destinations")
+    else:
+        print("✗ Failed to fetch airline routes")
 
     return database
 
