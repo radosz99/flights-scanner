@@ -60,7 +60,21 @@ def get_ryanair_flights(
         "ToUs": "AGREED",
     }
 
-    response = requests.get(url, params=params)
+    # Add browser-like headers to avoid bot detection
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:144.0) Gecko/20100101 Firefox/144.0',
+        'Accept': 'application/json, text/plain, */*',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Referer': 'https://www.ryanair.com/gb/en/',
+        'Origin': 'https://www.ryanair.com',
+        'Connection': 'keep-alive',
+        'Sec-Fetch-Dest': 'empty',
+        'Sec-Fetch-Mode': 'cors',
+        'Sec-Fetch-Site': 'same-origin',
+    }
+
+    response = requests.get(url, params=params, headers=headers)
     response.raise_for_status()
 
     # Parse response into Pydantic model

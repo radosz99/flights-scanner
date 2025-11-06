@@ -9,6 +9,7 @@ A Python application for fetching and analyzing flight data from Ryanair, Wizz A
 - Parse responses using Pydantic models
 - Display flight information with prices, times, and durations
 - Configurable search parameters (origin, destination, dates, passengers)
+- **Note**: Ryanair also uses bot protection that blocks automated requests
 
 ### 2. Wizz Air API Integration (`wizz_air.py`)
 - Fetch available flight dates between airports
@@ -39,11 +40,18 @@ pip install -r requirements.txt
 
 ### Ryanair Flight Search
 
-```python
+**Note:** Ryanair API also uses bot protection that blocks automated requests (403 Forbidden). The code includes browser-like headers but may still be blocked. Similar to Wizz Air, you may need to:
+- Extract headers/cookies from a browser session
+- Use browser automation (Selenium/Playwright)
+- Access from environments that aren't flagged as bots
+
+Test the API:
+
+```bash
 python3 main.py
 ```
 
-Or use the API programmatically:
+Example usage (when API access is available):
 
 ```python
 from main import get_ryanair_flights
@@ -311,14 +319,23 @@ Total airports in database: 12
 
 ## Known Limitations
 
-1. **Wizz Air Bot Protection**:
-   - Uses Kasada SDK + Akamai Bot Manager for bot detection
+1. **Bot Protection (Ryanair & Wizz Air)**:
+
+   **Ryanair**:
+   - Uses bot protection that blocks automated requests (403 Forbidden / "Access denied")
+   - Code includes browser-like headers but still gets blocked
+   - May require browser automation or running from non-flagged environments
+
+   **Wizz Air**:
+   - Uses Kasada SDK + Akamai Bot Manager for advanced bot detection
    - Blocks automated requests with 403 Forbidden
    - Headers include: `x-kpsdk-*` (Kasada), `X-RequestVerificationToken` (CSRF)
-   - Solutions:
-     - Extract headers from browser session (temporary, expires in minutes/hours)
-     - Use browser automation (Selenium with undetected-chromedriver)
-     - Consider official API access if available
+
+   **Solutions for both**:
+   - Extract headers/cookies from browser session (temporary, expires in minutes/hours)
+   - Use browser automation (Selenium with undetected-chromedriver recommended)
+   - Consider official API access if available
+   - Run from environments not flagged as datacenter/VPS IPs
    - **Warning**: Bypassing bot protection may violate Terms of Service
 
 2. **FlightConnections CDN Access**:
