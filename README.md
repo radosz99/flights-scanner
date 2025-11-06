@@ -4,7 +4,7 @@ A Python application for fetching and analyzing flight data from Ryanair, Wizz A
 
 ## Features
 
-### 1. Ryanair API Integration (`main.py`)
+### 1. Ryanair API Integration (`ryanair.py`)
 - Fetch flight availability from Ryanair API
 - Parse responses using Pydantic models
 - Display flight information with prices, times, and durations
@@ -53,13 +53,15 @@ pip install -r requirements.txt
 Test the API:
 
 ```bash
-python3 main.py
+python3 ryanair.py
 ```
+
+For using with browser-extracted cookies, see `ryanair_browser_cookies.py` for detailed instructions.
 
 Example usage (when API access is available):
 
 ```python
-from main import get_ryanair_flights
+from ryanair import get_ryanair_flights
 
 # Search for flights
 flights_data = get_ryanair_flights(
@@ -260,7 +262,7 @@ for hub in top_hubs:
 
 ## Data Models
 
-### Ryanair Models (`models.py`)
+### Ryanair Models (`ryanair_models.py`)
 - `RyanairResponse`: Complete API response
 - `Trip`: Trip details (origin, destination, dates)
 - `Flight`: Individual flight information
@@ -298,8 +300,9 @@ for hub in top_hubs:
 
 ## Files
 
-- `main.py` - Ryanair API integration and main entry point
-- `models.py` - Pydantic models for Ryanair API responses
+- `ryanair.py` - Ryanair API integration module
+- `ryanair_models.py` - Pydantic models for Ryanair API responses
+- `ryanair_browser_cookies.py` - Helper script for using browser-extracted cookies
 - `wizz_air.py` - Wizz Air API integration module with bot protection support
 - `wizz_air_models.py` - Pydantic models for Wizz Air API responses
 - `wizz_air_browser_headers.py` - Helper script for using browser-extracted headers

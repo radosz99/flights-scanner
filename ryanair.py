@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import requests
-from models import RyanairResponse
+from ryanair_models import RyanairResponse
 
 
 def get_ryanair_flights(
@@ -60,20 +60,24 @@ def get_ryanair_flights(
         "ToUs": "AGREED",
     }
 
-    # Add browser-like headers to avoid bot detection
+    # Add browser-like headers matching actual browser request
+    # Note: These headers match a browser navigation request
     headers = {
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:144.0) Gecko/20100101 Firefox/144.0',
-        'Accept': 'application/json, text/plain, */*',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Accept-Encoding': 'gzip, deflate, br',
-        'Referer': 'https://www.ryanair.com/gb/en/',
-        'Origin': 'https://www.ryanair.com',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
+        'Accept-Encoding': 'gzip, deflate, br, zstd',
+        'Upgrade-Insecure-Requests': '1',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'none',
+        'Sec-Fetch-User': '?1',
         'Connection': 'keep-alive',
-        'Sec-Fetch-Dest': 'empty',
-        'Sec-Fetch-Mode': 'cors',
-        'Sec-Fetch-Site': 'same-origin',
+        'TE': 'trailers',
     }
 
+    # Create a session to maintain cookies
+    # For production use, you may need to extract cookies from a browser session
     response = requests.get(url, params=params, headers=headers)
     response.raise_for_status()
 
