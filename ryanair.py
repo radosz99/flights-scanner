@@ -277,21 +277,22 @@ def setup_driver(enable_network_capture: bool = False):
 def extract_cookies_from_ryanair(wait_time: int = 30, save_to_db: bool = True) -> Optional[str]:
     """
     Use Selenium to navigate to Ryanair flight selection page and extract cookies
-    from the availability API request.
+    from the first request with cookies, then validate them.
 
     This function:
     1. Opens Chrome browser with network logging enabled
     2. Navigates to Ryanair flight selection page
-    3. Monitors network requests for availability API call
-    4. Extracts cookies from the availability request header
-    5. Optionally saves to MongoDB for tracking
+    3. Monitors network requests for any request with cookies
+    4. Extracts cookies from the first request with associatedCookies
+    5. Validates cookies by testing on availability endpoint
+    6. Optionally saves to MongoDB for tracking
 
     Args:
-        wait_time: Seconds to wait for availability request (default: 30)
+        wait_time: Seconds to wait for request with cookies (default: 30)
         save_to_db: Save cookies to MongoDB for tracking (default: True)
 
     Returns:
-        Cookie string from availability request or None if not found
+        Cookie string from first request with cookies (if valid) or None if not found
 
     Raises:
         ImportError: If selenium is not installed
@@ -311,8 +312,8 @@ def extract_cookies_from_ryanair(wait_time: int = 30, save_to_db: bool = True) -
         print(f"   URL: {url[:80]}...")
         driver.get(url)
 
-        print(f"⏳ Waiting up to {wait_time} seconds for availability request...")
-        print("   Monitoring network traffic for 'availability' API call...")
+        print(f"⏳ Waiting up to {wait_time} seconds for request with cookies...")
+        print("   Monitoring network traffic for any request with cookies...")
 
         cookie_string = None
         start_time = time.time()
@@ -326,22 +327,26 @@ def extract_cookies_from_ryanair(wait_time: int = 30, save_to_db: bool = True) -
                     log_entry = json.loads(log['message'])
                     message = log_entry.get('message', {})
 
-                    # Look for Network.requestWillBeSent events
-                    if message.get('method') == 'Network.requestWillBeSent':
+                    # Look for Network.requestWillBeSentExtraInfo events
+                    if message.get('method') == 'Network.requestWillBeSentExtraInfo':
                         params = message.get('params', {})
-                        request = params.get('request', {})
-                        request_url = request.get('url', '')
+                        associated_cookies = params.get('associatedCookies', [])
 
-                        # Check if this is the availability request
-                        if 'availability' in request_url.lower():
-                            headers = request.get('headers', {})
-                            cookie_header = headers.get('Cookie') or headers.get('cookie')
+                        # Check if this request has cookies
+                        if associated_cookies:
+                            # Build cookie string from associatedCookies
+                            cookies_list = []
+                            for cookie_data in associated_cookies:
+                                cookie = cookie_data.get('cookie', {})
+                                cookie_name = cookie.get('name')
+                                cookie_value = cookie.get('value')
+                                if cookie_name and cookie_value:
+                                    cookies_list.append(f"{cookie_name}={cookie_value}")
 
-                            if cookie_header:
-                                cookie_string = cookie_header
-                                print(f"\n✓ Found availability request!")
-                                print(f"   URL: {request_url[:100]}...")
-                                print(f"   Extracted {len(cookie_header)} characters of cookies")
+                            if cookies_list:
+                                cookie_string = "; ".join(cookies_list)
+                                print(f"\n✓ Found request with cookies!")
+                                print(f"   Extracted {len(associated_cookies)} cookies ({len(cookie_string)} characters)")
                                 break
 
                 except Exception as e:
@@ -355,17 +360,34 @@ def extract_cookies_from_ryanair(wait_time: int = 30, save_to_db: bool = True) -
             time.sleep(0.5)
 
         if not cookie_string:
-            print(f"\n✗ No availability request found after {wait_time} seconds")
-            print("   The page may not have loaded the flight data.")
+            print(f"\n✗ No request with cookies found after {wait_time} seconds")
+            print("   The page may not have loaded properly.")
             print("   Try increasing wait_time or check if the URL is correct.")
+            return None
+
+        # Validate cookies by testing on availability endpoint
+        print("\n🧪 Validating cookies on availability endpoint...")
+        try:
+            test_flights = get_ryanair_flights(
+                origin="WRO",
+                destination="ALC",
+                date_out="2026-03-06",
+                date_in="2026-03-08",
+                adt=1,
+                cookies=cookie_string
+            )
+            print(f"✓ Cookies are VALID! Successfully fetched {len(test_flights.trips)} trips")
+        except Exception as e:
+            print(f"✗ Cookies are INVALID: {e}")
+            print("   Extracted cookies failed validation. Discarding.")
             return None
 
         # Save to MongoDB if requested
         if save_to_db and MONGODB_AVAILABLE:
-            print("\n💾 Saving cookie to MongoDB...")
+            print("\n💾 Saving validated cookie to MongoDB...")
             save_cookie_to_mongodb(cookie_string)
 
-        print("\n✓ Cookie extraction completed successfully")
+        print("\n✓ Cookie extraction and validation completed successfully")
         return cookie_string
 
     finally:
