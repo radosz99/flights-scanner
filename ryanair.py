@@ -277,22 +277,23 @@ def setup_driver(enable_network_capture: bool = False):
 def extract_cookies_from_ryanair(wait_time: int = 30, save_to_db: bool = True) -> Optional[str]:
     """
     Use Selenium to navigate to Ryanair flight selection page and extract cookies
-    from the first request with cookies, then validate them.
+    from network requests, testing each cookie set until finding a valid one.
 
     This function:
     1. Opens Chrome browser with network logging enabled
     2. Navigates to Ryanair flight selection page
-    3. Monitors network requests for any request with cookies
-    4. Extracts cookies from the first request with associatedCookies
-    5. Validates cookies by testing on availability endpoint
-    6. Optionally saves to MongoDB for tracking
+    3. Monitors network requests for ALL requests with cookies
+    4. Collects cookies from ALL requests with associatedCookies
+    5. Tests each cookie set against the availability endpoint
+    6. Returns the first valid cookie set found
+    7. Optionally saves to MongoDB for tracking
 
     Args:
-        wait_time: Seconds to wait for request with cookies (default: 30)
+        wait_time: Seconds to wait for requests with cookies (default: 30)
         save_to_db: Save cookies to MongoDB for tracking (default: True)
 
     Returns:
-        Cookie string from first request with cookies (if valid) or None if not found
+        Valid cookie string or None if no valid cookies found
 
     Raises:
         ImportError: If selenium is not installed
@@ -312,10 +313,10 @@ def extract_cookies_from_ryanair(wait_time: int = 30, save_to_db: bool = True) -
         print(f"   URL: {url[:80]}...")
         driver.get(url)
 
-        print(f"⏳ Waiting up to {wait_time} seconds for request with cookies...")
-        print("   Monitoring network traffic for any request with cookies...")
+        print(f"⏳ Waiting up to {wait_time} seconds to collect all cookie sets...")
+        print("   Monitoring network traffic for requests with cookies...")
 
-        cookie_string = None
+        all_cookie_sets = []
         start_time = time.time()
 
         while time.time() - start_time < wait_time:
@@ -345,50 +346,73 @@ def extract_cookies_from_ryanair(wait_time: int = 30, save_to_db: bool = True) -
 
                             if cookies_list:
                                 cookie_string = "; ".join(cookies_list)
-                                print(f"\n✓ Found request with cookies!")
-                                print(f"   Extracted {len(associated_cookies)} cookies ({len(cookie_string)} characters)")
-                                break
+                                # Only add unique cookie sets
+                                if cookie_string not in all_cookie_sets:
+                                    all_cookie_sets.append(cookie_string)
+                                    print(f"\n✓ Found cookie set #{len(all_cookie_sets)}")
+                                    print(f"   {len(associated_cookies)} cookies, {len(cookie_string)} characters")
 
                 except Exception as e:
                     # Skip malformed log entries
                     continue
 
-            if cookie_string:
-                break
-
             # Small delay to avoid busy waiting
             time.sleep(0.5)
 
-        if not cookie_string:
-            print(f"\n✗ No request with cookies found after {wait_time} seconds")
+        if not all_cookie_sets:
+            print(f"\n✗ No cookie sets found after {wait_time} seconds")
             print("   The page may not have loaded properly.")
             print("   Try increasing wait_time or check if the URL is correct.")
             return None
 
-        # Validate cookies by testing on availability endpoint
-        print("\n🧪 Validating cookies on availability endpoint...")
-        try:
-            test_flights = get_ryanair_flights(
-                origin="WRO",
-                destination="ALC",
-                date_out="2026-03-06",
-                date_in="2026-03-08",
-                adt=1,
-                cookies=cookie_string
-            )
-            print(f"✓ Cookies are VALID! Successfully fetched {len(test_flights.trips)} trips")
-        except Exception as e:
-            print(f"✗ Cookies are INVALID: {e}")
-            print("   Extracted cookies failed validation. Discarding.")
-            return None
+        print(f"\n{'='*80}")
+        print(f"✓ Collected {len(all_cookie_sets)} unique cookie sets")
+        print(f"{'='*80}")
+        print("\n🧪 Testing each cookie set to find a valid one...")
 
-        # Save to MongoDB if requested
-        if save_to_db and MONGODB_AVAILABLE:
-            print("\n💾 Saving validated cookie to MongoDB...")
-            save_cookie_to_mongodb(cookie_string)
+        # Test each cookie set
+        for idx, cookie_string in enumerate(all_cookie_sets, 1):
+            print(f"\n{'='*80}")
+            print(f"Testing cookie set {idx}/{len(all_cookie_sets)}")
+            print(f"{'='*80}")
+            print(f"Cookie preview: {cookie_string[:80]}...")
+            print(f"Cookie length: {len(cookie_string)} characters")
 
-        print("\n✓ Cookie extraction and validation completed successfully")
-        return cookie_string
+            try:
+                test_flights = get_ryanair_flights(
+                    origin="WRO",
+                    destination="ALC",
+                    date_out="2026-03-06",
+                    date_in="2026-03-08",
+                    adt=1,
+                    cookies=cookie_string
+                )
+                print(f"\n{'🎉'*40}")
+                print(f"✓ COOKIE SET #{idx} IS VALID!")
+                print(f"{'🎉'*40}")
+                print(f"Successfully fetched {len(test_flights.trips)} trips")
+
+                # Save to MongoDB if requested
+                if save_to_db and MONGODB_AVAILABLE:
+                    print("\n💾 Saving validated cookie to MongoDB...")
+                    save_cookie_to_mongodb(cookie_string)
+
+                print("\n✓ Cookie extraction and validation completed successfully")
+                return cookie_string
+
+            except Exception as e:
+                print(f"\n✗ Cookie set #{idx} is INVALID")
+                print(f"   Error: {str(e)[:100]}")
+                print(f"   Continuing to next cookie set...")
+                continue
+
+        # No valid cookies found
+        print(f"\n{'='*80}")
+        print(f"✗ NO VALID COOKIES FOUND")
+        print(f"{'='*80}")
+        print(f"Tested all {len(all_cookie_sets)} cookie sets - none are valid")
+        print("The cookies may have expired during collection.")
+        return None
 
     finally:
         print("\n🔒 Closing browser...")
