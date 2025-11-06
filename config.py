@@ -37,6 +37,10 @@ class Settings(BaseSettings):
     RYANAIR_AIRLINE_ID: int = 39
     WIZZAIR_AIRLINE_IDS: str = "52,6002,6092"  # Wizz Air, Wizz Air UK, Wizz Air Abu Dhabi
 
+    # Ryanair cookie extraction URL
+    # This page triggers the availability API request which contains valid cookies
+    RYANAIR_COOKIE_URL: str = "https://www.ryanair.com/hr/en/trip/flights/select?adults=1&teens=0&children=0&infants=0&dateOut=2026-03-06&dateIn=2026-03-08&isConnectedFlight=false&discount=0&promoCode=&isReturn=true&originIata=WRO&destinationIata=ALC&tpAdults=1&tpTeens=0&tpChildren=0&tpInfants=0&tpStartDate=2026-03-06&tpEndDate=2026-03-08&tpDiscount=0&tpPromoCode=&tpOriginIata=WRO&tpDestinationIata=ALC"
+
     model_config = SettingsConfigDict(
         env_file='.env',
         env_file_encoding='utf-8',

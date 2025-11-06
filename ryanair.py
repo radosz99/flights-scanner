@@ -32,21 +32,219 @@ Or use Selenium automation (recommended):
 
 import requests
 import time
+import json
 from typing import Optional
+from datetime import datetime
 from ryanair_models import RyanairResponse
 
 # Selenium imports (optional - only needed for automation)
 try:
     from selenium import webdriver
     from selenium.webdriver.chrome.options import Options
+    from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
     SELENIUM_AVAILABLE = True
 except ImportError:
     SELENIUM_AVAILABLE = False
 
+# MongoDB imports (optional - only needed for cookie storage)
+try:
+    from pymongo import MongoClient, DESCENDING
+    from pymongo.errors import PyMongoError
+    MONGODB_AVAILABLE = True
+except ImportError:
+    MONGODB_AVAILABLE = False
 
-def setup_driver():
+# Config import
+try:
+    from config import settings
+    CONFIG_AVAILABLE = True
+except ImportError:
+    CONFIG_AVAILABLE = False
+    class MockSettings:
+        RYANAIR_COOKIE_URL = "https://www.ryanair.com/hr/en/trip/flights/select?adults=1&teens=0&children=0&infants=0&dateOut=2026-03-06&dateIn=2026-03-08&isConnectedFlight=false&discount=0&promoCode=&isReturn=true&originIata=WRO&destinationIata=ALC&tpAdults=1&tpTeens=0&tpChildren=0&tpInfants=0&tpStartDate=2026-03-06&tpEndDate=2026-03-08&tpDiscount=0&tpPromoCode=&tpOriginIata=WRO&tpDestinationIata=ALC"
+        MONGO_HOST = "localhost"
+        MONGO_PORT = 27017
+        MONGO_DATABASE = "flights_scanner"
+        @property
+        def mongo_uri(self):
+            return f"mongodb://{self.MONGO_HOST}:{self.MONGO_PORT}/{self.MONGO_DATABASE}"
+    settings = MockSettings()
+
+
+def save_cookie_to_mongodb(
+    cookie_string: str,
+    mongo_uri: Optional[str] = None
+) -> bool:
+    """
+    Save Ryanair cookie to MongoDB with tracking information.
+
+    Args:
+        cookie_string: Cookie string to save
+        mongo_uri: MongoDB connection URI (uses settings if not provided)
+
+    Returns:
+        True if successful, False otherwise
+    """
+    if not MONGODB_AVAILABLE:
+        print("⚠ MongoDB not available. Cookie not saved.")
+        return False
+
+    try:
+        uri = mongo_uri or settings.mongo_uri
+        client = MongoClient(uri)
+        db = client.get_default_database()
+        cookies_col = db["ryanair_cookies"]
+
+        # Create index
+        cookies_col.create_index([("fetched", DESCENDING)])
+        cookies_col.create_index([("active", DESCENDING)])
+
+        cookie_doc = {
+            "cookie": cookie_string,
+            "active": True,
+            "fetched": datetime.utcnow(),
+            "last_valid_use": None,
+            "last_invalid_use": None,
+        }
+
+        result = cookies_col.insert_one(cookie_doc)
+        client.close()
+
+        print(f"✓ Cookie saved to MongoDB (ID: {result.inserted_id})")
+        return True
+
+    except PyMongoError as e:
+        print(f"✗ MongoDB error: {e}")
+        return False
+    except Exception as e:
+        print(f"✗ Unexpected error: {e}")
+        return False
+
+
+def get_latest_valid_cookie(mongo_uri: Optional[str] = None) -> Optional[str]:
+    """
+    Get the most recently fetched active cookie from MongoDB.
+
+    Args:
+        mongo_uri: MongoDB connection URI (uses settings if not provided)
+
+    Returns:
+        Cookie string or None if not found
+    """
+    if not MONGODB_AVAILABLE:
+        print("⚠ MongoDB not available.")
+        return None
+
+    try:
+        uri = mongo_uri or settings.mongo_uri
+        client = MongoClient(uri)
+        db = client.get_default_database()
+        cookies_col = db["ryanair_cookies"]
+
+        # Find most recent active cookie
+        cookie_doc = cookies_col.find_one(
+            {"active": True},
+            sort=[("fetched", DESCENDING)]
+        )
+
+        client.close()
+
+        if cookie_doc:
+            print(f"✓ Found active cookie (fetched: {cookie_doc['fetched']})")
+            return cookie_doc["cookie"]
+        else:
+            print("⚠ No active cookies found in MongoDB")
+            return None
+
+    except PyMongoError as e:
+        print(f"✗ MongoDB error: {e}")
+        return None
+    except Exception as e:
+        print(f"✗ Unexpected error: {e}")
+        return None
+
+
+def mark_cookie_valid(
+    cookie_string: str,
+    mongo_uri: Optional[str] = None
+) -> bool:
+    """
+    Mark a cookie as having been successfully used.
+
+    Args:
+        cookie_string: Cookie string to mark as valid
+        mongo_uri: MongoDB connection URI (uses settings if not provided)
+
+    Returns:
+        True if successful, False otherwise
+    """
+    if not MONGODB_AVAILABLE:
+        return False
+
+    try:
+        uri = mongo_uri or settings.mongo_uri
+        client = MongoClient(uri)
+        db = client.get_default_database()
+        cookies_col = db["ryanair_cookies"]
+
+        result = cookies_col.update_one(
+            {"cookie": cookie_string},
+            {"$set": {"last_valid_use": datetime.utcnow()}}
+        )
+
+        client.close()
+        return result.modified_count > 0
+
+    except Exception:
+        return False
+
+
+def mark_cookie_invalid(
+    cookie_string: str,
+    mongo_uri: Optional[str] = None
+) -> bool:
+    """
+    Mark a cookie as invalid and deactivate it.
+
+    Args:
+        cookie_string: Cookie string to mark as invalid
+        mongo_uri: MongoDB connection URI (uses settings if not provided)
+
+    Returns:
+        True if successful, False otherwise
+    """
+    if not MONGODB_AVAILABLE:
+        return False
+
+    try:
+        uri = mongo_uri or settings.mongo_uri
+        client = MongoClient(uri)
+        db = client.get_default_database()
+        cookies_col = db["ryanair_cookies"]
+
+        result = cookies_col.update_one(
+            {"cookie": cookie_string},
+            {
+                "$set": {
+                    "last_invalid_use": datetime.utcnow(),
+                    "active": False
+                }
+            }
+        )
+
+        client.close()
+        return result.modified_count > 0
+
+    except Exception:
+        return False
+
+
+def setup_driver(enable_network_capture: bool = False):
     """
     Setup Chrome WebDriver for Selenium automation.
+
+    Args:
+        enable_network_capture: Enable network logging to capture requests
 
     Returns:
         webdriver.Chrome: Configured Chrome driver
@@ -68,58 +266,110 @@ def setup_driver():
     chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
     chrome_options.add_experimental_option('useAutomationExtension', False)
 
+    # Enable performance logging to capture network requests
+    if enable_network_capture:
+        chrome_options.set_capability('goog:loggingPrefs', {'performance': 'ALL'})
+
     driver = webdriver.Chrome(options=chrome_options)
     return driver
 
 
-def extract_cookies_from_ryanair(wait_time: int = 10) -> str:
+def extract_cookies_from_ryanair(wait_time: int = 30, save_to_db: bool = True) -> Optional[str]:
     """
-    Use Selenium to navigate to Ryanair and extract cookies.
+    Use Selenium to navigate to Ryanair flight selection page and extract cookies
+    from the availability API request.
 
     This function:
-    1. Opens Chrome browser
-    2. Navigates to Ryanair website
-    3. Waits for page to load and cookies to be set
-    4. Extracts all cookies
-    5. Returns cookie string for API use
+    1. Opens Chrome browser with network logging enabled
+    2. Navigates to Ryanair flight selection page
+    3. Monitors network requests for availability API call
+    4. Extracts cookies from the availability request header
+    5. Optionally saves to MongoDB for tracking
 
     Args:
-        wait_time: Seconds to wait for page load and cookie generation (default: 10)
+        wait_time: Seconds to wait for availability request (default: 30)
+        save_to_db: Save cookies to MongoDB for tracking (default: True)
 
     Returns:
-        Cookie string formatted for HTTP requests (e.g., "sid=xxx; rid=yyy; ...")
+        Cookie string from availability request or None if not found
 
     Raises:
         ImportError: If selenium is not installed
         Exception: If browser fails to start or navigate
 
     Example:
-        cookies = extract_cookies_from_ryanair(wait_time=15)
-        flights = get_ryanair_flights("WRO", "ALC", "2025-12-11", "2025-12-15", cookies=cookies)
+        cookies = extract_cookies_from_ryanair(wait_time=30, save_to_db=True)
+        if cookies:
+            flights = get_ryanair_flights("WRO", "ALC", "2025-12-11", "2025-12-15", cookies=cookies)
     """
-    print("🌐 Starting Chrome browser...")
-    driver = setup_driver()
+    print("🌐 Starting Chrome browser with network logging...")
+    driver = setup_driver(enable_network_capture=True)
 
     try:
-        print("🔍 Navigating to Ryanair...")
-        driver.get("https://www.ryanair.com")
+        url = settings.RYANAIR_COOKIE_URL
+        print(f"🔍 Navigating to Ryanair flight selection page...")
+        print(f"   URL: {url[:80]}...")
+        driver.get(url)
 
-        # Wait for page to load and cookies to be set
-        print(f"⏳ Waiting {wait_time} seconds for cookies to be set...")
-        time.sleep(wait_time)
+        print(f"⏳ Waiting up to {wait_time} seconds for availability request...")
+        print("   Monitoring network traffic for 'availability' API call...")
 
-        # Extract all cookies
-        selenium_cookies = driver.get_cookies()
-        print(f"✓ Extracted {len(selenium_cookies)} cookies")
+        cookie_string = None
+        start_time = time.time()
 
-        # Format cookies as HTTP Cookie header string
-        cookie_string = "; ".join([f"{cookie['name']}={cookie['value']}" for cookie in selenium_cookies])
+        while time.time() - start_time < wait_time:
+            # Get performance logs
+            logs = driver.get_log('performance')
 
-        print("✓ Cookies extracted successfully")
+            for log in logs:
+                try:
+                    log_entry = json.loads(log['message'])
+                    message = log_entry.get('message', {})
+
+                    # Look for Network.requestWillBeSent events
+                    if message.get('method') == 'Network.requestWillBeSent':
+                        params = message.get('params', {})
+                        request = params.get('request', {})
+                        request_url = request.get('url', '')
+
+                        # Check if this is the availability request
+                        if 'availability' in request_url.lower():
+                            headers = request.get('headers', {})
+                            cookie_header = headers.get('Cookie') or headers.get('cookie')
+
+                            if cookie_header:
+                                cookie_string = cookie_header
+                                print(f"\n✓ Found availability request!")
+                                print(f"   URL: {request_url[:100]}...")
+                                print(f"   Extracted {len(cookie_header)} characters of cookies")
+                                break
+
+                except Exception as e:
+                    # Skip malformed log entries
+                    continue
+
+            if cookie_string:
+                break
+
+            # Small delay to avoid busy waiting
+            time.sleep(0.5)
+
+        if not cookie_string:
+            print(f"\n✗ No availability request found after {wait_time} seconds")
+            print("   The page may not have loaded the flight data.")
+            print("   Try increasing wait_time or check if the URL is correct.")
+            return None
+
+        # Save to MongoDB if requested
+        if save_to_db and MONGODB_AVAILABLE:
+            print("\n💾 Saving cookie to MongoDB...")
+            save_cookie_to_mongodb(cookie_string)
+
+        print("\n✓ Cookie extraction completed successfully")
         return cookie_string
 
     finally:
-        print("🔒 Closing browser...")
+        print("\n🔒 Closing browser...")
         driver.quit()
 
 
@@ -216,12 +466,24 @@ def get_ryanair_flights(
     if cookies:
         headers['Cookie'] = cookies
 
-    response = requests.get(url, params=params, headers=headers)
-    response.raise_for_status()
+    try:
+        response = requests.get(url, params=params, headers=headers)
+        response.raise_for_status()
 
-    # Parse response into Pydantic model
-    data = response.json()
-    ryanair_data = RyanairResponse(**data)
+        # Parse response into Pydantic model
+        data = response.json()
+        ryanair_data = RyanairResponse(**data)
+
+        # Mark cookie as valid if request succeeded
+        if cookies:
+            mark_cookie_valid(cookies)
+
+    except requests.exceptions.HTTPError as e:
+        # If 403, mark cookie as invalid
+        if e.response.status_code == 403 and cookies:
+            print(f"⚠ Cookie returned 403 Forbidden - marking as invalid")
+            mark_cookie_invalid(cookies)
+        raise
 
     return ryanair_data
 
