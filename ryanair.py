@@ -8,24 +8,18 @@ You can either:
 1. Extract cookies manually from browser (see module docstring)
 2. Use Selenium automation to get cookies automatically (recommended)
 
-Required cookies from browser:
-- sid: Session ID
-- rid: Request ID
-- rid.sig: Request signature
-- xid: Transaction ID
-- PIM-SESSION-ID: PIM session
-- RY_COOKIE_CONSENT: Cookie consent
-- _cc: Cookie consent confirmation
+Required cookie from browser:
+- fr-correlation-id: Correlation ID for Ryanair requests
 
 How to extract cookies manually:
 1. Open https://www.ryanair.com in Firefox/Chrome
 2. Open Developer Tools (F12) → Network tab
 3. Search for a flight
-4. Find the GET request to "/api/booking/v4/.../availability"
-5. Copy the Cookie header value
+4. Look through network requests for the "fr-correlation-id" cookie
+5. Copy the cookie value
 
 Or use Selenium automation (recommended):
-- Use extract_cookies_from_ryanair() to get cookies automatically
+- Use extract_cookies_from_ryanair() to get fr-correlation-id cookie automatically
 - Then pass cookies to get_ryanair_flights()
 - Requires selenium and chromedriver
 """
@@ -276,16 +270,16 @@ def setup_driver(enable_network_capture: bool = False):
 
 def extract_cookies_from_ryanair(wait_time: int = 30, save_to_db: bool = True) -> Optional[str]:
     """
-    Use Selenium to navigate to Ryanair flight selection page and extract cookies
-    from network requests, testing each cookie set until finding a valid one.
+    Use Selenium to navigate to Ryanair flight selection page and extract fr-correlation-id cookie
+    from network requests.
 
     This function:
     1. Opens Chrome browser with network logging enabled
     2. Navigates to Ryanair flight selection page
-    3. Monitors network requests for ALL requests with cookies
-    4. Collects cookies from ALL requests with associatedCookies
-    5. Tests each cookie set against the availability endpoint
-    6. Returns the first valid cookie set found
+    3. Monitors ALL network requests for fr-correlation-id cookie
+    4. Extracts the fr-correlation-id cookie value
+    5. Tests it against the availability endpoint
+    6. Returns the validated cookie
     7. Optionally saves to MongoDB for tracking
 
     Args:
@@ -293,7 +287,7 @@ def extract_cookies_from_ryanair(wait_time: int = 30, save_to_db: bool = True) -
         save_to_db: Save cookies to MongoDB for tracking (default: True)
 
     Returns:
-        Valid cookie string or None if no valid cookies found
+        Valid fr-correlation-id cookie string or None if not found
 
     Raises:
         ImportError: If selenium is not installed
@@ -313,11 +307,12 @@ def extract_cookies_from_ryanair(wait_time: int = 30, save_to_db: bool = True) -
         print(f"   URL: {url[:80]}...")
         driver.get(url)
 
-        print(f"⏳ Waiting up to {wait_time} seconds to collect all cookie sets...")
-        print("   Monitoring network traffic for requests with cookies...")
+        print(f"⏳ Waiting up to {wait_time} seconds to find fr-correlation-id cookie...")
+        print("   Monitoring ALL network requests for fr-correlation-id cookie...")
 
-        all_cookie_sets = []
+        fr_correlation_id = None
         start_time = time.time()
+        checked_requests = 0
 
         while time.time() - start_time < wait_time:
             # Get performance logs
@@ -332,87 +327,81 @@ def extract_cookies_from_ryanair(wait_time: int = 30, save_to_db: bool = True) -
                     if message.get('method') == 'Network.requestWillBeSentExtraInfo':
                         params = message.get('params', {})
                         associated_cookies = params.get('associatedCookies', [])
+                        request_url = params.get('headers', {}).get('Referer', 'unknown')
 
-                        # Check if this request has cookies
+                        # Check if this request has the fr-correlation-id cookie
                         if associated_cookies:
-                            # Build cookie string from associatedCookies
-                            cookies_list = []
+                            checked_requests += 1
                             for cookie_data in associated_cookies:
                                 cookie = cookie_data.get('cookie', {})
                                 cookie_name = cookie.get('name')
                                 cookie_value = cookie.get('value')
-                                if cookie_name and cookie_value:
-                                    cookies_list.append(f"{cookie_name}={cookie_value}")
 
-                            if cookies_list:
-                                cookie_string = "; ".join(cookies_list)
-                                # Only add unique cookie sets
-                                if cookie_string not in all_cookie_sets:
-                                    all_cookie_sets.append(cookie_string)
-                                    print(f"\n✓ Found cookie set #{len(all_cookie_sets)}")
-                                    print(f"   {len(associated_cookies)} cookies, {len(cookie_string)} characters")
+                                if cookie_name == 'fr-correlation-id' and cookie_value:
+                                    fr_correlation_id = cookie_value
+                                    print(f"\n✓ Found fr-correlation-id cookie!")
+                                    print(f"   Value: {fr_correlation_id}")
+                                    print(f"   Found in request after checking {checked_requests} requests")
+                                    break
+
+                            if fr_correlation_id:
+                                break
 
                 except Exception as e:
                     # Skip malformed log entries
                     continue
 
+            if fr_correlation_id:
+                break
+
             # Small delay to avoid busy waiting
             time.sleep(0.5)
 
-        if not all_cookie_sets:
-            print(f"\n✗ No cookie sets found after {wait_time} seconds")
-            print("   The page may not have loaded properly.")
-            print("   Try increasing wait_time or check if the URL is correct.")
+        if not fr_correlation_id:
+            print(f"\n✗ fr-correlation-id cookie not found after {wait_time} seconds")
+            print(f"   Checked {checked_requests} network requests")
+            print("   The page may not have loaded properly or the cookie name might be different.")
+            print("   Try increasing wait_time or verify the cookie name.")
             return None
 
         print(f"\n{'='*80}")
-        print(f"✓ Collected {len(all_cookie_sets)} unique cookie sets")
+        print(f"✓ Found fr-correlation-id cookie: {fr_correlation_id}")
         print(f"{'='*80}")
-        print("\n🧪 Testing each cookie set to find a valid one...")
+        print("\n🧪 Testing cookie validity with API request...")
 
-        # Test each cookie set
-        for idx, cookie_string in enumerate(all_cookie_sets, 1):
+        # Build cookie string with fr-correlation-id
+        cookie_string = f"fr-correlation-id={fr_correlation_id}"
+
+        try:
+            test_flights = get_ryanair_flights(
+                origin="WRO",
+                destination="ALC",
+                date_out="2026-03-06",
+                date_in="2026-03-08",
+                adt=1,
+                cookies=cookie_string
+            )
+            print(f"\n{'🎉'*40}")
+            print(f"✓ FR-CORRELATION-ID COOKIE IS VALID!")
+            print(f"{'🎉'*40}")
+            print(f"Successfully fetched {len(test_flights.trips)} trips")
+            print(f"Currency: {test_flights.currency}")
+
+            # Save to MongoDB if requested
+            if save_to_db and MONGODB_AVAILABLE:
+                print("\n💾 Saving validated cookie to MongoDB...")
+                save_cookie_to_mongodb(cookie_string)
+
+            print("\n✓ Cookie extraction and validation completed successfully")
+            return cookie_string
+
+        except Exception as e:
             print(f"\n{'='*80}")
-            print(f"Testing cookie set {idx}/{len(all_cookie_sets)}")
+            print(f"✗ FR-CORRELATION-ID COOKIE IS INVALID")
             print(f"{'='*80}")
-            print(f"Cookie preview: {cookie_string[:80]}...")
-            print(f"Cookie length: {len(cookie_string)} characters")
-
-            try:
-                test_flights = get_ryanair_flights(
-                    origin="WRO",
-                    destination="ALC",
-                    date_out="2026-03-06",
-                    date_in="2026-03-08",
-                    adt=1,
-                    cookies=cookie_string
-                )
-                print(f"\n{'🎉'*40}")
-                print(f"✓ COOKIE SET #{idx} IS VALID!")
-                print(f"{'🎉'*40}")
-                print(f"Successfully fetched {len(test_flights.trips)} trips")
-
-                # Save to MongoDB if requested
-                if save_to_db and MONGODB_AVAILABLE:
-                    print("\n💾 Saving validated cookie to MongoDB...")
-                    save_cookie_to_mongodb(cookie_string)
-
-                print("\n✓ Cookie extraction and validation completed successfully")
-                return cookie_string
-
-            except Exception as e:
-                print(f"\n✗ Cookie set #{idx} is INVALID")
-                print(f"   Error: {str(e)[:100]}")
-                print(f"   Continuing to next cookie set...")
-                continue
-
-        # No valid cookies found
-        print(f"\n{'='*80}")
-        print(f"✗ NO VALID COOKIES FOUND")
-        print(f"{'='*80}")
-        print(f"Tested all {len(all_cookie_sets)} cookie sets - none are valid")
-        print("The cookies may have expired during collection.")
-        return None
+            print(f"Error: {str(e)[:200]}")
+            print("The cookie may have expired or might not be sufficient alone.")
+            return None
 
     finally:
         print("\n🔒 Closing browser...")
