@@ -18,23 +18,62 @@ import time
 
 
 class WizzAirAPI:
-    """Wizz Air API client."""
+    """
+    Wizz Air API client.
+
+    Note: Wizz Air uses bot protection (Kasada SDK + Akamai Bot Manager).
+    To successfully make requests, you need to extract headers and cookies
+    from a real browser session.
+
+    Required bot protection headers:
+    - X-RequestVerificationToken: Anti-CSRF token
+    - x-kpsdk-ct: Kasada SDK challenge token
+    - x-kpsdk-cd: Kasada SDK challenge data
+    - x-kpsdk-v: Kasada SDK version
+    - x-kpsdk-h: Kasada SDK hash
+
+    Required cookies:
+    - RequestVerificationToken: Must match X-RequestVerificationToken header
+    - ak_bm_vw_1.1: Akamai Bot Manager session
+    - ASP.NET_SessionId: ASP.NET session ID
+    - OptanonConsent: Cookie consent data
+    """
 
     BASE_URL = "https://be.wizzair.com/27.35.0/Api"
 
     # Default headers for API requests
     DEFAULT_HEADERS = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:144.0) Gecko/20100101 Firefox/144.0',
         'Accept': 'application/json, text/plain, */*',
-        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept-Language': 'en-US,en;q=0.5',
+        'Accept-Encoding': 'gzip, deflate, br, zstd',
         'Content-Type': 'application/json',
-        'Origin': 'https://wizzair.com',
-        'Referer': 'https://wizzair.com/',
+        'Origin': 'https://www.wizzair.com',
+        'Referer': 'https://www.wizzair.com/',
+        'Sec-Fetch-Dest': 'empty',
+        'Sec-Fetch-Mode': 'cors',
+        'Sec-Fetch-Site': 'same-site',
     }
 
-    def __init__(self):
+    def __init__(self, custom_headers: Optional[Dict[str, str]] = None,
+                 cookies: Optional[Dict[str, str]] = None):
+        """
+        Initialize Wizz Air API client.
+
+        Args:
+            custom_headers: Additional headers to include (e.g., bot protection headers)
+            cookies: Cookies to include in requests (e.g., session cookies)
+        """
         self.session = requests.Session()
         self.session.headers.update(self.DEFAULT_HEADERS)
+
+        # Add custom headers if provided (e.g., bot protection headers)
+        if custom_headers:
+            self.session.headers.update(custom_headers)
+
+        # Add cookies if provided
+        if cookies:
+            self.session.cookies.update(cookies)
 
     def get_flight_dates(
         self,

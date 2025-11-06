@@ -67,15 +67,71 @@ for trip in flights_data.trips:
 
 ### Wizz Air Flight Search
 
-**Note:** The Wizz Air API currently blocks automated requests (403 Forbidden). The code structure is complete and tested with sample data.
+**Note:** Wizz Air uses bot protection (Kasada SDK + Akamai Bot Manager) that blocks automated requests. There are two approaches:
 
-To test the parsing logic with sample data:
+#### Approach 1: Use Browser-Extracted Headers (Quick but Temporary)
+
+Extract headers and cookies from a real browser session:
+
+```python
+from wizz_air import WizzAirAPI
+
+# Headers extracted from browser DevTools
+bot_protection_headers = {
+    'X-RequestVerificationToken': 'YOUR_TOKEN',
+    'x-kpsdk-ct': 'YOUR_KASADA_TOKEN',
+    'x-kpsdk-cd': 'YOUR_KASADA_DATA',
+    'x-kpsdk-v': 'j-1.1.29259',
+    'x-kpsdk-h': 'YOUR_KASADA_HASH',
+}
+
+cookies = {
+    'RequestVerificationToken': 'YOUR_TOKEN',
+    'ak_bm_vw_1.1': 'YOUR_AKAMAI_SESSION',
+    'ASP.NET_SessionId': 'YOUR_SESSION_ID',
+}
+
+# Initialize with extracted headers
+api = WizzAirAPI(
+    custom_headers=bot_protection_headers,
+    cookies=cookies
+)
+
+# Now use normally
+flight_dates = api.get_flight_dates("WRO", "NCE", "2025-12-13", "2026-01-13")
+```
+
+See `wizz_air_browser_headers.py` for detailed instructions on extracting headers.
+
+⚠️ **Warning**: Headers expire quickly (minutes to hours) and this may violate Terms of Service.
+
+#### Approach 2: Browser Automation (Recommended for Production)
+
+Use Selenium/Playwright to run a real browser:
+
+```python
+import undetected_chromedriver as uc
+import time
+
+# Launch undetected Chrome
+driver = uc.Chrome()
+driver.get('https://www.wizzair.com')
+time.sleep(5)  # Let bot protection initialize
+
+# Extract cookies and use with requests
+cookies = {c['name']: c['value'] for c in driver.get_cookies()}
+# Use cookies with WizzAirAPI...
+```
+
+#### Testing with Sample Data
+
+To test the parsing logic without API access:
 
 ```bash
 python3 test_wizz_air.py
 ```
 
-Example usage (when API access is available):
+Example usage (with valid headers/cookies or browser automation):
 
 ```python
 from wizz_air import WizzAirAPI
@@ -188,8 +244,9 @@ print(f"{airport.code}: {airport.name} (ID: {airport.airport_id})")
 
 - `main.py` - Ryanair API integration and main entry point
 - `models.py` - Pydantic models for Ryanair API responses
-- `wizz_air.py` - Wizz Air API integration module
+- `wizz_air.py` - Wizz Air API integration module with bot protection support
 - `wizz_air_models.py` - Pydantic models for Wizz Air API responses
+- `wizz_air_browser_headers.py` - Helper script for using browser-extracted headers
 - `test_wizz_air.py` - Test script for Wizz Air with sample data
 - `flight_connector.py` - FlightConnections data scraper
 - `test_flight_connector.py` - Test script for FlightConnections with sample data
@@ -254,18 +311,34 @@ Total airports in database: 12
 
 ## Known Limitations
 
-1. **Wizz Air API Access**: The API currently blocks automated requests (403 Forbidden). For production use, consider:
-   - Browser automation tools (Selenium/Playwright)
-   - Proxy services
-   - Official API access if available
+1. **Wizz Air Bot Protection**:
+   - Uses Kasada SDK + Akamai Bot Manager for bot detection
+   - Blocks automated requests with 403 Forbidden
+   - Headers include: `x-kpsdk-*` (Kasada), `X-RequestVerificationToken` (CSRF)
+   - Solutions:
+     - Extract headers from browser session (temporary, expires in minutes/hours)
+     - Use browser automation (Selenium with undetected-chromedriver)
+     - Consider official API access if available
+   - **Warning**: Bypassing bot protection may violate Terms of Service
 
-2. **FlightConnections CDN Access**: The CDN currently blocks automated requests. Alternative solutions are needed for live data access.
+2. **FlightConnections CDN Access**:
+   - CDN blocks automated requests with 403 Forbidden
+   - Alternative solutions needed for live data access
+   - Code structure complete and tested with sample data
 
-3. **Rate Limiting**: Be mindful of API rate limits when making multiple requests to Ryanair.
+3. **Rate Limiting**:
+   - Be mindful of API rate limits when making multiple requests
+   - Implement delays between requests to avoid triggering bot detection
+   - Wizz Air: Use `max_workers` parameter to control parallel request count
 
 4. **Date Formats**:
-   - Ryanair API requires dates in YYYY-MM-DD format
-   - Wizz Air API requires dates in YYYY-MM-DDTHH:MM:SS format
+   - Ryanair API: YYYY-MM-DD format (e.g., "2025-12-11")
+   - Wizz Air API: YYYY-MM-DDTHH:MM:SS format (e.g., "2025-12-11T00:00:00")
+
+5. **Header/Cookie Expiration**:
+   - Browser-extracted headers expire quickly (typically minutes to hours)
+   - Need to refresh headers periodically for continued access
+   - Browser automation provides more stable long-term solution
 
 ## License
 
