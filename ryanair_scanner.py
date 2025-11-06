@@ -30,14 +30,15 @@ import sys
 SCAN_INTERVAL_HOURS = 1
 
 # Date range configuration
-DATE_RANGE_DAYS_FROM_NOW = 30  # Outbound flight X days from now
-TRIP_DURATION_DAYS = 2  # How many days for the trip
+TRIP_DURATION_DAYS = 4  # How many days between date_out and date_in
+SCAN_UNTIL_DATE = "2025-12-31"  # Scan all date ranges until this date
 
 # Departure airports to scan
 DEPARTURE_AIRPORTS = ["WRO"]
 
-# MongoDB collection name for flight records
+# MongoDB collection names
 FLIGHTS_COLLECTION = "ryanair_flights"
+SCAN_ITERATIONS_COLLECTION = "scan_iterations"
 
 # ============================================================================
 # MONGODB FLIGHT STORAGE
@@ -160,6 +161,147 @@ class FlightStorage:
             "total_flights": total_flights,
             "flights_with_price_changes": flights_with_changes,
             "collection": self.collection.name
+        }
+
+
+class ScanIterationManager:
+    """Manages scan iterations and enforces scan interval rules."""
+
+    def __init__(self, mongo_uri: str, database_name: str, collection_name: str):
+        """Initialize MongoDB connection for scan iterations."""
+        self.client = MongoClient(mongo_uri)
+        self.db = self.client[database_name]
+        self.collection = self.db[collection_name]
+        self._create_indexes()
+
+    def _create_indexes(self):
+        """Create indexes for efficient querying."""
+        self.collection.create_index("start_time", unique=False)
+        self.collection.create_index("status", unique=False)
+        logger.info(f"Created indexes on collection: {self.collection.name}")
+
+    def can_start_scan(self, scan_interval_hours: int) -> tuple[bool, Optional[str]]:
+        """
+        Check if enough time has passed since last scan to start a new one.
+
+        Args:
+            scan_interval_hours: Minimum hours between scans
+
+        Returns:
+            Tuple of (can_start, reason_if_cannot)
+        """
+        # Find the most recent completed scan
+        last_scan = self.collection.find_one(
+            {"status": "completed"},
+            sort=[("start_time", -1)]
+        )
+
+        if not last_scan:
+            # No previous scans, can start
+            return True, None
+
+        last_scan_time = last_scan.get("start_time")
+        if not last_scan_time:
+            return True, None
+
+        time_since_last = datetime.now() - last_scan_time
+        hours_since_last = time_since_last.total_seconds() / 3600
+
+        if hours_since_last < scan_interval_hours:
+            time_remaining = scan_interval_hours - hours_since_last
+            return False, f"Last scan was {hours_since_last:.1f} hours ago. Wait {time_remaining:.1f} more hours."
+
+        return True, None
+
+    def start_scan(self, config: Dict[str, Any]) -> str:
+        """
+        Record the start of a new scan iteration.
+
+        Args:
+            config: Configuration used for this scan
+
+        Returns:
+            Scan iteration ID
+        """
+        scan_doc = {
+            "start_time": datetime.now(),
+            "status": "running",
+            "config": config,
+            "date_ranges": [],
+            "stats": {
+                "total_routes": 0,
+                "successful_queries": 0,
+                "failed_queries": 0,
+                "flights_saved": 0
+            }
+        }
+        result = self.collection.insert_one(scan_doc)
+        logger.success(f"Started scan iteration: {result.inserted_id}")
+        return str(result.inserted_id)
+
+    def add_date_range_result(self, scan_id: str, date_out: str, date_in: str, stats: Dict[str, Any]):
+        """
+        Add results from scanning a specific date range.
+
+        Args:
+            scan_id: Scan iteration ID
+            date_out: Outbound date
+            date_in: Return date
+            stats: Statistics from this date range scan
+        """
+        from bson import ObjectId
+        self.collection.update_one(
+            {"_id": ObjectId(scan_id)},
+            {
+                "$push": {
+                    "date_ranges": {
+                        "date_out": date_out,
+                        "date_in": date_in,
+                        "timestamp": datetime.now(),
+                        "stats": stats
+                    }
+                },
+                "$inc": {
+                    "stats.total_routes": stats.get("total_routes", 0),
+                    "stats.successful_queries": stats.get("successful_queries", 0),
+                    "stats.failed_queries": stats.get("failed_queries", 0),
+                    "stats.flights_saved": stats.get("flights_saved", 0)
+                }
+            }
+        )
+
+    def complete_scan(self, scan_id: str, success: bool = True):
+        """
+        Mark a scan iteration as completed.
+
+        Args:
+            scan_id: Scan iteration ID
+            success: Whether the scan completed successfully
+        """
+        from bson import ObjectId
+        self.collection.update_one(
+            {"_id": ObjectId(scan_id)},
+            {
+                "$set": {
+                    "end_time": datetime.now(),
+                    "status": "completed" if success else "failed"
+                }
+            }
+        )
+        logger.success(f"Scan iteration completed: {scan_id}")
+
+    def get_scan_stats(self) -> Dict[str, Any]:
+        """Get statistics about all scan iterations."""
+        total_scans = self.collection.count_documents({})
+        completed_scans = self.collection.count_documents({"status": "completed"})
+        failed_scans = self.collection.count_documents({"status": "failed"})
+        running_scans = self.collection.count_documents({"status": "running"})
+
+        return {
+            "total_scans": total_scans,
+            "completed_scans": completed_scans,
+            "failed_scans": failed_scans,
+            "running_scans": running_scans
         }
 
 
@@ -352,6 +494,34 @@ def scan_flights(
     return stats
 
 
+def generate_date_ranges(start_date: datetime, end_date: datetime, trip_duration_days: int) -> List[tuple[str, str]]:
+    """
+    Generate date ranges from start_date to end_date.
+
+    Args:
+        start_date: Starting date (typically today)
+        end_date: Maximum date to scan until
+        trip_duration_days: Number of days between date_out and date_in
+
+    Returns:
+        List of tuples [(date_out, date_in), ...]
+    """
+    date_ranges = []
+    current_date_out = start_date
+
+    while current_date_out.date() <= end_date.date():
+        date_out_str = current_date_out.strftime("%Y-%m-%d")
+        current_date_in = current_date_out + timedelta(days=trip_duration_days)
+        date_in_str = current_date_in.strftime("%Y-%m-%d")
+
+        date_ranges.append((date_out_str, date_in_str))
+
+        # Move to next date range: date_out becomes current date_in
+        current_date_out = current_date_in
+
+    return date_ranges
+
+
 def main():
     """Main entry point for the Ryanair scanner."""
     logger.info("=" * 80)
@@ -359,8 +529,22 @@ def main():
     logger.info("=" * 80)
     logger.info(f"Scan interval: {SCAN_INTERVAL_HOURS} hour(s)")
     logger.info(f"Departure airports: {', '.join(DEPARTURE_AIRPORTS)}")
-    logger.info(f"Date range: {DATE_RANGE_DAYS_FROM_NOW} days from now, {TRIP_DURATION_DAYS} day trip")
+    logger.info(f"Trip duration: {TRIP_DURATION_DAYS} days")
+    logger.info(f"Scan until date: {SCAN_UNTIL_DATE}")
     logger.info("=" * 80)
+
+    # Check if enough time has passed since last scan
+    scan_manager = ScanIterationManager(
+        settings.mongo_uri,
+        settings.MONGO_DATABASE,
+        SCAN_ITERATIONS_COLLECTION
+    )
+
+    can_start, reason = scan_manager.can_start_scan(SCAN_INTERVAL_HOURS)
+    if not can_start:
+        logger.warning(f"Cannot start scan: {reason}")
+        logger.info("Scan skipped due to interval restriction.")
+        return True  # Not an error, just skipped
 
     # Get valid cookie
     logger.info("Getting valid cookie...")
@@ -374,45 +558,97 @@ def main():
         logger.warning("  - Internet connection is available")
         return False
 
-    # Calculate date range
-    date_out = datetime.now() + timedelta(days=DATE_RANGE_DAYS_FROM_NOW)
-    date_in = date_out + timedelta(days=TRIP_DURATION_DAYS)
+    # Generate all date ranges
+    today = datetime.now()
+    scan_until = datetime.strptime(SCAN_UNTIL_DATE, "%Y-%m-%d")
+    date_ranges = generate_date_ranges(today, scan_until, TRIP_DURATION_DAYS)
 
-    date_out_str = date_out.strftime("%Y-%m-%d")
-    date_in_str = date_in.strftime("%Y-%m-%d")
-
-    logger.info(f"Scanning flights: {date_out_str} to {date_in_str}")
+    logger.info(f"Generated {len(date_ranges)} date ranges to scan")
+    logger.info(f"First range: {date_ranges[0][0]} to {date_ranges[0][1]}")
+    logger.info(f"Last range: {date_ranges[-1][0]} to {date_ranges[-1][1]}")
     logger.info("=" * 80)
 
-    # Run scan
-    scan_start = datetime.now()
-    stats = scan_flights(DEPARTURE_AIRPORTS, date_out_str, date_in_str, cookie)
-    scan_duration = (datetime.now() - scan_start).total_seconds()
+    # Start scan iteration
+    config = {
+        "scan_interval_hours": SCAN_INTERVAL_HOURS,
+        "trip_duration_days": TRIP_DURATION_DAYS,
+        "scan_until_date": SCAN_UNTIL_DATE,
+        "departure_airports": DEPARTURE_AIRPORTS,
+        "total_date_ranges": len(date_ranges)
+    }
+    scan_id = scan_manager.start_scan(config)
 
-    # Display results
-    logger.info("=" * 80)
-    logger.success("SCAN COMPLETED!")
-    logger.info("=" * 80)
-    logger.info(f"Duration: {scan_duration:.1f} seconds")
-    logger.info(f"Total routes scanned: {stats.get('total_routes', 0)}")
-    logger.success(f"Successful queries: {stats.get('successful_queries', 0)}")
-    logger.info(f"Flights saved/updated: {stats.get('flights_saved', 0)}")
+    # Run scan for each date range
+    overall_start = datetime.now()
+    total_stats = {
+        "total_routes": 0,
+        "successful_queries": 0,
+        "failed_queries": 0,
+        "flights_saved": 0
+    }
 
-    if stats.get("failed_queries", 0) > 0:
-        logger.warning(f"Failed queries: {stats['failed_queries']}")
+    try:
+        for idx, (date_out_str, date_in_str) in enumerate(date_ranges, 1):
+            logger.info("=" * 80)
+            logger.info(f"DATE RANGE {idx}/{len(date_ranges)}: {date_out_str} to {date_in_str}")
+            logger.info("=" * 80)
 
-    # Get storage statistics
-    storage = FlightStorage(settings.mongo_uri, settings.MONGO_DATABASE, FLIGHTS_COLLECTION)
-    db_stats = storage.get_flight_stats()
+            range_start = datetime.now()
+            stats = scan_flights(DEPARTURE_AIRPORTS, date_out_str, date_in_str, cookie)
+            range_duration = (datetime.now() - range_start).total_seconds()
 
-    logger.info("=" * 80)
-    logger.info("DATABASE STATISTICS")
-    logger.info("=" * 80)
-    logger.info(f"Total flights in database: {db_stats['total_flights']}")
-    logger.info(f"Flights with price changes: {db_stats['flights_with_price_changes']}")
-    logger.info("=" * 80)
+            # Update totals
+            for key in total_stats:
+                total_stats[key] += stats.get(key, 0)
 
-    return True
+            # Record this date range result
+            scan_manager.add_date_range_result(scan_id, date_out_str, date_in_str, stats)
+
+            logger.info(f"Range completed in {range_duration:.1f}s: {stats.get('successful_queries', 0)} successful, {stats.get('failed_queries', 0)} failed")
+
+        # Mark scan as completed
+        scan_manager.complete_scan(scan_id, success=True)
+        overall_duration = (datetime.now() - overall_start).total_seconds()
+
+        # Display final results
+        logger.info("=" * 80)
+        logger.success("FULL SCAN COMPLETED!")
+        logger.info("=" * 80)
+        logger.info(f"Total duration: {overall_duration:.1f} seconds ({overall_duration/60:.1f} minutes)")
+        logger.info(f"Date ranges scanned: {len(date_ranges)}")
+        logger.info(f"Total routes scanned: {total_stats['total_routes']}")
+        logger.success(f"Successful queries: {total_stats['successful_queries']}")
+        logger.info(f"Flights saved/updated: {total_stats['flights_saved']}")
+
+        if total_stats['failed_queries'] > 0:
+            logger.warning(f"Failed queries: {total_stats['failed_queries']}")
+
+        # Get storage statistics
+        storage = FlightStorage(settings.mongo_uri, settings.MONGO_DATABASE, FLIGHTS_COLLECTION)
+        db_stats = storage.get_flight_stats()
+
+        logger.info("=" * 80)
+        logger.info("DATABASE STATISTICS")
+        logger.info("=" * 80)
+        logger.info(f"Total flights in database: {db_stats['total_flights']}")
+        logger.info(f"Flights with price changes: {db_stats['flights_with_price_changes']}")
+
+        # Get scan iteration statistics
+        iteration_stats = scan_manager.get_scan_stats()
+        logger.info("=" * 80)
+        logger.info("SCAN ITERATION STATISTICS")
+        logger.info("=" * 80)
+        logger.info(f"Total scans: {iteration_stats['total_scans']}")
+        logger.info(f"Completed scans: {iteration_stats['completed_scans']}")
+        logger.info(f"Failed scans: {iteration_stats['failed_scans']}")
+        logger.info("=" * 80)
+
+        return True
+
+    except Exception as e:
+        logger.error(f"Scan failed with error: {e}")
+        scan_manager.complete_scan(scan_id, success=False)
+        return False
 
 
 if __name__ == "__main__":
