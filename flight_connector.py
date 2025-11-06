@@ -46,11 +46,38 @@ class FlightConnectionsDatabase(BaseModel):
     """Database of all airports and their connections."""
     airports: Dict[str, Airport] = Field(default_factory=dict)
     airports_by_id: Dict[int, str] = Field(default_factory=dict)
+    connections: Dict[str, Set[str]] = Field(default_factory=dict)  # airport_code -> set of connected airport codes
 
     def add_airport(self, airport: Airport):
         """Add an airport to the database."""
         self.airports[airport.code] = airport
         self.airports_by_id[airport.airport_id] = airport.code
+        # Initialize empty connections set for this airport
+        if airport.code not in self.connections:
+            self.connections[airport.code] = set()
+
+    def add_connection(self, from_code: str, to_code: str):
+        """
+        Add a flight connection between two airports.
+
+        Args:
+            from_code: Origin airport code
+            to_code: Destination airport code
+        """
+        if from_code not in self.connections:
+            self.connections[from_code] = set()
+        self.connections[from_code].add(to_code)
+
+    def add_bidirectional_connection(self, code1: str, code2: str):
+        """
+        Add a bidirectional flight connection between two airports.
+
+        Args:
+            code1: First airport code
+            code2: Second airport code
+        """
+        self.add_connection(code1, code2)
+        self.add_connection(code2, code1)
 
     def get_airport_by_code(self, code: str) -> Optional[Airport]:
         """Get airport by its IATA code."""
@@ -64,6 +91,88 @@ class FlightConnectionsDatabase(BaseModel):
     def get_all_airports(self) -> List[Airport]:
         """Get all airports sorted by code."""
         return sorted(self.airports.values(), key=lambda x: x.code)
+
+    def get_all_airports_dict(self) -> Dict[str, str]:
+        """
+        Get all airports as a dictionary mapping code to city/airport name.
+
+        Returns:
+            Dictionary with airport codes as keys and airport names as values
+            Example: {"JFK": "New York", "LAX": "Los Angeles", ...}
+        """
+        return {code: airport.name for code, airport in self.airports.items()}
+
+    def get_connections_from(self, airport_code: str) -> List[str]:
+        """
+        Get all destination airports that have flights from the given airport.
+
+        Args:
+            airport_code: IATA code of the origin airport
+
+        Returns:
+            List of destination airport codes that can be reached from this airport
+            Returns empty list if airport not found or has no connections
+        """
+        return sorted(list(self.connections.get(airport_code, set())))
+
+    def get_connections_from_with_names(self, airport_code: str) -> List[Dict[str, str]]:
+        """
+        Get all destinations from an airport with full airport information.
+
+        Args:
+            airport_code: IATA code of the origin airport
+
+        Returns:
+            List of dictionaries with destination info:
+            [{"code": "LAX", "name": "Los Angeles"}, ...]
+        """
+        connections = self.get_connections_from(airport_code)
+        result = []
+        for dest_code in connections:
+            airport = self.get_airport_by_code(dest_code)
+            if airport:
+                result.append({
+                    "code": dest_code,
+                    "name": airport.name
+                })
+        return result
+
+    def get_connection_count(self, airport_code: str) -> int:
+        """
+        Get the number of destinations from an airport.
+
+        Args:
+            airport_code: IATA code of the airport
+
+        Returns:
+            Number of destinations reachable from this airport
+        """
+        return len(self.connections.get(airport_code, set()))
+
+    def get_airports_by_connection_count(self, limit: Optional[int] = None) -> List[Dict[str, any]]:
+        """
+        Get airports sorted by number of connections (most connected first).
+
+        Args:
+            limit: Optional limit on number of results
+
+        Returns:
+            List of dictionaries with airport info and connection counts
+        """
+        results = []
+        for code, airport in self.airports.items():
+            results.append({
+                "code": code,
+                "name": airport.name,
+                "connections": self.get_connection_count(code)
+            })
+
+        # Sort by connection count descending
+        results.sort(key=lambda x: x["connections"], reverse=True)
+
+        if limit:
+            return results[:limit]
+        return results
 
 
 def fetch_tile(n: int, m: int) -> Optional[TileData]:

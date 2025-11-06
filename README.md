@@ -29,6 +29,11 @@ A Python application for fetching and analyzing flight data from Ryanair, Wizz A
   - Size/importance indicators
 - Build a comprehensive airport database
 - Lookup airports by code or ID
+- **NEW**: Manage flight connections/routes between airports:
+  - Get all airports as {code: city} dictionary
+  - Get all destinations from a specific airport
+  - Track and query flight routes/connections
+  - Find major airport hubs by connection count
 
 ## Installation
 
@@ -215,12 +220,42 @@ from flight_connector import build_airport_database
 # Build the airport database
 database = build_airport_database()
 
-# Get all airports
-airports = database.get_all_airports()
+# 1. Get all airports as a dictionary {code: name}
+all_airports = database.get_all_airports_dict()
+print(f"Total airports: {len(all_airports)}")
+# Output: {"JFK": "New York", "LAX": "Los Angeles", ...}
 
-# Lookup specific airport
+# 2. Get all airports as Airport objects
+airports = database.get_all_airports()
+for airport in airports[:5]:
+    print(f"{airport.code}: {airport.name}")
+
+# 3. Lookup specific airport
 airport = database.get_airport_by_code("LAX")
 print(f"{airport.code}: {airport.name} (ID: {airport.airport_id})")
+
+# 4. Add connections between airports
+database.add_connection("JFK", "LAX")  # One-way
+database.add_bidirectional_connection("LAX", "ORD")  # Both ways
+
+# 5. Get all flights/connections from an airport
+connections = database.get_connections_from("JFK")
+print(f"Destinations from JFK: {connections}")
+# Output: ['LAX', 'ORD', ...]
+
+# 6. Get connections with full airport names
+connections_detailed = database.get_connections_from_with_names("JFK")
+for conn in connections_detailed:
+    print(f"  → {conn['code']}: {conn['name']}")
+
+# 7. Get connection statistics
+count = database.get_connection_count("JFK")
+print(f"JFK has {count} destinations")
+
+# 8. Find most connected airports
+top_hubs = database.get_airports_by_connection_count(limit=10)
+for hub in top_hubs:
+    print(f"{hub['code']} ({hub['name']}): {hub['connections']} destinations")
 ```
 
 ## Data Models
@@ -245,8 +280,21 @@ print(f"{airport.code}: {airport.name} (ID: {airport.airport_id})")
 ### FlightConnections Models (`flight_connector.py`)
 - `AirportGeometry`: Raw airport data from tiles
 - `Airport`: Parsed airport information
-- `FlightConnectionsDatabase`: Airport database with lookup functions
+- `FlightConnectionsDatabase`: Airport database with:
+  - Airport storage and lookup by code/ID
+  - Connection/route management
+  - Functions to query destinations from airports
+  - Statistics on most connected airports
 - `TileData`: Tile JSON structure
+
+**Key FlightConnectionsDatabase Methods**:
+- `get_all_airports_dict()`: Get {code: name} dictionary
+- `get_connections_from(code)`: Get all destinations from an airport
+- `get_connections_from_with_names(code)`: Get destinations with full info
+- `add_connection(from, to)`: Add one-way flight route
+- `add_bidirectional_connection(a, b)`: Add round-trip route
+- `get_connection_count(code)`: Count destinations from airport
+- `get_airports_by_connection_count(limit)`: Find major hubs
 
 ## Files
 
@@ -315,6 +363,27 @@ Parsed Airports:
   ...
 
 Total airports in database: 12
+
+Testing Airport Connections:
+1. Get all airports as dictionary:
+  ATL: Atlanta
+  DFW: Dallas
+  JFK: New York
+  LAX: Los Angeles
+  ORD: Chicago
+
+2. Get connections from JFK:
+  Airport codes: ['ATL', 'LAX', 'ORD']
+
+3. Get connections from JFK with names:
+  ATL: Atlanta
+  LAX: Los Angeles
+  ORD: Chicago
+
+4. Get airports by connection count (top 3):
+  JFK (New York): 3 connections
+  LAX (Los Angeles): 3 connections
+  ORD (Chicago): 3 connections
 ```
 
 ## Known Limitations

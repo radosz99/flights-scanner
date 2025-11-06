@@ -86,5 +86,82 @@ def test_with_sample_data():
     return database
 
 
+def test_airport_connections():
+    """Test the connections functionality."""
+    print("\n\nTesting Airport Connections")
+    print("=" * 60)
+
+    # Create a database with sample airports
+    database = FlightConnectionsDatabase()
+
+    # Add sample airports
+    airports_data = [
+        {"code": "JFK", "name": "New York", "id": 1001, "coords": [100, 200]},
+        {"code": "LAX", "name": "Los Angeles", "id": 1002, "coords": [50, 250]},
+        {"code": "ORD", "name": "Chicago", "id": 1003, "coords": [120, 180]},
+        {"code": "DFW", "name": "Dallas", "id": 1004, "coords": [110, 220]},
+        {"code": "ATL", "name": "Atlanta", "id": 1005, "coords": [130, 210]},
+    ]
+
+    for apt_data in airports_data:
+        airport = Airport(
+            code=apt_data["code"],
+            name=apt_data["name"],
+            airport_id=apt_data["id"],
+            size=4,
+            coordinates=apt_data["coords"],
+            tile="test",
+        )
+        database.add_airport(airport)
+
+    # Add sample connections
+    # JFK connects to: LAX, ORD, ATL
+    database.add_connection("JFK", "LAX")
+    database.add_connection("JFK", "ORD")
+    database.add_connection("JFK", "ATL")
+
+    # LAX connects to: JFK, ORD, DFW
+    database.add_connection("LAX", "JFK")
+    database.add_connection("LAX", "ORD")
+    database.add_connection("LAX", "DFW")
+
+    # ORD connects to: JFK, LAX, ATL
+    database.add_connection("ORD", "JFK")
+    database.add_connection("ORD", "LAX")
+    database.add_connection("ORD", "ATL")
+
+    print("\n1. Get all airports as dictionary:")
+    print("-" * 60)
+    all_airports = database.get_all_airports_dict()
+    for code, name in sorted(all_airports.items()):
+        print(f"  {code}: {name}")
+
+    print("\n2. Get connections from JFK:")
+    print("-" * 60)
+    jfk_connections = database.get_connections_from("JFK")
+    print(f"  Airport codes: {jfk_connections}")
+
+    print("\n3. Get connections from JFK with names:")
+    print("-" * 60)
+    jfk_connections_detailed = database.get_connections_from_with_names("JFK")
+    for conn in jfk_connections_detailed:
+        print(f"  {conn['code']}: {conn['name']}")
+
+    print("\n4. Get connection counts:")
+    print("-" * 60)
+    for code in ["JFK", "LAX", "ORD", "DFW", "ATL"]:
+        count = database.get_connection_count(code)
+        print(f"  {code}: {count} connections")
+
+    print("\n5. Get airports by connection count (top 3):")
+    print("-" * 60)
+    top_airports = database.get_airports_by_connection_count(limit=3)
+    for airport in top_airports:
+        print(f"  {airport['code']} ({airport['name']}): {airport['connections']} connections")
+
+    return database
+
+
 if __name__ == "__main__":
     test_with_sample_data()
+    test_airport_connections()
