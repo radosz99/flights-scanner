@@ -25,8 +25,8 @@ How to extract cookies manually:
 5. Copy the Cookie header value
 
 Or use Selenium automation (recommended):
-- Use get_ryanair_flights_with_selenium() function
-- Automatically navigates to Ryanair and extracts cookies
+- Use extract_cookies_from_ryanair() to get cookies automatically
+- Then pass cookies to get_ryanair_flights()
 - Requires selenium and chromedriver
 """
 
@@ -121,81 +121,6 @@ def extract_cookies_from_ryanair(wait_time: int = 10) -> str:
     finally:
         print("🔒 Closing browser...")
         driver.quit()
-
-
-def get_ryanair_flights_with_selenium(
-    origin: str,
-    destination: str,
-    date_out: str,
-    date_in: str,
-    adt: int = 1,
-    teen: int = 0,
-    chd: int = 0,
-    inf: int = 0,
-    flex_days_before_out: int = 2,
-    flex_days_out: int = 2,
-    flex_days_before_in: int = 2,
-    flex_days_in: int = 2,
-    wait_time: int = 10,
-) -> RyanairResponse:
-    """
-    Fetch Ryanair flights using Selenium automation to get cookies.
-
-    This is a convenience function that:
-    1. Uses Selenium to extract cookies from Ryanair
-    2. Calls get_ryanair_flights() with the extracted cookies
-
-    Args:
-        origin: Origin airport code (e.g., 'WRO')
-        destination: Destination airport code (e.g., 'ALC')
-        date_out: Outbound date (YYYY-MM-DD format)
-        date_in: Return date (YYYY-MM-DD format)
-        adt: Number of adults
-        teen: Number of teens
-        chd: Number of children
-        inf: Number of infants
-        flex_days_before_out: Flex days before outbound
-        flex_days_out: Flex days after outbound
-        flex_days_before_in: Flex days before return
-        flex_days_in: Flex days after return
-        wait_time: Seconds to wait for cookies (default: 10)
-
-    Returns:
-        RyanairResponse: Parsed Pydantic model with flight data
-
-    Raises:
-        ImportError: If selenium is not installed
-        requests.exceptions.HTTPError: If API request fails
-
-    Example:
-        # Automatically get cookies and fetch flights
-        flights = get_ryanair_flights_with_selenium(
-            origin="WRO",
-            destination="ALC",
-            date_out="2025-12-11",
-            date_in="2025-12-15"
-        )
-    """
-    # Extract cookies using Selenium
-    cookies = extract_cookies_from_ryanair(wait_time=wait_time)
-
-    # Use extracted cookies to fetch flights
-    print("\n🛫 Fetching flights with extracted cookies...")
-    return get_ryanair_flights(
-        origin=origin,
-        destination=destination,
-        date_out=date_out,
-        date_in=date_in,
-        adt=adt,
-        teen=teen,
-        chd=chd,
-        inf=inf,
-        flex_days_before_out=flex_days_before_out,
-        flex_days_out=flex_days_out,
-        flex_days_before_in=flex_days_before_in,
-        flex_days_in=flex_days_in,
-        cookies=cookies,
-    )
 
 
 def get_ryanair_flights(

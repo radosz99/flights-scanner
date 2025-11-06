@@ -55,16 +55,19 @@ pip install -r requirements.txt
 **Recommended approach: Selenium automation** (automatically extracts cookies):
 
 ```python
-from ryanair import get_ryanair_flights_with_selenium
+from ryanair import extract_cookies_from_ryanair, get_ryanair_flights
 
-# Automatically extract cookies and fetch flights
-flights_data = get_ryanair_flights_with_selenium(
+# Step 1: Extract cookies using Selenium
+cookies = extract_cookies_from_ryanair(wait_time=10)
+
+# Step 2: Use cookies to fetch flights
+flights_data = get_ryanair_flights(
     origin="WRO",
     destination="ALC",
     date_out="2025-12-11",
     date_in="2025-12-15",
     adt=1,
-    wait_time=10  # Seconds to wait for cookies
+    cookies=cookies
 )
 
 # Access flight information
@@ -421,7 +424,7 @@ Testing Airport Connections:
    **Ryanair**:
    - Uses bot protection that blocks automated requests (403 Forbidden / "Access denied")
    - **Solution implemented**: Selenium automation automatically extracts cookies
-   - Use `get_ryanair_flights_with_selenium()` for automated cookie extraction
+   - Use `extract_cookies_from_ryanair()` to get cookies, then pass to `get_ryanair_flights()`
    - Alternatively, manually extract cookies from browser session
 
    **Wizz Air**:
@@ -430,7 +433,7 @@ Testing Airport Connections:
    - Headers include: `x-kpsdk-*` (Kasada), `X-RequestVerificationToken` (CSRF)
 
    **Solutions**:
-   - **Ryanair**: Use built-in Selenium automation (`get_ryanair_flights_with_selenium()`)
+   - **Ryanair**: Use built-in Selenium automation (`extract_cookies_from_ryanair()` + `get_ryanair_flights()`)
    - **Wizz Air**: Extract headers/cookies from browser session (temporary, expires in minutes/hours)
    - Consider browser automation with undetected-chromedriver for more robust solutions
    - Consider official API access if available
