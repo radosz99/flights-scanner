@@ -1,28 +1,53 @@
 #!/usr/bin/env python3
 
 """
-Unit tests for the API service layer.
+Integration tests for the API service layer.
 
-These tests verify the business logic in api_service.py without requiring
-a running FastAPI application.
+These tests verify the business logic in api_service.py using a real MongoDB instance.
+Requires MongoDB to be running (e.g., via Docker Compose).
 """
 
 import pytest
+import os
+import sys
 from datetime import datetime, date
-from mongomock import MongoClient
+from pymongo import MongoClient
+
+# Add parent directory to path to import modules
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+
 from api_service import APIService
+from config import Settings
+
+
+@pytest.fixture(scope="session")
+def test_settings():
+    """Create test settings that use a separate test database."""
+    settings = Settings()
+    # Override database name for testing to avoid interfering with production data
+    settings.MONGO_DATABASE = "flights_scanner_test"
+    return settings
+
+
+@pytest.fixture(scope="session")
+def mongo_client(test_settings):
+    """Create a real MongoDB client for testing."""
+    client = MongoClient(test_settings.mongo_uri)
+    yield client
+    # Close connection after all tests
+    client.close()
 
 
 @pytest.fixture
-def mongo_client():
-    """Create a mock MongoDB client for testing."""
-    return MongoClient()
+def api_service(mongo_client, test_settings):
+    """
+    Create an APIService instance with real database.
+    Cleans up test database before each test.
+    """
+    # Clean up test database before each test
+    mongo_client.drop_database(test_settings.MONGO_DATABASE)
 
-
-@pytest.fixture
-def api_service(mongo_client):
-    """Create an APIService instance with mock database."""
-    service = APIService(mongo_client, "test_database")
+    service = APIService(mongo_client, test_settings.MONGO_DATABASE)
     return service
 
 

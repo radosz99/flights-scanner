@@ -39,12 +39,18 @@ frontend:
 	cd frontend && npm run dev -- --port 8901
 
 test:
+	@echo "Running all backend tests..."
+	@echo "NOTE: Tests require MongoDB to be running (see README for setup)"
 	cd backend && python -m pytest test_*.py -v
 
 test-api:
+	@echo "Running API service integration tests..."
+	@echo "NOTE: Tests require MongoDB to be running (see README for setup)"
 	cd backend/api && python -m pytest test_api_service.py -v
 
 test-all:
+	@echo "Running all tests with coverage..."
+	@echo "NOTE: Tests require MongoDB to be running (see README for setup)"
 	cd backend && python -m pytest test_*.py -v --cov=. --cov-report=term-missing
 
 # Docker commands
