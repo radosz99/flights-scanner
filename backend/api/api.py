@@ -449,6 +449,112 @@ async def get_routes(origin: Optional[str] = Query(None, description="Filter rou
     return {"routes": routes}
 
 
+@app.post("/airports/populate")
+async def populate_airports(background_tasks: BackgroundTasks):
+    """
+    Populate the airport database with Ryanair and Wizz Air routes.
+
+    This endpoint triggers a background task that:
+    1. Builds airport database from FlightConnections tiles
+    2. Fetches routes for Ryanair and Wizz Air
+    3. Populates connections for each airline
+    4. Saves to MongoDB in separate collections
+
+    The task runs in the background and returns immediately.
+    Check the logs to monitor progress.
+    """
+    try:
+        from populate_databases import populate_ryanair_database, populate_wizzair_database
+
+        def run_population():
+            """Background task to populate databases."""
+            try:
+                logger.info("Starting airport database population...")
+
+                ryanair_success = populate_ryanair_database()
+                wizzair_success = populate_wizzair_database()
+
+                if ryanair_success and wizzair_success:
+                    logger.success("All airport databases populated successfully")
+                elif ryanair_success or wizzair_success:
+                    logger.warning("Some airport databases populated successfully")
+                else:
+                    logger.error("Failed to populate airport databases")
+
+            except Exception as e:
+                logger.error(f"Error during airport database population: {e}")
+                import traceback
+                traceback.print_exc()
+
+        # Start background task
+        background_tasks.add_task(run_population)
+
+        return {
+            "message": "Airport database population started in background",
+            "status": "started",
+            "info": "Check server logs for progress. This may take several minutes."
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to trigger airport population: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to trigger population: {str(e)}")
+
+
+@app.delete("/airports/clear")
+async def clear_airports(
+    airline: Optional[str] = Query(None, description="Clear specific airline (ryanair/wizzair) or all if not specified")
+):
+    """
+    Clear airport database collections.
+
+    This will remove all airport and connection data for the specified airline,
+    or for all airlines if no airline is specified.
+
+    WARNING: This action cannot be undone. Use /airports/populate to repopulate the data.
+    """
+    try:
+        collections_to_clear = []
+
+        if airline:
+            airline = airline.lower()
+            if airline not in ["ryanair", "wizzair"]:
+                raise HTTPException(status_code=400, detail="Invalid airline. Must be 'ryanair' or 'wizzair'")
+            collections_to_clear = [
+                f"{airline}_airports",
+                f"{airline}_connections"
+            ]
+        else:
+            # Clear all airlines
+            collections_to_clear = [
+                "ryanair_airports",
+                "ryanair_connections",
+                "wizzair_airports",
+                "wizzair_connections"
+            ]
+
+        results = {}
+        total_deleted = 0
+
+        for collection_name in collections_to_clear:
+            collection = db[collection_name]
+            result = collection.delete_many({})
+            results[collection_name] = result.deleted_count
+            total_deleted += result.deleted_count
+            logger.info(f"Cleared {result.deleted_count} documents from {collection_name}")
+
+        return {
+            "message": f"Successfully cleared {len(collections_to_clear)} collections",
+            "total_documents_deleted": total_deleted,
+            "collections_cleared": results
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to clear airport collections: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to clear collections: {str(e)}")
+
+
 @app.get("/scans", response_model=List[ScanIterationResponse])
 async def get_scans(limit: int = Query(10, ge=1, le=100, description="Number of scans to return")):
     """
