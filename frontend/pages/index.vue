@@ -14,7 +14,64 @@
 
     <div v-if="scanStatus" class="scan-status">
       <h2>Latest Scan Status</h2>
-      <pre>{{ JSON.stringify(scanStatus, null, 2) }}</pre>
+
+      <div class="scan-info">
+        <div class="info-row">
+          <strong>Status:</strong>
+          <span :class="'status-badge status-' + scanStatus.status">{{ scanStatus.status.toUpperCase() }}</span>
+        </div>
+
+        <div class="info-row">
+          <strong>Started:</strong> {{ formatDateTime(scanStatus.start_time) }}
+        </div>
+
+        <div v-if="scanStatus.end_time" class="info-row">
+          <strong>Completed:</strong> {{ formatDateTime(scanStatus.end_time) }}
+        </div>
+
+        <div v-if="scanStatus.progress" class="progress-section">
+          <h3>Progress</h3>
+
+          <div class="progress-bar-container">
+            <div class="progress-bar" :style="{ width: scanStatus.progress.percentage + '%' }">
+              <span class="progress-text">{{ scanStatus.progress.percentage }}%</span>
+            </div>
+          </div>
+
+          <div class="progress-details">
+            <div class="info-row">
+              <strong>Date Ranges:</strong>
+              {{ scanStatus.progress.completed_date_ranges }} / {{ scanStatus.progress.total_date_ranges }}
+            </div>
+
+            <div v-if="scanStatus.progress.current_date_range" class="info-row">
+              <strong>Current Range:</strong> {{ scanStatus.progress.current_date_range }}
+            </div>
+          </div>
+        </div>
+
+        <div class="stats-section">
+          <h3>Statistics</h3>
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-value">{{ scanStatus.stats.total_routes }}</div>
+              <div class="stat-label">Total Routes</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value">{{ scanStatus.stats.successful_queries }}</div>
+              <div class="stat-label">Successful</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value">{{ scanStatus.stats.failed_queries }}</div>
+              <div class="stat-label">Failed</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value">{{ scanStatus.stats.flights_saved }}</div>
+              <div class="stat-label">Flights Saved</div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div v-if="scanResult" class="success">
@@ -135,6 +192,13 @@ const triggerScan = async () => {
     scanning.value = false
     loading.value = false
   }
+}
+
+// Format datetime for display
+const formatDateTime = (dateString) => {
+  if (!dateString) return 'N/A'
+  const date = new Date(dateString)
+  return date.toLocaleString()
 }
 
 // Check health on mount (client-side only)
@@ -285,5 +349,116 @@ pre {
   padding: 0.75rem;
   border-radius: 3px;
   font-size: 0.85rem;
+}
+
+.scan-info {
+  margin-top: 0.5rem;
+}
+
+.info-row {
+  margin: 0.75rem 0;
+  font-size: 0.95rem;
+}
+
+.info-row strong {
+  display: inline-block;
+  min-width: 140px;
+  color: #2c3e50;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+}
+
+.status-running {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.status-completed {
+  background: #d4edda;
+  color: #155724;
+}
+
+.status-failed {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.progress-section {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.progress-bar-container {
+  width: 100%;
+  height: 30px;
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 15px;
+  overflow: hidden;
+  margin: 1rem 0;
+}
+
+.progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #28a745, #20c997);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: width 0.3s ease;
+  min-width: 40px;
+}
+
+.progress-text {
+  color: white;
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.progress-details {
+  margin-top: 0.5rem;
+}
+
+.stats-section {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.stat-card {
+  background: rgba(0, 0, 0, 0.03);
+  padding: 1rem;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #2c3e50;
+  line-height: 1;
+  margin-bottom: 0.5rem;
+}
+
+.stat-label {
+  font-size: 0.85rem;
+  color: #6c757d;
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.5px;
 }
 </style>

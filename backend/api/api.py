@@ -114,9 +114,10 @@ class StatsResponse(BaseModel):
 class ScanIterationResponse(BaseModel):
     """Scan iteration response model."""
     start_time: datetime
-    end_time: Optional[datetime]
+    end_time: Optional[datetime] = Field(default=None)
     status: str
     stats: Dict[str, Any]
+    progress: Optional[Dict[str, Any]] = Field(default=None)
 
     class Config:
         json_encoders = {
@@ -719,13 +720,20 @@ async def trigger_scan(scan_request: ScanRequest, background_tasks: BackgroundTa
     Note: Scans all default Polish airports (GDN, SZN, KRK, KTW, WRO, POZ, WMI, WAW, LCJ, LUZ, RZE, SZY, BZG).
     """
     try:
-        from ryanair_scanner import ScanIterationManager, SCAN_ITERATIONS_COLLECTION
+        from ryanair_scanner import ScanIterationManager, SCAN_ITERATIONS_COLLECTION, generate_date_ranges
+        from datetime import datetime
 
         # Always use all default departure airports (all Polish airports)
         departure_airports = ["GDN", "SZN", "KRK", "KTW", "WRO", "POZ", "WMI", "WAW", "LCJ", "LUZ", "RZE", "SZY", "BZG"]
 
         trip_duration_days = scan_request.trip_duration_days or 4
         scan_until_date = scan_request.scan_until_date or "2025-12-31"
+
+        # Calculate total date ranges for progress tracking
+        today = datetime.now()
+        scan_until = datetime.strptime(scan_until_date, "%Y-%m-%d")
+        date_ranges = generate_date_ranges(today, scan_until, trip_duration_days)
+        total_date_ranges = len(date_ranges)
 
         # Create scan iteration record
         scan_manager = ScanIterationManager(
@@ -738,6 +746,7 @@ async def trigger_scan(scan_request: ScanRequest, background_tasks: BackgroundTa
             "trip_duration_days": trip_duration_days,
             "scan_until_date": scan_until_date,
             "departure_airports": departure_airports,
+            "total_date_ranges": total_date_ranges,
         }
 
         scan_id = scan_manager.start_scan(config)

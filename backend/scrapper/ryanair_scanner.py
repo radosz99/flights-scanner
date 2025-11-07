@@ -223,6 +223,7 @@ class ScanIterationManager:
         Returns:
             Scan iteration ID
         """
+        total_date_ranges = config.get("total_date_ranges", 0)
         scan_doc = {
             "start_time": datetime.now(),
             "status": "running",
@@ -233,6 +234,12 @@ class ScanIterationManager:
                 "successful_queries": 0,
                 "failed_queries": 0,
                 "flights_saved": 0
+            },
+            "progress": {
+                "total_date_ranges": total_date_ranges,
+                "completed_date_ranges": 0,
+                "current_date_range": None,
+                "percentage": 0
             }
         }
         result = self.collection.insert_one(scan_doc)
@@ -250,6 +257,17 @@ class ScanIterationManager:
             stats: Statistics from this date range scan
         """
         from bson import ObjectId
+
+        # Get current scan to calculate progress
+        scan = self.collection.find_one({"_id": ObjectId(scan_id)})
+        if scan:
+            completed = scan.get("progress", {}).get("completed_date_ranges", 0) + 1
+            total = scan.get("progress", {}).get("total_date_ranges", 1)
+            percentage = round((completed / total) * 100, 1) if total > 0 else 0
+        else:
+            completed = 1
+            percentage = 0
+
         self.collection.update_one(
             {"_id": ObjectId(scan_id)},
             {
@@ -265,7 +283,12 @@ class ScanIterationManager:
                     "stats.total_routes": stats.get("total_routes", 0),
                     "stats.successful_queries": stats.get("successful_queries", 0),
                     "stats.failed_queries": stats.get("failed_queries", 0),
-                    "stats.flights_saved": stats.get("flights_saved", 0)
+                    "stats.flights_saved": stats.get("flights_saved", 0),
+                    "progress.completed_date_ranges": 1
+                },
+                "$set": {
+                    "progress.percentage": percentage,
+                    "progress.current_date_range": f"{date_out} to {date_in}"
                 }
             }
         )
@@ -284,7 +307,8 @@ class ScanIterationManager:
             {
                 "$set": {
                     "end_time": datetime.now(),
-                    "status": "completed" if success else "failed"
+                    "status": "completed" if success else "failed",
+                    "progress.percentage": 100 if success else None
                 }
             }
         )
