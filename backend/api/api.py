@@ -21,6 +21,7 @@ Example queries:
 
 from fastapi import FastAPI, Query, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 from pymongo import MongoClient, ASCENDING, DESCENDING
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any, Literal
@@ -125,10 +126,6 @@ class ScanIterationResponse(BaseModel):
 
 class ScanRequest(BaseModel):
     """Request model for triggering a scan."""
-    departure_airports: Optional[List[str]] = Field(
-        default=None,
-        description="List of departure airport codes (e.g., ['WRO', 'KRK']). If not provided, scans all Polish airports."
-    )
     trip_duration_days: Optional[int] = Field(
         default=4,
         ge=1,
@@ -181,23 +178,8 @@ scan_iterations_collection = db[SCAN_ITERATIONS_COLLECTION]
 
 @app.get("/")
 async def root():
-    """Root endpoint with API information."""
-    return {
-        "name": "Ryanair Flight Scanner API",
-        "version": "1.0.0",
-        "endpoints": {
-            "GET /health": "Health check endpoint",
-            "GET /flights": "Query flights with filters and sorting",
-            "GET /flights/{flight_id}": "Get specific flight details",
-            "GET /flights/stats/summary": "Get database statistics",
-            "GET /airports/origins": "Get list of available origin airports",
-            "GET /airports/destinations": "Get list of available destination airports",
-            "GET /airports/routes": "Get list of available routes",
-            "GET /scans": "Get scan iteration history",
-            "GET /scans/latest": "Get latest scan iteration details",
-            "POST /scans/run": "Trigger a new flight scan (background task)"
-        }
-    }
+    """Root endpoint - redirects to API documentation."""
+    return RedirectResponse(url="/docs")
 
 
 @app.get("/flights", response_model=FlightListResponse)
@@ -627,19 +609,17 @@ async def trigger_scan(scan_request: ScanRequest, background_tasks: BackgroundTa
 
     This endpoint starts a background scan job and returns immediately.
     Use GET /scans/latest or GET /scans to check the scan progress.
+
+    Note: Scans all default Polish airports (GDN, SZN, KRK, KTW, WRO, POZ, WMI, WAW, LCJ, LUZ, RZE, SZY, BZG).
     """
     try:
         from ryanair_scanner import ScanIterationManager, SCAN_ITERATIONS_COLLECTION
 
-        # Default departure airports (all Polish airports)
-        default_airports = ["GDN", "SZN", "KRK", "KTW", "WRO", "POZ", "WMI", "WAW", "LCJ", "LUZ", "RZE", "SZY", "BZG"]
+        # Always use all default departure airports (all Polish airports)
+        departure_airports = ["GDN", "SZN", "KRK", "KTW", "WRO", "POZ", "WMI", "WAW", "LCJ", "LUZ", "RZE", "SZY", "BZG"]
 
-        departure_airports = scan_request.departure_airports or default_airports
         trip_duration_days = scan_request.trip_duration_days or 4
         scan_until_date = scan_request.scan_until_date or "2025-12-31"
-
-        # Validate departure airports
-        departure_airports = [airport.upper() for airport in departure_airports]
 
         # Create scan iteration record
         scan_manager = ScanIterationManager(

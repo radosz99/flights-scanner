@@ -6,17 +6,19 @@ Configuration and secrets management using Pydantic BaseSettings.
 This module handles configuration for MongoDB connections and other sensitive settings.
 Configuration can be provided via:
 1. Environment variables
-2. .env file
-3. secrets.json file (create this for local development)
+2. .env file in the project root
 
-Example secrets.json:
-{
-    "MONGO_HOST": "localhost",
-    "MONGO_PORT": 27017,
-    "MONGO_DATABASE": "flights_scanner",
-    "MONGO_USERNAME": "",
-    "MONGO_PASSWORD": ""
-}
+Example .env file:
+MONGO_HOST=localhost
+MONGO_PORT=27017
+MONGO_DATABASE=flights_scanner
+MONGO_USERNAME=
+MONGO_PASSWORD=
+
+# Ryanair scraping configuration
+RYANAIR_REQUEST_DELAY=2
+RYANAIR_COOKIE_WAIT_TIME=30
+RYANAIR_COOKIE_CHECK_INTERVAL=0.5
 """
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -41,10 +43,14 @@ class Settings(BaseSettings):
     # This page triggers the availability API request which contains valid cookies
     RYANAIR_COOKIE_URL: str = "https://www.ryanair.com/hr/en/trip/flights/select?adults=1&teens=0&children=0&infants=0&dateOut=2026-03-06&dateIn=2026-03-08&isConnectedFlight=false&discount=0&promoCode=&isReturn=true&originIata=WRO&destinationIata=ALC&tpAdults=1&tpTeens=0&tpChildren=0&tpInfants=0&tpStartDate=2026-03-06&tpEndDate=2026-03-08&tpDiscount=0&tpPromoCode=&tpOriginIata=WRO&tpDestinationIata=ALC"
 
+    # Ryanair scraping configuration
+    RYANAIR_REQUEST_DELAY: float = 2.0  # Delay between Ryanair API requests (seconds)
+    RYANAIR_COOKIE_WAIT_TIME: int = 30  # Max time to wait for cookie extraction (seconds)
+    RYANAIR_COOKIE_CHECK_INTERVAL: float = 0.5  # Interval for checking cookie extraction progress (seconds)
+
     model_config = SettingsConfigDict(
         env_file='.env',
         env_file_encoding='utf-8',
-        json_file='secrets.json',
         extra='ignore',
         case_sensitive=True
     )

@@ -269,7 +269,7 @@ def setup_driver(enable_network_capture: bool = False):
     return driver
 
 
-def extract_cookies_from_ryanair(wait_time: int = 30, save_to_db: bool = True) -> Optional[str]:
+def extract_cookies_from_ryanair(wait_time: Optional[int] = None, save_to_db: bool = True) -> Optional[str]:
     """
     Use Selenium to navigate to Ryanair flight selection page and extract fr-correlation-id cookie
     from network requests.
@@ -284,7 +284,7 @@ def extract_cookies_from_ryanair(wait_time: int = 30, save_to_db: bool = True) -
     7. Optionally saves to MongoDB for tracking
 
     Args:
-        wait_time: Seconds to wait for requests with cookies (default: 30)
+        wait_time: Seconds to wait for requests with cookies (default: from settings.RYANAIR_COOKIE_WAIT_TIME)
         save_to_db: Save cookies to MongoDB for tracking (default: True)
 
     Returns:
@@ -295,10 +295,14 @@ def extract_cookies_from_ryanair(wait_time: int = 30, save_to_db: bool = True) -
         Exception: If browser fails to start or navigate
 
     Example:
-        cookies = extract_cookies_from_ryanair(wait_time=30, save_to_db=True)
+        cookies = extract_cookies_from_ryanair(save_to_db=True)
         if cookies:
             flights = get_ryanair_flights("WRO", "ALC", "2025-12-11", "2025-12-15", cookies=cookies)
     """
+    # Use configured wait time if not explicitly provided
+    if wait_time is None:
+        wait_time = settings.RYANAIR_COOKIE_WAIT_TIME
+
     logger.info("Starting Chrome browser with network logging...")
     driver = setup_driver(enable_network_capture=True)
 
@@ -356,7 +360,7 @@ def extract_cookies_from_ryanair(wait_time: int = 30, save_to_db: bool = True) -
                 break
 
             # Small delay to avoid busy waiting
-            time.sleep(0.5)
+            time.sleep(settings.RYANAIR_COOKIE_CHECK_INTERVAL)
 
         if not fr_correlation_id:
             logger.error(f"fr-correlation-id cookie not found after {wait_time} seconds")
@@ -488,7 +492,7 @@ def get_valid_cookie(auto_refresh: bool = True) -> Optional[str]:
         logger.info("(This will open a Chrome window)")
 
         try:
-            new_cookie = extract_cookies_from_ryanair(wait_time=30, save_to_db=True)
+            new_cookie = extract_cookies_from_ryanair(save_to_db=True)
 
             if new_cookie:
                 logger.info(f"{'='*80}")
@@ -588,7 +592,7 @@ def get_ryanair_flights(
         headers['Cookie'] = cookies
 
     try:
-        time.sleep(2)
+        time.sleep(settings.RYANAIR_REQUEST_DELAY)
         response = requests.get(url, params=params, headers=headers)
         response.raise_for_status()
 

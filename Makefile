@@ -1,4 +1,4 @@
-.PHONY: help backend frontend install-backend install-frontend test docker-build docker-up docker-down docker-logs clean
+.PHONY: help backend frontend install-backend install-frontend test docker-build docker-up docker-down docker-logs docker-backend-logs docker-restart clean
 
 # Default target
 help:
@@ -16,6 +16,7 @@ help:
 	@echo "    make docker-up           - Start all services with Docker Compose"
 	@echo "    make docker-down         - Stop all services"
 	@echo "    make docker-logs         - Show logs from all services"
+	@echo "    make docker-backend-logs - Show backend logs (last 100 lines, follow)"
 	@echo "    make docker-restart      - Restart all services"
 	@echo ""
 	@echo "  Utility:"
@@ -57,6 +58,9 @@ docker-down:
 
 docker-logs:
 	docker-compose logs -f
+
+docker-backend-logs:
+	docker-compose logs -f --tail 100 backend
 
 docker-restart:
 	docker-compose restart
