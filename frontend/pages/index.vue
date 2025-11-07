@@ -7,11 +7,224 @@
       {{ loadingMessage }}
     </div>
 
-    <div v-if="healthData" class="health-status">
-      <h2>API Health Status</h2>
-      <pre>{{ JSON.stringify(healthData, null, 2) }}</pre>
+    <div v-if="error" class="error">
+      <strong>Error:</strong> {{ error }}
     </div>
 
+    <!-- Database Statistics -->
+    <div v-if="stats" class="stats-overview">
+      <h2>Database Statistics</h2>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-value">{{ stats.total_flights }}</div>
+          <div class="stat-label">Total Flights</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">{{ stats.unique_origins }}</div>
+          <div class="stat-label">Origins</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">{{ stats.unique_destinations }}</div>
+          <div class="stat-label">Destinations</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">{{ stats.average_price.toFixed(2) }}€</div>
+          <div class="stat-label">Avg Price</div>
+        </div>
+      </div>
+
+      <div v-if="stats.cheapest_flight" class="flight-highlight">
+        <h3>Cheapest Flight</h3>
+        <p>
+          <strong>{{ stats.cheapest_flight.route }}</strong> -
+          {{ stats.cheapest_flight.price }} {{ stats.cheapest_flight.currency }} on
+          {{ stats.cheapest_flight.date }}
+        </p>
+      </div>
+    </div>
+
+    <!-- Flights Search and Filters -->
+    <div class="flights-section">
+      <h2>Search Flights</h2>
+
+      <div class="filters">
+        <div class="filter-row">
+          <div class="filter-group">
+            <label>Origin</label>
+            <input
+              v-model="filters.origin"
+              type="text"
+              placeholder="e.g. WRO, KRK"
+              @input="debouncedSearch"
+            />
+          </div>
+
+          <div class="filter-group">
+            <label>Destination</label>
+            <input
+              v-model="filters.destination"
+              type="text"
+              placeholder="e.g. BCN, ALC"
+              @input="debouncedSearch"
+            />
+          </div>
+
+          <div class="filter-group">
+            <label>Date From</label>
+            <input
+              v-model="filters.dateFrom"
+              type="date"
+              @change="searchFlights"
+            />
+          </div>
+
+          <div class="filter-group">
+            <label>Date To</label>
+            <input
+              v-model="filters.dateTo"
+              type="date"
+              @change="searchFlights"
+            />
+          </div>
+        </div>
+
+        <div class="filter-row">
+          <div class="filter-group">
+            <label>Min Price (€)</label>
+            <input
+              v-model.number="filters.minPrice"
+              type="number"
+              min="0"
+              placeholder="Min"
+              @input="debouncedSearch"
+            />
+          </div>
+
+          <div class="filter-group">
+            <label>Max Price (€)</label>
+            <input
+              v-model.number="filters.maxPrice"
+              type="number"
+              min="0"
+              placeholder="Max"
+              @input="debouncedSearch"
+            />
+          </div>
+
+          <div class="filter-group">
+            <label>Sort By</label>
+            <select v-model="filters.sortBy" @change="searchFlights">
+              <option value="price">Price (Low to High)</option>
+              <option value="price_desc">Price (High to Low)</option>
+              <option value="date">Date (Earliest)</option>
+              <option value="duration">Duration</option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <label>Page Size</label>
+            <select v-model="filters.pageSize" @change="searchFlights">
+              <option :value="25">25</option>
+              <option :value="50">50</option>
+              <option :value="100">100</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="filter-actions">
+          <button @click="searchFlights" class="btn-primary" :disabled="loading">
+            Search Flights
+          </button>
+          <button @click="clearFilters" class="btn-secondary">
+            Clear Filters
+          </button>
+        </div>
+      </div>
+
+      <!-- Flights Results -->
+      <div v-if="flightsData" class="flights-results">
+        <div class="results-header">
+          <h3>Found {{ flightsData.total }} flights</h3>
+          <div class="pagination-info">
+            Page {{ flightsData.page }} of {{ Math.ceil(flightsData.total / flightsData.page_size) }}
+          </div>
+        </div>
+
+        <div v-if="flightsData.flights.length === 0" class="no-results">
+          No flights found matching your criteria.
+        </div>
+
+        <div v-else class="flights-table-container">
+          <table class="flights-table">
+            <thead>
+              <tr>
+                <th>Route</th>
+                <th>Date</th>
+                <th>Time</th>
+                <th>Duration</th>
+                <th>Price</th>
+                <th>Seats Left</th>
+                <th>Flight #</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="flight in flightsData.flights" :key="flight.flight_id">
+                <td class="route-cell">
+                  <div class="route">
+                    <strong>{{ flight.origin }}</strong> → <strong>{{ flight.destination }}</strong>
+                  </div>
+                  <div class="route-names">
+                    {{ flight.origin_name }} → {{ flight.destination_name }}
+                  </div>
+                </td>
+                <td>{{ flight.date_out }}</td>
+                <td>
+                  <div class="time-cell">
+                    <div>{{ flight.departure_time }}</div>
+                    <div class="arrival-time">{{ flight.arrival_time }}</div>
+                  </div>
+                </td>
+                <td>{{ flight.duration }}</td>
+                <td class="price-cell">
+                  <strong>{{ flight.current_price }} {{ flight.currency }}</strong>
+                  <div v-if="flight.price_history.length > 1" class="price-changes">
+                    {{ flight.price_history.length - 1 }} changes
+                  </div>
+                </td>
+                <td>{{ flight.fares_left }}</td>
+                <td>
+                  <code>{{ flight.flight_number }}</code>
+                  <div class="operator">{{ flight.operator }}</div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination -->
+        <div v-if="flightsData.total > flightsData.page_size" class="pagination">
+          <button
+            @click="changePage(flightsData.page - 1)"
+            :disabled="flightsData.page === 1"
+            class="btn-secondary"
+          >
+            Previous
+          </button>
+          <span class="page-info">
+            Page {{ flightsData.page }} of {{ Math.ceil(flightsData.total / flightsData.page_size) }}
+          </span>
+          <button
+            @click="changePage(flightsData.page + 1)"
+            :disabled="flightsData.page >= Math.ceil(flightsData.total / flightsData.page_size)"
+            class="btn-secondary"
+          >
+            Next
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scan Status Section -->
     <div v-if="scanStatus" class="scan-status">
       <h2>Latest Scan Status</h2>
 
@@ -74,21 +287,10 @@
       </div>
     </div>
 
-    <div v-if="scanResult" class="success">
-      <h2>Scan Triggered</h2>
-      <p><strong>Message:</strong> {{ scanResult.message }}</p>
-      <p><strong>Scan ID:</strong> <code>{{ scanResult.scan_id }}</code></p>
-      <p><strong>Config:</strong></p>
-      <pre>{{ JSON.stringify(scanResult.config, null, 2) }}</pre>
-    </div>
-
-    <div v-if="error" class="error">
-      <strong>Error:</strong> {{ error }}
-    </div>
-
+    <!-- Action Buttons -->
     <div class="actions">
-      <button @click="checkHealth" :disabled="loading" class="btn-primary">
-        {{ loading ? 'Checking...' : 'Refresh Health Status' }}
+      <button @click="loadAllData" :disabled="loading" class="btn-primary">
+        {{ loading ? 'Loading...' : 'Refresh All Data' }}
       </button>
 
       <button @click="checkLatestScan" :disabled="loading" class="btn-secondary">
@@ -99,47 +301,79 @@
         {{ scanning ? 'Starting Scan...' : 'Trigger New Scan' }}
       </button>
     </div>
-
-    <div class="info">
-      <h3>Available Endpoints:</h3>
-      <ul>
-        <li><code>GET /health</code> - Check API health</li>
-        <li><code>GET /flights</code> - Query flights</li>
-        <li><code>GET /scans/latest</code> - Get latest scan status</li>
-        <li><code>POST /scans/run</code> - Trigger new scan</li>
-      </ul>
-    </div>
   </div>
 </template>
 
 <script setup>
 const config = useRuntimeConfig()
 const apiBaseUrl = config.public.apiBaseUrl
-const healthData = ref(null)
 const scanStatus = ref(null)
-const scanResult = ref(null)
 const error = ref(null)
 const loading = ref(false)
 const scanning = ref(false)
 const loadingMessage = ref('Loading...')
+const stats = ref(null)
+const flightsData = ref(null)
 
-const checkHealth = async () => {
+// Filters
+const filters = ref({
+  origin: '',
+  destination: '',
+  dateFrom: '',
+  dateTo: '',
+  minPrice: null,
+  maxPrice: null,
+  sortBy: 'price',
+  page: 1,
+  pageSize: 50
+})
+
+// Debounce timer
+let debounceTimer = null
+
+const debouncedSearch = () => {
+  if (debounceTimer) clearTimeout(debounceTimer)
+  debounceTimer = setTimeout(() => {
+    filters.value.page = 1 // Reset to page 1 on new search
+    searchFlights()
+  }, 500)
+}
+
+const searchFlights = async () => {
   loading.value = true
-  loadingMessage.value = 'Checking API health...'
+  loadingMessage.value = 'Searching flights...'
   error.value = null
-  healthData.value = null
-  scanStatus.value = null
-  scanResult.value = null
 
   try {
-    const response = await $fetch(`${apiBaseUrl}/health`, {
-      method: 'GET'
-    })
-    healthData.value = response
+    // Build query params
+    const params = new URLSearchParams()
+
+    if (filters.value.origin) params.append('origin', filters.value.origin)
+    if (filters.value.destination) params.append('destination', filters.value.destination)
+    if (filters.value.dateFrom) params.append('date_from', filters.value.dateFrom)
+    if (filters.value.dateTo) params.append('date_to', filters.value.dateTo)
+    if (filters.value.minPrice) params.append('min_price', filters.value.minPrice)
+    if (filters.value.maxPrice) params.append('max_price', filters.value.maxPrice)
+    params.append('sort_by', filters.value.sortBy)
+    params.append('page', filters.value.page)
+    params.append('page_size', filters.value.pageSize)
+
+    const response = await $fetch(`${apiBaseUrl}/flights?${params.toString()}`)
+    flightsData.value = response
   } catch (e) {
-    error.value = e.message || 'Failed to connect to backend API. Make sure the backend is running on http://localhost:8000'
+    error.value = e.message || 'Failed to fetch flights'
+    flightsData.value = null
   } finally {
     loading.value = false
+  }
+}
+
+const loadStats = async () => {
+  try {
+    const response = await $fetch(`${apiBaseUrl}/flights/stats/summary`)
+    stats.value = response
+  } catch (e) {
+    console.error('Failed to load stats:', e)
   }
 }
 
@@ -147,14 +381,10 @@ const checkLatestScan = async () => {
   loading.value = true
   loadingMessage.value = 'Fetching latest scan status...'
   error.value = null
-  healthData.value = null
   scanStatus.value = null
-  scanResult.value = null
 
   try {
-    const response = await $fetch(`${apiBaseUrl}/scans/latest`, {
-      method: 'GET'
-    })
+    const response = await $fetch(`${apiBaseUrl}/scans/latest`)
     scanStatus.value = response
   } catch (e) {
     if (e.statusCode === 404) {
@@ -172,24 +402,62 @@ const triggerScan = async () => {
   loading.value = true
   loadingMessage.value = 'Triggering new scan...'
   error.value = null
-  healthData.value = null
-  scanStatus.value = null
-  scanResult.value = null
 
   try {
     const response = await $fetch(`${apiBaseUrl}/scans/run`, {
       method: 'POST',
       body: {
-        departure_airports: null, // Will use default (all Polish airports)
         trip_duration_days: 4,
         scan_until_date: '2025-12-31'
       }
     })
-    scanResult.value = response
+
+    // Show success and automatically check scan status
+    setTimeout(() => {
+      checkLatestScan()
+    }, 2000)
   } catch (e) {
     error.value = e.message || 'Failed to trigger scan'
   } finally {
     scanning.value = false
+    loading.value = false
+  }
+}
+
+const clearFilters = () => {
+  filters.value = {
+    origin: '',
+    destination: '',
+    dateFrom: '',
+    dateTo: '',
+    minPrice: null,
+    maxPrice: null,
+    sortBy: 'price',
+    page: 1,
+    pageSize: 50
+  }
+  searchFlights()
+}
+
+const changePage = (newPage) => {
+  filters.value.page = newPage
+  searchFlights()
+}
+
+const loadAllData = async () => {
+  loading.value = true
+  loadingMessage.value = 'Loading all data...'
+  error.value = null
+
+  try {
+    await Promise.all([
+      loadStats(),
+      searchFlights(),
+      checkLatestScan()
+    ])
+  } catch (e) {
+    error.value = e.message || 'Failed to load data'
+  } finally {
     loading.value = false
   }
 }
@@ -201,15 +469,15 @@ const formatDateTime = (dateString) => {
   return date.toLocaleString()
 }
 
-// Check health on mount (client-side only)
+// Load data on mount (client-side only)
 onMounted(() => {
-  checkHealth()
+  loadAllData()
 })
 </script>
 
 <style scoped>
 .container {
-  max-width: 1000px;
+  max-width: 1400px;
   margin: 0 auto;
   padding: 2rem;
   font-family: system-ui, -apple-system, sans-serif;
@@ -222,8 +490,10 @@ h1 {
 
 h2 {
   color: #34495e;
-  margin-bottom: 0.5rem;
-  font-size: 1.25rem;
+  margin-bottom: 1rem;
+  font-size: 1.5rem;
+  border-bottom: 2px solid #e0e0e0;
+  padding-bottom: 0.5rem;
 }
 
 h3 {
@@ -249,25 +519,6 @@ code {
   border: 1px solid #ffeaa7;
 }
 
-.health-status,
-.scan-status {
-  margin-top: 2rem;
-  padding: 1rem;
-  background: #d4edda;
-  color: #155724;
-  border-radius: 5px;
-  border: 1px solid #c3e6cb;
-}
-
-.success {
-  margin-top: 2rem;
-  padding: 1rem;
-  background: #d1ecf1;
-  color: #0c5460;
-  border-radius: 5px;
-  border: 1px solid #bee5eb;
-}
-
 .error {
   margin-top: 2rem;
   padding: 1rem;
@@ -277,78 +528,260 @@ code {
   border: 1px solid #f5c6cb;
 }
 
-.actions {
+/* Statistics Overview */
+.stats-overview {
   margin-top: 2rem;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 10px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.stats-overview h2 {
+  color: white;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.stat-card {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  padding: 1.25rem;
+  border-radius: 8px;
+  text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.stats-overview .stat-card {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: inherit;
+  line-height: 1;
+  margin-bottom: 0.5rem;
+}
+
+.stat-label {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.9);
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.flight-highlight {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.flight-highlight h3 {
+  color: white;
+  margin-bottom: 0.5rem;
+}
+
+.flight-highlight p {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+/* Flights Section */
+.flights-section {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Filters */
+.filters {
+  margin-top: 1rem;
+  padding: 1.5rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.filter-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.filter-group label {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: #495057;
+  font-size: 0.9rem;
+}
+
+.filter-group input,
+.filter-group select {
+  padding: 0.5rem;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 1rem;
+  transition: border-color 0.2s;
+}
+
+.filter-group input:focus,
+.filter-group select:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.filter-actions {
   display: flex;
   gap: 1rem;
-  flex-wrap: wrap;
+  margin-top: 1rem;
 }
 
-button {
-  color: white;
-  border: none;
-  padding: 0.75rem 1.5rem;
-  border-radius: 5px;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-weight: 500;
+/* Flights Results */
+.flights-results {
+  margin-top: 1.5rem;
 }
 
-.btn-primary {
-  background: #007bff;
+.results-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #e0e0e0;
 }
 
-.btn-primary:hover:not(:disabled) {
-  background: #0056b3;
+.results-header h3 {
+  margin: 0;
+  color: #2c3e50;
 }
 
-.btn-secondary {
-  background: #6c757d;
+.pagination-info {
+  color: #6c757d;
+  font-size: 0.9rem;
 }
 
-.btn-secondary:hover:not(:disabled) {
-  background: #545b62;
+.no-results {
+  padding: 2rem;
+  text-align: center;
+  color: #6c757d;
+  font-size: 1.1rem;
 }
 
-.btn-success {
-  background: #28a745;
+.flights-table-container {
+  overflow-x: auto;
 }
 
-.btn-success:hover:not(:disabled) {
-  background: #218838;
+.flights-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
 }
 
-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.info {
-  margin-top: 2rem;
-  padding: 1rem;
+.flights-table thead {
   background: #f8f9fa;
-  border-radius: 5px;
-  border: 1px solid #dee2e6;
+  border-bottom: 2px solid #dee2e6;
 }
 
-.info ul {
-  margin: 0.5rem 0 0 0;
-  padding-left: 1.5rem;
-}
-
-.info li {
-  margin: 0.5rem 0;
-}
-
-pre {
-  white-space: pre-wrap;
-  word-wrap: break-word;
-  margin: 0.5rem 0 0 0;
-  background: rgba(0, 0, 0, 0.05);
+.flights-table th {
   padding: 0.75rem;
-  border-radius: 3px;
+  text-align: left;
+  font-weight: 600;
+  color: #495057;
+  white-space: nowrap;
+}
+
+.flights-table tbody tr {
+  border-bottom: 1px solid #dee2e6;
+  transition: background-color 0.2s;
+}
+
+.flights-table tbody tr:hover {
+  background: #f8f9fa;
+}
+
+.flights-table td {
+  padding: 0.75rem;
+}
+
+.route-cell .route {
+  font-size: 1rem;
+  margin-bottom: 0.25rem;
+}
+
+.route-cell .route-names {
+  font-size: 0.75rem;
+  color: #6c757d;
+}
+
+.time-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.arrival-time {
   font-size: 0.85rem;
+  color: #6c757d;
+}
+
+.price-cell {
+  font-size: 1.1rem;
+  color: #28a745;
+}
+
+.price-changes {
+  font-size: 0.75rem;
+  color: #6c757d;
+  font-weight: normal;
+}
+
+.operator {
+  font-size: 0.75rem;
+  color: #6c757d;
+  margin-top: 0.25rem;
+}
+
+/* Pagination */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.page-info {
+  font-weight: 600;
+  color: #495057;
+}
+
+/* Scan Status */
+.scan-status {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background: #d4edda;
+  color: #155724;
+  border-radius: 10px;
+  border: 1px solid #c3e6cb;
 }
 
 .scan-info {
@@ -432,33 +865,71 @@ pre {
   border-top: 1px solid rgba(0, 0, 0, 0.1);
 }
 
-.stats-grid {
-  display: grid;
+.stats-section .stats-grid {
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 1rem;
-  margin-top: 1rem;
 }
 
-.stat-card {
+.stats-section .stat-card {
   background: rgba(0, 0, 0, 0.03);
-  padding: 1rem;
-  border-radius: 8px;
-  text-align: center;
 }
 
-.stat-value {
-  font-size: 2rem;
-  font-weight: 700;
+.stats-section .stat-value {
   color: #2c3e50;
-  line-height: 1;
-  margin-bottom: 0.5rem;
 }
 
-.stat-label {
-  font-size: 0.85rem;
+.stats-section .stat-label {
   color: #6c757d;
-  text-transform: uppercase;
-  font-weight: 600;
-  letter-spacing: 0.5px;
+}
+
+/* Action Buttons */
+.actions {
+  margin-top: 2rem;
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+button {
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 5px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+.btn-primary {
+  background: #007bff;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #0056b3;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+}
+
+.btn-secondary {
+  background: #6c757d;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: #545b62;
+}
+
+.btn-success {
+  background: #28a745;
+}
+
+.btn-success:hover:not(:disabled) {
+  background: #218838;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 </style>
