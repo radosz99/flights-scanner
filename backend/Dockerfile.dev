@@ -1,0 +1,31 @@
+# Development Dockerfile with hot reload support
+FROM python:3.11-slim
+
+# Set working directory
+WORKDIR /app
+
+# Install runtime dependencies (for Selenium if needed)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    chromium \
+    chromium-driver \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements file
+COPY requirements.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Copy application code (will be overridden by volume mount in dev)
+COPY . .
+
+# Expose port
+EXPOSE 8900
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+# Run with uvicorn in reload mode (command will be overridden by docker-compose)
+CMD ["uvicorn", "api.api:app", "--host", "0.0.0.0", "--port", "8900", "--reload"]

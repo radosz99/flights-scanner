@@ -1,4 +1,4 @@
-.PHONY: help backend frontend install-backend install-frontend test test-api test-all docker-build docker-up docker-down docker-logs docker-backend-logs docker-restart clean
+.PHONY: help backend backend-dev frontend install-backend install-frontend test test-api test-all docker-build docker-up docker-down docker-dev-up docker-dev-down docker-logs docker-backend-logs docker-restart clean
 
 # Default target
 help:
@@ -8,18 +8,23 @@ help:
 	@echo "    make install-backend     - Install backend dependencies"
 	@echo "    make install-frontend    - Install frontend dependencies"
 	@echo "    make backend             - Run backend API server (port 8900)"
+	@echo "    make backend-dev         - Run backend with hot reload connecting to Docker MongoDB"
 	@echo "    make frontend            - Run frontend dev server (port 8901)"
 	@echo "    make test                - Run all backend tests"
 	@echo "    make test-api            - Run API service tests only"
 	@echo "    make test-all            - Run all tests with coverage report"
 	@echo ""
-	@echo "  Docker commands:"
+	@echo "  Docker commands (Production):"
 	@echo "    make docker-build        - Build all Docker images"
-	@echo "    make docker-up           - Start all services with Docker Compose"
+	@echo "    make docker-up           - Start all services with Docker Compose (production mode)"
 	@echo "    make docker-down         - Stop all services"
 	@echo "    make docker-logs         - Show logs from all services"
 	@echo "    make docker-backend-logs - Show backend logs (last 100 lines, follow)"
 	@echo "    make docker-restart      - Restart all services"
+	@echo ""
+	@echo "  Docker commands (Development):"
+	@echo "    make docker-dev-up       - Start all services in development mode with hot reload"
+	@echo "    make docker-dev-down     - Stop development services"
 	@echo ""
 	@echo "  Utility:"
 	@echo "    make clean               - Clean up temporary files and caches"
@@ -34,6 +39,16 @@ install-frontend:
 
 backend:
 	cd backend && uvicorn api.api:app --host 0.0.0.0 --port 8900 --reload
+
+backend-dev:
+	@echo "Starting backend in development mode with hot reload..."
+	@echo "Connecting to MongoDB at mongodb://localhost:8902"
+	@echo ""
+	@echo "Make sure MongoDB container is running with: docker-compose up -d mongodb"
+	@echo ""
+	cd backend && \
+	MONGO_HOST=localhost MONGO_PORT=8902 \
+	uvicorn api.api:app --host 0.0.0.0 --port 8900 --reload
 
 frontend:
 	cd frontend && npm run dev -- --port 8901
@@ -78,6 +93,21 @@ docker-backend-logs:
 
 docker-restart:
 	docker-compose restart
+
+# Docker development commands
+docker-dev-up:
+	docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+	@echo ""
+	@echo "Services starting in DEVELOPMENT mode with hot reload:"
+	@echo "  - Backend API: http://localhost:8900 (with hot reload)"
+	@echo "  - Frontend:    http://localhost:8901 (with hot reload)"
+	@echo "  - MongoDB:     mongodb://localhost:8902"
+	@echo ""
+	@echo "Code changes will automatically reload the services."
+	@echo "Run 'make docker-logs' to see logs"
+
+docker-dev-down:
+	docker-compose -f docker-compose.yml -f docker-compose.dev.yml down
 
 # Utility commands
 clean:

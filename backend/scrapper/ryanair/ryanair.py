@@ -29,7 +29,11 @@ import time
 import json
 from typing import Optional
 from datetime import datetime
-from ryanair_models import RyanairResponse
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
+
+from api_models.ryanair_models import RyanairResponse
 from loguru import logger
 
 # Selenium imports (optional - only needed for automation)

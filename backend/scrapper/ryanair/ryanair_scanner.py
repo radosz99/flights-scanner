@@ -12,8 +12,13 @@ This scanner:
 Configuration is set via variables at the top of this file.
 """
 
-from ryanair import get_valid_cookie, get_ryanair_flights
-from flight_connector import load_from_mongodb
+import sys
+import os
+
+# Add parent directory to path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
+
+from .ryanair import get_valid_cookie, get_ryanair_flights
 from config import settings
 from datetime import datetime, timedelta
 from loguru import logger

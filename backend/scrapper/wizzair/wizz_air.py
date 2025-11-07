@@ -12,9 +12,13 @@ Provides functions to:
 import requests
 from typing import List, Optional, Dict
 from datetime import datetime, timedelta
-from wizz_air_models import FlightDatesResponse, SearchResponse, Flight
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
+import sys
+import os
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
+from api_models.wizz_air_models import FlightDatesResponse, SearchResponse, Flight
 
 
 class WizzAirAPI:

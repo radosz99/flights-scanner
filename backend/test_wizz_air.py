@@ -7,7 +7,7 @@ Note: The actual Wizz Air API blocks automated requests (403 Forbidden).
 This test demonstrates the parsing logic works correctly with sample data.
 """
 
-from wizz_air_models import (
+from api_models.wizz_air_models import (
     FlightDatesResponse,
     SearchResponse,
     Flight,

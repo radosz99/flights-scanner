@@ -19,10 +19,15 @@ Environment:
 """
 
 import sys
+import os
 from datetime import datetime
-from config import settings
 from loguru import logger
-from flight_connector import (
+
+# Add parent directory to path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
+
+from config import settings
+from .flight_connector import (
     build_airport_database,
     fetch_ryanair_routes,
     fetch_wizzair_routes,
