@@ -590,6 +590,63 @@ async def get_latest_scan():
     return ScanIterationResponse(**scan)
 
 
+@app.get("/flights/price-chart")
+async def get_price_chart(
+    origin: str = Query(..., description="Origin airport code (e.g., WRO)"),
+    destination: str = Query(..., description="Destination airport code (e.g., BCN)")
+):
+    """
+    Get price chart data for a specific route over the full date range.
+
+    Returns all flights for the route grouped by date with min, max, and average prices.
+    """
+    query = {
+        "origin": origin.upper(),
+        "destination": destination.upper()
+    }
+
+    # Aggregate flights by date to get price statistics
+    pipeline = [
+        {"$match": query},
+        {"$group": {
+            "_id": "$date_out",
+            "min_price": {"$min": "$current_price"},
+            "max_price": {"$max": "$current_price"},
+            "avg_price": {"$avg": "$current_price"},
+            "flight_count": {"$sum": 1},
+            "currency": {"$first": "$currency"}
+        }},
+        {"$sort": {"_id": ASCENDING}}
+    ]
+
+    results = list(flights_collection.aggregate(pipeline))
+
+    if not results:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No flights found for route {origin.upper()} → {destination.upper()}"
+        )
+
+    chart_data = [
+        {
+            "date": r["_id"],
+            "min_price": round(r["min_price"], 2),
+            "max_price": round(r["max_price"], 2),
+            "avg_price": round(r["avg_price"], 2),
+            "flight_count": r["flight_count"],
+            "currency": r["currency"]
+        }
+        for r in results
+    ]
+
+    return {
+        "origin": origin.upper(),
+        "destination": destination.upper(),
+        "data": chart_data,
+        "total_dates": len(chart_data)
+    }
+
+
 @app.get("/health")
 async def health_check():
     """
