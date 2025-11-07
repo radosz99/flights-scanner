@@ -35,7 +35,7 @@ class Flight(BaseModel):
     faresLeft: int
     flightKey: str
     infantsLeft: int
-    regularFare: RegularFare
+    regularFare: Optional[RegularFare] = None
     operatedBy: str
     segments: List[Segment]
     isSSIMLoad: bool

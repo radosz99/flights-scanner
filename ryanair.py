@@ -588,6 +588,7 @@ def get_ryanair_flights(
         headers['Cookie'] = cookies
 
     try:
+        time.sleep(2)
         response = requests.get(url, params=params, headers=headers)
         response.raise_for_status()
 
