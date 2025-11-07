@@ -5,5 +5,10 @@ export default defineNuxtConfig({
   ssr: true,
   nitro: {
     preset: 'node-server'
+  },
+  runtimeConfig: {
+    public: {
+      apiBaseUrl: process.env.API_BASE_URL || 'http://localhost:8900'
+    }
   }
 })

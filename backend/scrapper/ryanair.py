@@ -254,18 +254,33 @@ def setup_driver(enable_network_capture: bool = False):
         )
 
     chrome_options = Options()
-    # chrome_options.add_argument("--headless")  # Uncomment for headless mode
+    chrome_options.add_argument("--headless")  # Run in headless mode for Docker
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+    chrome_options.add_argument("--disable-gpu")  # Disable GPU for headless mode
+    chrome_options.add_argument("--disable-software-rasterizer")
     chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
     chrome_options.add_experimental_option('useAutomationExtension', False)
+
+    # Set binary location for Chromium (Debian/Ubuntu path)
+    chrome_options.binary_location = "/usr/bin/chromium"
 
     # Enable performance logging to capture network requests
     if enable_network_capture:
         chrome_options.set_capability('goog:loggingPrefs', {'performance': 'ALL'})
 
-    driver = webdriver.Chrome(options=chrome_options)
+    # Use Selenium Manager or system chromedriver
+    try:
+        from selenium.webdriver.chrome.service import Service
+        # Try to use system chromedriver first
+        service = Service(executable_path='/usr/bin/chromedriver')
+        driver = webdriver.Chrome(service=service, options=chrome_options)
+    except Exception as e:
+        logger.warning(f"Failed to use system chromedriver, falling back to Selenium Manager: {e}")
+        # Fall back to Selenium Manager (automatic driver management)
+        driver = webdriver.Chrome(options=chrome_options)
+
     return driver
 
 

@@ -56,7 +56,8 @@
 </template>
 
 <script setup>
-const apiBaseUrl = 'http://localhost:8000'
+const config = useRuntimeConfig()
+const apiBaseUrl = config.public.apiBaseUrl
 const healthData = ref(null)
 const scanStatus = ref(null)
 const scanResult = ref(null)
