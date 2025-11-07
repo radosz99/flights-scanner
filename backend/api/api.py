@@ -172,6 +172,10 @@ db = client[settings.MONGO_DATABASE]
 flights_collection = db[FLIGHTS_COLLECTION]
 scan_iterations_collection = db[SCAN_ITERATIONS_COLLECTION]
 
+# Initialize API service
+from api_service import APIService
+api_service = APIService(client, settings.MONGO_DATABASE)
+
 
 # ============================================================================
 # API ENDPOINTS
@@ -201,71 +205,26 @@ async def get_flights(
 
     Returns paginated list of flights matching the specified criteria.
     """
-    # Build MongoDB query
-    query = {}
-
-    if origin:
-        query["origin"] = origin.upper()
-
-    if destination:
-        query["destination"] = destination.upper()
-
-    if date_from or date_to:
-        date_query = {}
-        if date_from:
-            date_query["$gte"] = date_from.strftime("%Y-%m-%d")
-        if date_to:
-            date_query["$lte"] = date_to.strftime("%Y-%m-%d")
-        query["date_out"] = date_query
-
-    if min_price is not None or max_price is not None:
-        price_query = {}
-        if min_price is not None:
-            price_query["$gte"] = min_price
-        if max_price is not None:
-            price_query["$lte"] = max_price
-        query["current_price"] = price_query
-
-    if currency:
-        query["currency"] = currency.upper()
-
-    # Determine sort order
-    sort_field = "current_price"
-    sort_direction = ASCENDING
-
-    if sort_by == "price":
-        sort_field = "current_price"
-        sort_direction = ASCENDING
-    elif sort_by == "price_desc":
-        sort_field = "current_price"
-        sort_direction = DESCENDING
-    elif sort_by == "date":
-        sort_field = "date_out"
-        sort_direction = ASCENDING
-    elif sort_by == "duration":
-        sort_field = "duration"
-        sort_direction = ASCENDING
-
-    # Count total results
-    total = flights_collection.count_documents(query)
-
-    # Calculate pagination
-    skip = (page - 1) * page_size
-
-    # Execute query
-    cursor = flights_collection.find(query).sort(sort_field, sort_direction).skip(skip).limit(page_size)
+    result = api_service.get_flights(
+        origin=origin,
+        destination=destination,
+        date_from=date_from,
+        date_to=date_to,
+        min_price=min_price,
+        max_price=max_price,
+        currency=currency,
+        sort_by=sort_by,
+        page=page,
+        page_size=page_size
+    )
 
     # Convert to response models
-    flights = []
-    for doc in cursor:
-        # Convert MongoDB document to FlightResponse
-        doc.pop("_id", None)  # Remove MongoDB _id field
-        flights.append(FlightResponse(**doc))
+    flights = [FlightResponse(**flight) for flight in result["flights"]]
 
     return FlightListResponse(
-        total=total,
-        page=page,
-        page_size=page_size,
+        total=result["total"],
+        page=result["page"],
+        page_size=result["page_size"],
         flights=flights
     )
 
@@ -275,12 +234,11 @@ async def get_flight(flight_id: str):
     """
     Get detailed information about a specific flight including full price history.
     """
-    flight = flights_collection.find_one({"flight_id": flight_id})
+    flight = api_service.get_flight_by_id(flight_id)
 
     if not flight:
         raise HTTPException(status_code=404, detail=f"Flight {flight_id} not found")
 
-    flight.pop("_id", None)
     return FlightResponse(**flight)
 
 
@@ -289,58 +247,8 @@ async def get_stats():
     """
     Get database statistics including total flights, price changes, and price ranges.
     """
-    # Total flights
-    total_flights = flights_collection.count_documents({})
-
-    # Flights with price changes
-    flights_with_changes = flights_collection.count_documents({
-        "price_history.1": {"$exists": True}
-    })
-
-    # Unique origins and destinations
-    unique_origins = len(flights_collection.distinct("origin"))
-    unique_destinations = len(flights_collection.distinct("destination"))
-
-    # Cheapest flight
-    cheapest = flights_collection.find_one(sort=[("current_price", ASCENDING)])
-    cheapest_flight = None
-    if cheapest:
-        cheapest_flight = {
-            "flight_id": cheapest.get("flight_id"),
-            "route": f"{cheapest.get('origin')} → {cheapest.get('destination')}",
-            "price": cheapest.get("current_price"),
-            "currency": cheapest.get("currency"),
-            "date": cheapest.get("date_out")
-        }
-
-    # Most expensive flight
-    most_expensive = flights_collection.find_one(sort=[("current_price", DESCENDING)])
-    most_expensive_flight = None
-    if most_expensive:
-        most_expensive_flight = {
-            "flight_id": most_expensive.get("flight_id"),
-            "route": f"{most_expensive.get('origin')} → {most_expensive.get('destination')}",
-            "price": most_expensive.get("current_price"),
-            "currency": most_expensive.get("currency"),
-            "date": most_expensive.get("date_out")
-        }
-
-    # Average price
-    pipeline = [
-        {"$group": {"_id": None, "avg_price": {"$avg": "$current_price"}}}
-    ]
-    avg_result = list(flights_collection.aggregate(pipeline))
-    average_price = avg_result[0]["avg_price"] if avg_result else 0.0
-
-    return StatsResponse(
-        total_flights=total_flights,
-        flights_with_price_changes=flights_with_changes,
-        unique_origins=unique_origins,
-        unique_destinations=unique_destinations,
-        cheapest_flight=cheapest_flight,
-        most_expensive_flight=most_expensive_flight,
-        average_price=round(average_price, 2)
-    )
+    stats = api_service.get_stats()
+    return StatsResponse(**stats)
 
 
 @app.get("/airports/origins")
@@ -348,26 +256,7 @@ async def get_origins():
     """
     Get list of all available origin airports with flight counts.
     """
-    pipeline = [
-        {"$group": {
-            "_id": "$origin",
-            "origin_name": {"$first": "$origin_name"},
-            "flight_count": {"$sum": 1}
-        }},
-        {"$sort": {"_id": ASCENDING}}
-    ]
-
-    results = list(flights_collection.aggregate(pipeline))
-
-    origins = [
-        {
-            "code": r["_id"],
-            "name": r["origin_name"],
-            "flight_count": r["flight_count"]
-        }
-        for r in results
-    ]
-
+    origins = api_service.get_origins()
     return {"origins": origins}
 
 
@@ -376,26 +265,7 @@ async def get_destinations():
     """
     Get list of all available destination airports with flight counts.
     """
-    pipeline = [
-        {"$group": {
-            "_id": "$destination",
-            "destination_name": {"$first": "$destination_name"},
-            "flight_count": {"$sum": 1}
-        }},
-        {"$sort": {"_id": ASCENDING}}
-    ]
-
-    results = list(flights_collection.aggregate(pipeline))
-
-    destinations = [
-        {
-            "code": r["_id"],
-            "name": r["destination_name"],
-            "flight_count": r["flight_count"]
-        }
-        for r in results
-    ]
-
+    destinations = api_service.get_destinations()
     return {"destinations": destinations}
 
 
@@ -404,49 +274,7 @@ async def get_routes(origin: Optional[str] = Query(None, description="Filter rou
     """
     Get list of all available routes with flight counts.
     """
-    match_stage = {}
-    if origin:
-        match_stage = {"$match": {"origin": origin.upper()}}
-
-    pipeline = [
-        match_stage,
-        {"$group": {
-            "_id": {
-                "origin": "$origin",
-                "destination": "$destination"
-            },
-            "origin_name": {"$first": "$origin_name"},
-            "destination_name": {"$first": "$destination_name"},
-            "flight_count": {"$sum": 1},
-            "min_price": {"$min": "$current_price"},
-            "max_price": {"$max": "$current_price"},
-            "avg_price": {"$avg": "$current_price"},
-            "currency": {"$first": "$currency"}
-        }},
-        {"$sort": {"_id.origin": ASCENDING, "_id.destination": ASCENDING}}
-    ]
-
-    # Remove empty match stage
-    if not match_stage:
-        pipeline = pipeline[1:]
-
-    results = list(flights_collection.aggregate(pipeline))
-
-    routes = [
-        {
-            "origin": r["_id"]["origin"],
-            "origin_name": r["origin_name"],
-            "destination": r["_id"]["destination"],
-            "destination_name": r["destination_name"],
-            "flight_count": r["flight_count"],
-            "min_price": round(r["min_price"], 2),
-            "max_price": round(r["max_price"], 2),
-            "avg_price": round(r["avg_price"], 2),
-            "currency": r["currency"]
-        }
-        for r in results
-    ]
-
+    routes = api_service.get_routes(origin=origin)
     return {"routes": routes}
 
 
@@ -561,16 +389,8 @@ async def get_scans(limit: int = Query(10, ge=1, le=100, description="Number of 
     """
     Get scan iteration history.
     """
-    cursor = scan_iterations_collection.find().sort("start_time", DESCENDING).limit(limit)
-
-    scans = []
-    for doc in cursor:
-        doc.pop("_id", None)
-        doc.pop("date_ranges", None)  # Remove detailed date ranges to keep response small
-        doc.pop("config", None)  # Remove config details
-        scans.append(ScanIterationResponse(**doc))
-
-    return scans
+    scans_data = api_service.get_scans(limit=limit)
+    return [ScanIterationResponse(**scan) for scan in scans_data]
 
 
 @app.get("/scans/latest", response_model=ScanIterationResponse)
@@ -578,14 +398,10 @@ async def get_latest_scan():
     """
     Get details of the most recent scan iteration.
     """
-    scan = scan_iterations_collection.find_one(sort=[("start_time", DESCENDING)])
+    scan = api_service.get_latest_scan()
 
     if not scan:
         raise HTTPException(status_code=404, detail="No scan iterations found")
-
-    scan.pop("_id", None)
-    scan.pop("date_ranges", None)  # Remove detailed date ranges to keep response small
-    scan.pop("config", None)  # Remove config details
 
     return ScanIterationResponse(**scan)
 
@@ -600,51 +416,15 @@ async def get_price_chart(
 
     Returns all flights for the route grouped by date with min, max, and average prices.
     """
-    query = {
-        "origin": origin.upper(),
-        "destination": destination.upper()
-    }
+    chart_data = api_service.get_price_chart(origin=origin, destination=destination)
 
-    # Aggregate flights by date to get price statistics
-    pipeline = [
-        {"$match": query},
-        {"$group": {
-            "_id": "$date_out",
-            "min_price": {"$min": "$current_price"},
-            "max_price": {"$max": "$current_price"},
-            "avg_price": {"$avg": "$current_price"},
-            "flight_count": {"$sum": 1},
-            "currency": {"$first": "$currency"}
-        }},
-        {"$sort": {"_id": ASCENDING}}
-    ]
-
-    results = list(flights_collection.aggregate(pipeline))
-
-    if not results:
+    if not chart_data:
         raise HTTPException(
             status_code=404,
             detail=f"No flights found for route {origin.upper()} → {destination.upper()}"
         )
 
-    chart_data = [
-        {
-            "date": r["_id"],
-            "min_price": round(r["min_price"], 2),
-            "max_price": round(r["max_price"], 2),
-            "avg_price": round(r["avg_price"], 2),
-            "flight_count": r["flight_count"],
-            "currency": r["currency"]
-        }
-        for r in results
-    ]
-
-    return {
-        "origin": origin.upper(),
-        "destination": destination.upper(),
-        "data": chart_data,
-        "total_dates": len(chart_data)
-    }
+    return chart_data
 
 
 @app.get("/health")
@@ -652,26 +432,8 @@ async def health_check():
     """
     Health check endpoint to verify API and database connectivity.
     """
-    try:
-        # Test MongoDB connection
-        db.command("ping")
-
-        # Get basic stats
-        flight_count = flights_collection.count_documents({})
-
-        return {
-            "status": "healthy",
-            "database": "connected",
-            "flights_in_database": flight_count,
-            "timestamp": datetime.now().isoformat()
-        }
-    except Exception as e:
-        return {
-            "status": "unhealthy",
-            "database": "disconnected",
-            "error": str(e),
-            "timestamp": datetime.now().isoformat()
-        }
+    health_data, _ = api_service.get_health()
+    return health_data
 
 
 def run_scanner_background(

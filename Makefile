@@ -1,4 +1,4 @@
-.PHONY: help backend frontend install-backend install-frontend test docker-build docker-up docker-down docker-logs docker-backend-logs docker-restart clean
+.PHONY: help backend frontend install-backend install-frontend test test-api test-all docker-build docker-up docker-down docker-logs docker-backend-logs docker-restart clean
 
 # Default target
 help:
@@ -9,7 +9,9 @@ help:
 	@echo "    make install-frontend    - Install frontend dependencies"
 	@echo "    make backend             - Run backend API server (port 8900)"
 	@echo "    make frontend            - Run frontend dev server (port 8901)"
-	@echo "    make test                - Run backend tests"
+	@echo "    make test                - Run all backend tests"
+	@echo "    make test-api            - Run API service tests only"
+	@echo "    make test-all            - Run all tests with coverage report"
 	@echo ""
 	@echo "  Docker commands:"
 	@echo "    make docker-build        - Build all Docker images"
@@ -38,6 +40,12 @@ frontend:
 
 test:
 	cd backend && python -m pytest test_*.py -v
+
+test-api:
+	cd backend/api && python -m pytest test_api_service.py -v
+
+test-all:
+	cd backend && python -m pytest test_*.py -v --cov=. --cov-report=term-missing
 
 # Docker commands
 docker-build:
