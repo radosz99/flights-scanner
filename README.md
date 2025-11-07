@@ -2,6 +2,25 @@
 
 A Python application for fetching and analyzing flight data from Ryanair, Wizz Air, and FlightConnections.
 
+## 🚀 Quick Start with Docker
+
+The easiest way to run the entire application:
+
+```bash
+# Build and start all services (MongoDB, Backend API, Frontend)
+make docker-up
+
+# View logs
+make docker-logs
+```
+
+**Services will be available at:**
+- Frontend: http://localhost:8901
+- Backend API: http://localhost:8900
+- MongoDB: mongodb://localhost:8902
+
+📖 **For detailed Docker instructions, see [DOCKER_SETUP.md](DOCKER_SETUP.md)**
+
 ## Features
 
 ### 1. Ryanair API Integration (`ryanair.py`)
