@@ -40,10 +40,10 @@ test:
 
 # Docker commands
 docker-build:
-	docker compose build
+	docker-compose build
 
 docker-up:
-	docker compose up -d
+	docker-compose up -d
 	@echo ""
 	@echo "Services starting:"
 	@echo "  - Backend API: http://localhost:8900"
@@ -53,13 +53,13 @@ docker-up:
 	@echo "Run 'make docker-logs' to see logs"
 
 docker-down:
-	docker compose down
+	docker-compose down
 
 docker-logs:
-	docker compose logs -f
+	docker-compose logs -f
 
 docker-restart:
-	docker compose restart
+	docker-compose restart
 
 # Utility commands
 clean:
