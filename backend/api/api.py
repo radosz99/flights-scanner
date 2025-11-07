@@ -19,7 +19,7 @@ Example queries:
     GET /flights/price-history/{flight_id}
 """
 
-from fastapi import FastAPI, Query, HTTPException
+from fastapi import FastAPI, Query, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pymongo import MongoClient, ASCENDING, DESCENDING
 from pydantic import BaseModel, Field
@@ -27,6 +27,11 @@ from typing import Optional, List, Dict, Any, Literal
 from datetime import datetime, date
 from config import settings
 from loguru import logger
+import sys
+import os
+
+# Add scrapper directory to path to import scanner modules
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scrapper"))
 
 # ============================================================================
 # CONFIGURATION
@@ -118,6 +123,32 @@ class ScanIterationResponse(BaseModel):
         }
 
 
+class ScanRequest(BaseModel):
+    """Request model for triggering a scan."""
+    departure_airports: Optional[List[str]] = Field(
+        default=None,
+        description="List of departure airport codes (e.g., ['WRO', 'KRK']). If not provided, scans all Polish airports."
+    )
+    trip_duration_days: Optional[int] = Field(
+        default=4,
+        ge=1,
+        le=30,
+        description="Number of days between outbound and return flight"
+    )
+    scan_until_date: Optional[str] = Field(
+        default="2025-12-31",
+        description="Scan all date ranges until this date (YYYY-MM-DD)"
+    )
+
+
+class ScanTriggerResponse(BaseModel):
+    """Response model for scan trigger."""
+    message: str
+    status: str
+    scan_id: Optional[str] = None
+    config: Optional[Dict[str, Any]] = None
+
+
 # ============================================================================
 # FASTAPI APPLICATION
 # ============================================================================
@@ -155,13 +186,16 @@ async def root():
         "name": "Ryanair Flight Scanner API",
         "version": "1.0.0",
         "endpoints": {
+            "GET /health": "Health check endpoint",
             "GET /flights": "Query flights with filters and sorting",
             "GET /flights/{flight_id}": "Get specific flight details",
-            "GET /flights/stats": "Get database statistics",
+            "GET /flights/stats/summary": "Get database statistics",
             "GET /airports/origins": "Get list of available origin airports",
             "GET /airports/destinations": "Get list of available destination airports",
+            "GET /airports/routes": "Get list of available routes",
             "GET /scans": "Get scan iteration history",
-            "GET /scans/latest": "Get latest scan iteration details"
+            "GET /scans/latest": "Get latest scan iteration details",
+            "POST /scans/run": "Trigger a new flight scan (background task)"
         }
     }
 
@@ -492,6 +526,157 @@ async def health_check():
             "error": str(e),
             "timestamp": datetime.now().isoformat()
         }
+
+
+def run_scanner_background(
+    departure_airports: List[str],
+    trip_duration_days: int,
+    scan_until_date: str,
+    scan_id: str
+):
+    """
+    Background task to run the flight scanner.
+
+    This imports and runs the scanner logic in a background thread.
+    """
+    try:
+        from ryanair_scanner import (
+            scan_flights,
+            generate_date_ranges,
+            ScanIterationManager,
+            FlightStorage,
+            SCAN_ITERATIONS_COLLECTION,
+            FLIGHTS_COLLECTION
+        )
+        from ryanair import get_valid_cookie
+        from datetime import datetime, timedelta
+
+        logger.info(f"Starting background scan {scan_id}")
+
+        # Get valid cookie
+        logger.info("Getting valid cookie...")
+        cookie = get_valid_cookie(auto_refresh=True)
+
+        if not cookie:
+            logger.error("Failed to get valid cookie")
+            # Mark scan as failed
+            scan_manager = ScanIterationManager(
+                settings.mongo_uri,
+                settings.MONGO_DATABASE,
+                SCAN_ITERATIONS_COLLECTION
+            )
+            scan_manager.complete_scan(scan_id, success=False)
+            return
+
+        # Generate date ranges
+        today = datetime.now()
+        scan_until = datetime.strptime(scan_until_date, "%Y-%m-%d")
+        date_ranges = generate_date_ranges(today, scan_until, trip_duration_days)
+
+        logger.info(f"Generated {len(date_ranges)} date ranges to scan")
+
+        # Get scan manager
+        scan_manager = ScanIterationManager(
+            settings.mongo_uri,
+            settings.MONGO_DATABASE,
+            SCAN_ITERATIONS_COLLECTION
+        )
+
+        # Run scan for each date range
+        total_stats = {
+            "total_routes": 0,
+            "successful_queries": 0,
+            "failed_queries": 0,
+            "flights_saved": 0
+        }
+
+        for idx, (date_out_str, date_in_str) in enumerate(date_ranges, 1):
+            logger.info(f"Scanning date range {idx}/{len(date_ranges)}: {date_out_str} to {date_in_str}")
+
+            stats = scan_flights(departure_airports, date_out_str, date_in_str, cookie)
+
+            # Update totals
+            for key in total_stats:
+                total_stats[key] += stats.get(key, 0)
+
+            # Record this date range result
+            scan_manager.add_date_range_result(scan_id, date_out_str, date_in_str, stats)
+
+        # Mark scan as completed
+        scan_manager.complete_scan(scan_id, success=True)
+        logger.success(f"Scan {scan_id} completed successfully")
+
+    except Exception as e:
+        logger.error(f"Background scan failed: {e}")
+        try:
+            from ryanair_scanner import ScanIterationManager, SCAN_ITERATIONS_COLLECTION
+            scan_manager = ScanIterationManager(
+                settings.mongo_uri,
+                settings.MONGO_DATABASE,
+                SCAN_ITERATIONS_COLLECTION
+            )
+            scan_manager.complete_scan(scan_id, success=False)
+        except:
+            pass
+
+
+@app.post("/scans/run", response_model=ScanTriggerResponse)
+async def trigger_scan(scan_request: ScanRequest, background_tasks: BackgroundTasks):
+    """
+    Trigger a new flight scan.
+
+    This endpoint starts a background scan job and returns immediately.
+    Use GET /scans/latest or GET /scans to check the scan progress.
+    """
+    try:
+        from ryanair_scanner import ScanIterationManager, SCAN_ITERATIONS_COLLECTION
+
+        # Default departure airports (all Polish airports)
+        default_airports = ["GDN", "SZN", "KRK", "KTW", "WRO", "POZ", "WMI", "WAW", "LCJ", "LUZ", "RZE", "SZY", "BZG"]
+
+        departure_airports = scan_request.departure_airports or default_airports
+        trip_duration_days = scan_request.trip_duration_days or 4
+        scan_until_date = scan_request.scan_until_date or "2025-12-31"
+
+        # Validate departure airports
+        departure_airports = [airport.upper() for airport in departure_airports]
+
+        # Create scan iteration record
+        scan_manager = ScanIterationManager(
+            settings.mongo_uri,
+            settings.MONGO_DATABASE,
+            SCAN_ITERATIONS_COLLECTION
+        )
+
+        config = {
+            "trip_duration_days": trip_duration_days,
+            "scan_until_date": scan_until_date,
+            "departure_airports": departure_airports,
+        }
+
+        scan_id = scan_manager.start_scan(config)
+
+        # Start background scan
+        background_tasks.add_task(
+            run_scanner_background,
+            departure_airports,
+            trip_duration_days,
+            scan_until_date,
+            scan_id
+        )
+
+        logger.info(f"Scan triggered: {scan_id}")
+
+        return ScanTriggerResponse(
+            message="Scan started successfully. Use GET /scans/latest to check progress.",
+            status="started",
+            scan_id=scan_id,
+            config=config
+        )
+
+    except Exception as e:
+        logger.error(f"Failed to trigger scan: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to trigger scan: {str(e)}")
 
 
 # ============================================================================
