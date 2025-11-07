@@ -173,7 +173,7 @@ flights_collection = db[FLIGHTS_COLLECTION]
 scan_iterations_collection = db[SCAN_ITERATIONS_COLLECTION]
 
 # Initialize API service
-from api_service import APIService
+from .api_service import APIService
 api_service = APIService(client, settings.MONGO_DATABASE)
 
 
