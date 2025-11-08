@@ -111,13 +111,13 @@
           <div class="flight-segment outbound">
             <div class="segment-header">
               <span class="segment-label">Outbound</span>
-              <span class="segment-date">{{ trip.outbound_flight.date }}</span>
+              <span class="segment-date">{{ formatDate(trip.outbound_flight.date) }}</span>
             </div>
             <div class="flight-details">
               <div class="flight-time">
-                <div class="time">{{ trip.outbound_flight.departure_time }}</div>
+                <div class="time">{{ formatTime(trip.outbound_flight.departure_time) }}</div>
                 <div class="arrow">→</div>
-                <div class="time">{{ trip.outbound_flight.arrival_time }}</div>
+                <div class="time">{{ formatTime(trip.outbound_flight.arrival_time) }}</div>
               </div>
               <div class="flight-info">
                 <span class="flight-number">{{ trip.outbound_flight.flight_number }}</span>
@@ -131,13 +131,13 @@
           <div class="flight-segment return">
             <div class="segment-header">
               <span class="segment-label">Return</span>
-              <span class="segment-date">{{ trip.return_flight.date }}</span>
+              <span class="segment-date">{{ formatDate(trip.return_flight.date) }}</span>
             </div>
             <div class="flight-details">
               <div class="flight-time">
-                <div class="time">{{ trip.return_flight.departure_time }}</div>
+                <div class="time">{{ formatTime(trip.return_flight.departure_time) }}</div>
                 <div class="arrow">→</div>
-                <div class="time">{{ trip.return_flight.arrival_time }}</div>
+                <div class="time">{{ formatTime(trip.return_flight.arrival_time) }}</div>
               </div>
               <div class="flight-info">
                 <span class="flight-number">{{ trip.return_flight.flight_number }}</span>
@@ -190,6 +190,36 @@ const canSearch = computed(() => {
     searchParams.value.minDays <= searchParams.value.maxDays
   )
 })
+
+// Helper function to format date (YYYY-MM-DD or ISO string to readable date)
+const formatDate = (dateStr) => {
+  if (!dateStr) return ''
+
+  // Handle both YYYY-MM-DD and ISO format
+  const date = new Date(dateStr)
+
+  // Format as: Mon, Jan 15, 2025
+  return date.toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric'
+  })
+}
+
+// Helper function to format time (extract HH:MM from ISO string)
+const formatTime = (timeStr) => {
+  if (!timeStr) return ''
+
+  // Handle format: YYYY-MM-DDTHH:MM:SS.mmm
+  // Extract just the time part and remove seconds
+  const timePart = timeStr.split('T')[1]
+  if (!timePart) return timeStr
+
+  // Get HH:MM
+  const [hours, minutes] = timePart.split(':')
+  return `${hours}:${minutes}`
+}
 
 // Load origins on mount
 onMounted(async () => {
@@ -447,7 +477,7 @@ h2 {
 
 .trips-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
   gap: 1.5rem;
 }
 
@@ -458,6 +488,7 @@ h2 {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   overflow: hidden;
   transition: transform 0.2s, box-shadow 0.2s;
+  min-width: 0;
 }
 
 .trip-card:hover {
@@ -508,8 +539,10 @@ h2 {
 .segment-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   margin-bottom: 0.75rem;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .segment-label {
@@ -518,12 +551,17 @@ h2 {
   font-size: 0.9rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  white-space: nowrap;
 }
 
 .segment-date {
   color: #6c757d;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   font-weight: 500;
+  text-align: right;
+  line-height: 1.3;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .flight-details {
@@ -535,14 +573,17 @@ h2 {
 .flight-time {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  font-size: 1.25rem;
+  gap: 0.75rem;
+  font-size: 1.1rem;
   font-weight: 600;
   color: #2c3e50;
+  flex-wrap: nowrap;
 }
 
 .time {
   font-family: 'Courier New', monospace;
+  white-space: nowrap;
+  min-width: 3.5rem;
 }
 
 .arrow {
@@ -646,6 +687,19 @@ button:disabled {
 
   .trip-duration {
     text-align: center;
+  }
+
+  .flight-time {
+    font-size: 1rem;
+    gap: 0.5rem;
+  }
+
+  .segment-date {
+    font-size: 0.8rem;
+  }
+
+  .time {
+    min-width: 3rem;
   }
 }
 </style>

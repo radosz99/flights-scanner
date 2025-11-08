@@ -374,10 +374,14 @@ class APIService:
         }
 
         # Aggregate flights by date to get price statistics
+        # Extract date from departure_time (format: YYYY-MM-DDTHH:MM:SS.mmm)
         pipeline = [
             {"$match": query},
+            {"$addFields": {
+                "departure_date": {"$substr": ["$departure_time", 0, 10]}
+            }},
             {"$group": {
-                "_id": "$date_out",
+                "_id": "$departure_date",
                 "min_price": {"$min": "$current_price"},
                 "max_price": {"$max": "$current_price"},
                 "avg_price": {"$avg": "$current_price"},
@@ -471,25 +475,25 @@ class APIService:
         outbound_flights = list(self.flights_collection.find({
             "origin": origin.upper(),
             "destination": destination.upper()
-        }).sort("date_out", ASCENDING))
+        }).sort("departure_time", ASCENDING))
 
         # Get all return flights from destination to origin
         return_flights = list(self.flights_collection.find({
             "origin": destination.upper(),
             "destination": origin.upper()
-        }).sort("date_out", ASCENDING))
+        }).sort("departure_time", ASCENDING))
 
         # Find valid round trip combinations
         round_trips = []
 
         for outbound in outbound_flights:
-            # Handle both date-only format (YYYY-MM-DD) and ISO format (YYYY-MM-DDTHH:MM:SS.mmm)
-            outbound_date_str = outbound["date_out"].split("T")[0]
+            # Extract date from departure_time (format: YYYY-MM-DDTHH:MM:SS.mmm)
+            outbound_date_str = outbound["departure_time"].split("T")[0]
             outbound_date = datetime.strptime(outbound_date_str, "%Y-%m-%d")
 
             for return_flight in return_flights:
-                # Handle both date-only format (YYYY-MM-DD) and ISO format (YYYY-MM-DDTHH:MM:SS.mmm)
-                return_date_str = return_flight["date_out"].split("T")[0]
+                # Extract date from departure_time (format: YYYY-MM-DDTHH:MM:SS.mmm)
+                return_date_str = return_flight["departure_time"].split("T")[0]
                 return_date = datetime.strptime(return_date_str, "%Y-%m-%d")
 
                 # Calculate trip duration
@@ -503,7 +507,7 @@ class APIService:
                         "outbound_flight": {
                             "flight_id": outbound["flight_id"],
                             "flight_number": outbound["flight_number"],
-                            "date": outbound["date_out"],
+                            "date": outbound_date_str,
                             "departure_time": outbound["departure_time"],
                             "arrival_time": outbound["arrival_time"],
                             "duration": outbound["duration"],
@@ -513,7 +517,7 @@ class APIService:
                         "return_flight": {
                             "flight_id": return_flight["flight_id"],
                             "flight_number": return_flight["flight_number"],
-                            "date": return_flight["date_out"],
+                            "date": return_date_str,
                             "departure_time": return_flight["departure_time"],
                             "arrival_time": return_flight["arrival_time"],
                             "duration": return_flight["duration"],
@@ -531,6 +535,114 @@ class APIService:
         round_trips.sort(key=lambda x: x["total_price"])
 
         return round_trips
+
+    def get_all_two_way_routes(self, limit: int = 100) -> List[Dict[str, Any]]:
+        """
+        Get all possible two-way routes from Polish airports.
+
+        This returns example routes that can form round trips, useful for
+        displaying on the trip search page.
+
+        Args:
+            limit: Maximum number of route pairs to return
+
+        Returns:
+            List of route pairs (origin-destination combinations)
+        """
+        # Polish airport codes
+        polish_airports = ["WRO", "KRK", "GDN", "POZ", "WAW", "KTW", "WMI", "SZN", "LCJ", "LUZ", "RZE", "SZY", "BZG"]
+
+        # Get unique routes from Polish airports
+        pipeline = [
+            {"$match": {"origin": {"$in": polish_airports}}},
+            {"$group": {
+                "_id": {
+                    "origin": "$origin",
+                    "destination": "$destination"
+                },
+                "origin_name": {"$first": "$origin_name"},
+                "destination_name": {"$first": "$destination_name"},
+                "flight_count": {"$sum": 1}
+            }},
+            {"$sort": {"_id.origin": ASCENDING, "_id.destination": ASCENDING}},
+            {"$limit": limit}
+        ]
+
+        results = list(self.flights_collection.aggregate(pipeline))
+
+        # Now check which routes have return flights
+        two_way_routes = []
+
+        for route in results:
+            origin = route["_id"]["origin"]
+            destination = route["_id"]["destination"]
+
+            # Check if return route exists
+            return_route_exists = self.flights_collection.count_documents({
+                "origin": destination,
+                "destination": origin
+            }) > 0
+
+            if return_route_exists:
+                two_way_routes.append({
+                    "origin": origin,
+                    "origin_name": route["origin_name"],
+                    "destination": destination,
+                    "destination_name": route["destination_name"],
+                    "outbound_flights": route["flight_count"]
+                })
+
+        return two_way_routes
+
+    def get_one_way_route_examples(self, limit: int = 50) -> List[Dict[str, Any]]:
+        """
+        Get example one-way routes from Polish airports for price chart display.
+
+        Args:
+            limit: Maximum number of routes to return
+
+        Returns:
+            List of one-way routes with sample flights
+        """
+        # Polish airport codes
+        polish_airports = ["WRO", "KRK", "GDN", "POZ", "WAW", "KTW", "WMI", "SZN", "LCJ", "LUZ", "RZE", "SZY", "BZG"]
+
+        # Get unique routes from Polish airports with min prices
+        pipeline = [
+            {"$match": {"origin": {"$in": polish_airports}}},
+            {"$group": {
+                "_id": {
+                    "origin": "$origin",
+                    "destination": "$destination"
+                },
+                "origin_name": {"$first": "$origin_name"},
+                "destination_name": {"$first": "$destination_name"},
+                "min_price": {"$min": "$current_price"},
+                "avg_price": {"$avg": "$current_price"},
+                "flight_count": {"$sum": 1},
+                "currency": {"$first": "$currency"}
+            }},
+            {"$sort": {"min_price": ASCENDING}},
+            {"$limit": limit}
+        ]
+
+        results = list(self.flights_collection.aggregate(pipeline))
+
+        routes = [
+            {
+                "origin": r["_id"]["origin"],
+                "origin_name": r["origin_name"],
+                "destination": r["_id"]["destination"],
+                "destination_name": r["destination_name"],
+                "min_price": round(r["min_price"], 2),
+                "avg_price": round(r["avg_price"], 2),
+                "flight_count": r["flight_count"],
+                "currency": r["currency"]
+            }
+            for r in results
+        ]
+
+        return routes
 
     def get_health(self) -> Tuple[Dict[str, Any], bool]:
         """
