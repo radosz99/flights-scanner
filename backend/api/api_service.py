@@ -489,7 +489,7 @@ class APIService:
     def find_round_trips(
         self,
         origin: str,
-        destination: str,
+        destination: Optional[str],
         min_days: int,
         max_days: int,
         passengers: int = 2
@@ -499,7 +499,7 @@ class APIService:
 
         Args:
             origin: Origin airport code
-            destination: Destination airport code
+            destination: Destination airport code (optional - if None, search all destinations)
             min_days: Minimum trip duration in days
             max_days: Maximum trip duration in days
             passengers: Number of passengers (default 2)
@@ -509,17 +509,29 @@ class APIService:
         """
         from datetime import datetime, timedelta
 
-        # Get all outbound flights from origin to destination
-        outbound_flights = list(self.flights_collection.find({
-            "origin": origin.upper(),
-            "destination": destination.upper()
-        }).sort("departure_time", ASCENDING))
+        # If destination is provided, search for that specific destination
+        if destination:
+            # Get all outbound flights from origin to destination
+            outbound_flights = list(self.flights_collection.find({
+                "origin": origin.upper(),
+                "destination": destination.upper()
+            }).sort("departure_time", ASCENDING))
 
-        # Get all return flights from destination to origin
-        return_flights = list(self.flights_collection.find({
-            "origin": destination.upper(),
-            "destination": origin.upper()
-        }).sort("departure_time", ASCENDING))
+            # Get all return flights from destination to origin
+            return_flights = list(self.flights_collection.find({
+                "origin": destination.upper(),
+                "destination": origin.upper()
+            }).sort("departure_time", ASCENDING))
+        else:
+            # Get all outbound flights from origin to any destination
+            outbound_flights = list(self.flights_collection.find({
+                "origin": origin.upper()
+            }).sort("departure_time", ASCENDING))
+
+            # Get all return flights to origin from any destination
+            return_flights = list(self.flights_collection.find({
+                "destination": origin.upper()
+            }).sort("departure_time", ASCENDING))
 
         # Find valid round trip combinations
         round_trips = []
@@ -530,6 +542,12 @@ class APIService:
             outbound_date = datetime.strptime(outbound_date_str, "%Y-%m-%d")
 
             for return_flight in return_flights:
+                # When destination is not specified, ensure return flight matches outbound destination
+                if not destination:
+                    # Return flight must originate from where the outbound flight lands
+                    if return_flight["origin"] != outbound["destination"]:
+                        continue
+
                 # Extract date from departure_time (format: YYYY-MM-DDTHH:MM:SS.mmm)
                 return_date_str = return_flight["departure_time"].split("T")[0]
                 return_date = datetime.strptime(return_date_str, "%Y-%m-%d")
@@ -541,7 +559,7 @@ class APIService:
                 if min_days <= trip_duration <= max_days:
                     total_price = (outbound["current_price"] + return_flight["current_price"]) * passengers
 
-                    round_trips.append({
+                    trip_data = {
                         "outbound_flight": {
                             "flight_id": outbound["flight_id"],
                             "flight_number": outbound["flight_number"],
@@ -567,7 +585,14 @@ class APIService:
                         "price_per_person": round(total_price / passengers, 2),
                         "passengers": passengers,
                         "currency": outbound["currency"]
-                    })
+                    }
+
+                    # Add destination info when searching all destinations
+                    if not destination:
+                        trip_data["destination"] = outbound["destination"]
+                        trip_data["destination_name"] = outbound.get("destination_name", outbound["destination"])
+
+                    round_trips.append(trip_data)
 
         # Sort by total price
         round_trips.sort(key=lambda x: x["total_price"])

@@ -162,7 +162,7 @@ async def get_price_chart(
 @app.get("/flights/round-trips")
 async def get_round_trips(
     origin: str = Query(..., description="Origin airport code (e.g., WRO)"),
-    destination: str = Query(..., description="Destination airport code (e.g., BCN)"),
+    destination: Optional[str] = Query(None, description="Destination airport code (e.g., BCN). If not provided, shows all destinations."),
     min_days: int = Query(..., ge=1, description="Minimum trip duration in days"),
     max_days: int = Query(..., ge=1, description="Maximum trip duration in days"),
     passengers: int = Query(2, ge=1, le=10, description="Number of passengers"),
@@ -173,6 +173,8 @@ async def get_round_trips(
 
     Returns combinations of outbound and return flights that form valid round trips
     with trip duration between min_days and max_days, sorted by total price.
+
+    If destination is not provided, shows round trips to all available destinations.
     """
     if min_days > max_days:
         raise HTTPException(
@@ -189,9 +191,10 @@ async def get_round_trips(
     )
 
     if not round_trips:
+        dest_msg = destination.upper() if destination else "any destination"
         raise HTTPException(
             status_code=404,
-            detail=f"No round trips found for {origin.upper()} → {destination.upper()} with {min_days}-{max_days} days duration"
+            detail=f"No round trips found for {origin.upper()} → {dest_msg} with {min_days}-{max_days} days duration"
         )
 
     # Apply limit
@@ -199,7 +202,7 @@ async def get_round_trips(
 
     return {
         "origin": origin.upper(),
-        "destination": destination.upper(),
+        "destination": destination.upper() if destination else "ALL",
         "min_days": min_days,
         "max_days": max_days,
         "passengers": passengers,

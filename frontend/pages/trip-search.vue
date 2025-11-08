@@ -27,13 +27,13 @@
         </div>
 
         <div class="form-group">
-          <label class="dark:text-gray-200">Destination Airport</label>
+          <label class="dark:text-gray-200">Destination Airport (optional)</label>
           <select
             v-model="searchParams.destination"
             :disabled="!searchParams.origin || availableDestinations.length === 0"
             class="dark:bg-gray-600 dark:text-gray-100 dark:border-gray-500 dark:disabled:bg-gray-700 dark:disabled:text-gray-400"
           >
-            <option value="">{{ searchParams.origin ? 'Select destination...' : 'Select departure first' }}</option>
+            <option value="">{{ searchParams.origin ? 'All destinations' : 'Select departure first' }}</option>
             <option v-for="dest in availableDestinations" :key="dest.code" :value="dest.code">
               {{ dest.code }} - {{ dest.name }}
             </option>
@@ -80,6 +80,13 @@
       </div>
 
       <div class="action-buttons">
+        <button
+          @click="searchTrips"
+          :disabled="!canSearch"
+          class="btn-primary dark:bg-blue-600 dark:hover:bg-blue-700 dark:disabled:bg-gray-600"
+        >
+          Search Trips
+        </button>
         <button
           @click="clearSearch"
           class="btn-secondary dark:bg-gray-600 dark:hover:bg-gray-700"
@@ -161,30 +168,37 @@
         <h2 class="dark:text-gray-100">Found {{ results.total_combinations }} Round Trips</h2>
         <p class="results-info dark:text-gray-400">
           Showing {{ results.showing }} results for
-          <strong class="dark:text-gray-200">{{ results.origin }} → {{ results.destination }}</strong>
+          <strong class="dark:text-gray-200">{{ results.origin }} → {{ results.destination === 'ALL' ? 'All Destinations' : results.destination }}</strong>
           ({{ results.min_days }}-{{ results.max_days }} days)
         </p>
       </div>
 
       <!-- Trips Table -->
-      <div class="trips-table-container">
+      <div class="trips-table-container dark:bg-gray-800">
         <table class="trips-table">
           <thead class="dark:bg-gray-700 dark:border-gray-600">
             <tr>
-              <th class="dark:text-gray-200">Duration</th>
-              <th class="dark:text-gray-200">Outbound</th>
-              <th class="dark:text-gray-200">Outbound Times</th>
-              <th class="dark:text-gray-200">Return</th>
-              <th class="dark:text-gray-200">Return Times</th>
-              <th class="dark:text-gray-200">Total Price</th>
+              <th v-if="results.destination === 'ALL'" class="dark:text-gray-200 dark:bg-gray-700">Destination</th>
+              <th class="dark:text-gray-200 dark:bg-gray-700">Duration</th>
+              <th class="dark:text-gray-200 dark:bg-gray-700">Outbound</th>
+              <th class="dark:text-gray-200 dark:bg-gray-700">Outbound Times</th>
+              <th class="dark:text-gray-200 dark:bg-gray-700">Return</th>
+              <th class="dark:text-gray-200 dark:bg-gray-700">Return Times</th>
+              <th class="dark:text-gray-200 dark:bg-gray-700">Total Price</th>
             </tr>
           </thead>
-          <tbody>
-            <tr v-for="(trip, index) in results.trips" :key="index" class="dark:border-gray-700 dark:hover:bg-gray-700">
-              <td class="duration-cell dark:text-gray-100">
+          <tbody class="dark:bg-gray-800">
+            <tr v-for="(trip, index) in results.trips" :key="index" class="dark:border-gray-700 dark:hover:bg-gray-700 dark:bg-gray-800">
+              <td v-if="results.destination === 'ALL'" class="destination-cell dark:text-gray-100 dark:bg-gray-800">
+                <div class="destination-info-cell">
+                  <div class="dest-code"><strong>{{ trip.destination }}</strong></div>
+                  <div class="dest-name dark:text-gray-400">{{ trip.destination_name }}</div>
+                </div>
+              </td>
+              <td class="duration-cell dark:text-gray-100 dark:bg-gray-800">
                 <strong>{{ trip.trip_duration_days }} days</strong>
               </td>
-              <td class="date-cell dark:text-gray-200">
+              <td class="date-cell dark:text-gray-200 dark:bg-gray-800">
                 <div class="date-info">
                   <div class="date">{{ formatDate(trip.outbound_flight.date) }}</div>
                   <div class="flight-details-small dark:text-gray-400">
@@ -193,14 +207,14 @@
                   </div>
                 </div>
               </td>
-              <td class="time-cell dark:text-gray-200">
+              <td class="time-cell dark:text-gray-200 dark:bg-gray-800">
                 <div class="time-info">
                   <span class="time">{{ formatTime(trip.outbound_flight.departure_time) }}</span>
                   <span class="arrow dark:text-blue-400">→</span>
                   <span class="time">{{ formatTime(trip.outbound_flight.arrival_time) }}</span>
                 </div>
               </td>
-              <td class="date-cell dark:text-gray-200">
+              <td class="date-cell dark:text-gray-200 dark:bg-gray-800">
                 <div class="date-info">
                   <div class="date">{{ formatDate(trip.return_flight.date) }}</div>
                   <div class="flight-details-small dark:text-gray-400">
@@ -209,14 +223,14 @@
                   </div>
                 </div>
               </td>
-              <td class="time-cell dark:text-gray-200">
+              <td class="time-cell dark:text-gray-200 dark:bg-gray-800">
                 <div class="time-info">
                   <span class="time">{{ formatTime(trip.return_flight.departure_time) }}</span>
                   <span class="arrow dark:text-blue-400">→</span>
                   <span class="time">{{ formatTime(trip.return_flight.arrival_time) }}</span>
                 </div>
               </td>
-              <td class="price-cell dark:text-green-400">
+              <td class="price-cell dark:text-green-400 dark:bg-gray-800">
                 <div class="price-info">
                   <div class="total-price">{{ formatPrice(trip.total_price) }}</div>
                   <div class="per-person dark:text-gray-400">{{ formatPrice(trip.price_per_person) }} /p</div>
@@ -266,7 +280,6 @@ const results = ref(null)
 const canSearch = computed(() => {
   return (
     searchParams.value.origin &&
-    searchParams.value.destination &&
     searchParams.value.minDays > 0 &&
     searchParams.value.maxDays > 0 &&
     searchParams.value.minDays <= searchParams.value.maxDays
@@ -283,8 +296,9 @@ onMounted(async () => {
   ])
 })
 
-// Auto-search when destination is selected
+// Auto-search when destination changes (including when cleared)
 watch(() => searchParams.value.destination, (newDest, oldDest) => {
+  // Only auto-search if destination is explicitly selected (not when just cleared)
   if (newDest && newDest !== oldDest && canSearch.value) {
     searchTrips()
   }
@@ -372,7 +386,7 @@ const onMaxDaysChange = () => {
 
 const searchTrips = async () => {
   if (!canSearch.value) {
-    error.value = 'Please fill in all required fields'
+    error.value = 'Please select an origin and specify trip duration'
     return
   }
 
@@ -388,15 +402,22 @@ const searchTrips = async () => {
   searched.value = true
 
   try {
+    // Build params object, only include destination if it's set
+    const params = {
+      origin: searchParams.value.origin,
+      min_days: searchParams.value.minDays,
+      max_days: searchParams.value.maxDays,
+      passengers: searchParams.value.passengers,
+      limit: searchParams.value.limit
+    }
+
+    // Only add destination if it's not empty
+    if (searchParams.value.destination) {
+      params.destination = searchParams.value.destination
+    }
+
     const response = await $fetch(`${apiBaseUrl}/flights/round-trips`, {
-      params: {
-        origin: searchParams.value.origin,
-        destination: searchParams.value.destination,
-        min_days: searchParams.value.minDays,
-        max_days: searchParams.value.maxDays,
-        passengers: searchParams.value.passengers,
-        limit: searchParams.value.limit
-      }
+      params: params
     })
 
     results.value = response
@@ -825,10 +846,6 @@ h2 {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-:deep(.dark) .trips-table-container {
-  background: #1f2937;
-}
-
 .trips-table {
   width: 100%;
   border-collapse: collapse;
@@ -864,6 +881,26 @@ h2 {
 .trips-table td {
   padding: 0.75rem;
   vertical-align: middle;
+}
+
+.destination-cell {
+  min-width: 140px;
+}
+
+.destination-info-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.dest-code {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.dest-name {
+  font-size: 0.75rem;
+  color: #6c757d;
 }
 
 .duration-cell {
