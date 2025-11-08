@@ -18,7 +18,7 @@
       <div class="selection-grid">
         <div class="selection-group">
           <label>Origin Airport</label>
-          <select v-model="selectedOrigin" @change="onRouteChange">
+          <select v-model="selectedOrigin" @change="onOriginChange">
             <option value="">Select origin...</option>
             <option v-for="origin in origins" :key="origin.code" :value="origin.code">
               {{ origin.code }} - {{ origin.name }} ({{ origin.flight_count }} flights)
@@ -28,9 +28,13 @@
 
         <div class="selection-group">
           <label>Destination Airport</label>
-          <select v-model="selectedDestination" @change="onRouteChange">
-            <option value="">Select destination...</option>
-            <option v-for="dest in destinations" :key="dest.code" :value="dest.code">
+          <select
+            v-model="selectedDestination"
+            @change="onDestinationChange"
+            :disabled="!selectedOrigin || availableDestinations.length === 0"
+          >
+            <option value="">{{ selectedOrigin ? 'Select destination...' : 'Select origin first' }}</option>
+            <option v-for="dest in availableDestinations" :key="dest.code" :value="dest.code">
               {{ dest.code }} - {{ dest.name }} ({{ dest.flight_count }} flights)
             </option>
           </select>
@@ -140,6 +144,7 @@ const error = ref(null)
 
 const origins = ref([])
 const destinations = ref([])
+const availableDestinations = ref([]) // Destinations from selected origin
 const selectedOrigin = ref('')
 const selectedDestination = ref('')
 const chartData = ref(null)
@@ -172,17 +177,54 @@ const loadAirports = async () => {
   error.value = null
 
   try {
-    const [originsResponse, destinationsResponse] = await Promise.all([
-      $fetch(`${apiBaseUrl}/airports/origins`),
-      $fetch(`${apiBaseUrl}/airports/destinations`)
-    ])
-
+    // Only load origins initially
+    const originsResponse = await $fetch(`${apiBaseUrl}/airports/origins`)
     origins.value = originsResponse.origins || []
-    destinations.value = destinationsResponse.destinations || []
   } catch (e) {
     error.value = e.message || 'Failed to load airports'
   } finally {
     loading.value = false
+  }
+}
+
+const loadDestinationsFromOrigin = async (origin) => {
+  if (!origin) {
+    availableDestinations.value = []
+    return
+  }
+
+  loading.value = true
+  loadingMessage.value = 'Loading destinations...'
+  error.value = null
+
+  try {
+    const response = await $fetch(`${apiBaseUrl}/airports/origins/${origin}/destinations`)
+    availableDestinations.value = response.destinations || []
+  } catch (e) {
+    error.value = e.message || 'Failed to load destinations'
+    availableDestinations.value = []
+  } finally {
+    loading.value = false
+  }
+}
+
+const onOriginChange = async () => {
+  // Clear destination selection when origin changes
+  selectedDestination.value = ''
+  chartData.value = null
+
+  // Load destinations for selected origin
+  if (selectedOrigin.value) {
+    await loadDestinationsFromOrigin(selectedOrigin.value)
+  } else {
+    availableDestinations.value = []
+  }
+}
+
+const onDestinationChange = () => {
+  // Auto-load chart when both origin and destination are selected
+  if (selectedOrigin.value && selectedDestination.value) {
+    loadChartData()
   }
 }
 
@@ -377,6 +419,7 @@ const renderChart = () => {
 const clearSelection = () => {
   selectedOrigin.value = ''
   selectedDestination.value = ''
+  availableDestinations.value = []
   chartData.value = null
   error.value = null
 
@@ -498,6 +541,12 @@ h3 {
   outline: none;
   border-color: #007bff;
   box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.selection-group select:disabled {
+  background: #e9ecef;
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .action-buttons {

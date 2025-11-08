@@ -158,6 +158,56 @@ async def get_price_chart(
     return chart_data
 
 
+@app.get("/flights/round-trips")
+async def get_round_trips(
+    origin: str = Query(..., description="Origin airport code (e.g., WRO)"),
+    destination: str = Query(..., description="Destination airport code (e.g., BCN)"),
+    min_days: int = Query(..., ge=1, description="Minimum trip duration in days"),
+    max_days: int = Query(..., ge=1, description="Maximum trip duration in days"),
+    passengers: int = Query(2, ge=1, le=10, description="Number of passengers"),
+    limit: int = Query(100, ge=1, le=500, description="Maximum number of results")
+):
+    """
+    Find all possible round trips (two-way) within specified trip length range.
+
+    Returns combinations of outbound and return flights that form valid round trips
+    with trip duration between min_days and max_days, sorted by total price.
+    """
+    if min_days > max_days:
+        raise HTTPException(
+            status_code=400,
+            detail="min_days must be less than or equal to max_days"
+        )
+
+    round_trips = api_service.find_round_trips(
+        origin=origin,
+        destination=destination,
+        min_days=min_days,
+        max_days=max_days,
+        passengers=passengers
+    )
+
+    if not round_trips:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No round trips found for {origin.upper()} → {destination.upper()} with {min_days}-{max_days} days duration"
+        )
+
+    # Apply limit
+    limited_trips = round_trips[:limit]
+
+    return {
+        "origin": origin.upper(),
+        "destination": destination.upper(),
+        "min_days": min_days,
+        "max_days": max_days,
+        "passengers": passengers,
+        "total_combinations": len(round_trips),
+        "showing": len(limited_trips),
+        "trips": limited_trips
+    }
+
+
 @app.get("/flights/{flight_id}", response_model=FlightResponse)
 async def get_flight(flight_id: str):
     """
@@ -205,6 +255,25 @@ async def get_routes(origin: Optional[str] = Query(None, description="Filter rou
     """
     routes = api_service.get_routes(origin=origin)
     return {"routes": routes}
+
+
+@app.get("/airports/origins/{origin}/destinations")
+async def get_destinations_from_origin(origin: str):
+    """
+    Get list of all available destinations from a specific origin airport.
+
+    This is useful for cascading dropdowns where you first select origin,
+    then see only the destinations available from that origin.
+    """
+    destinations = api_service.get_destinations_from_origin(origin=origin)
+
+    if not destinations:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No destinations found from origin {origin.upper()}"
+        )
+
+    return {"destinations": destinations}
 
 
 @app.post("/airports/populate")

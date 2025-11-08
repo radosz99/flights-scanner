@@ -15,6 +15,9 @@
         <NuxtLink to="/price-chart" class="nav-link">
           Price Chart
         </NuxtLink>
+        <NuxtLink to="/trip-search" class="nav-link">
+          Trip Search
+        </NuxtLink>
       </nav>
     </div>
   </header>

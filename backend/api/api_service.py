@@ -411,6 +411,123 @@ class APIService:
             "total_dates": len(chart_data)
         }
 
+    def get_destinations_from_origin(self, origin: str) -> List[Dict[str, Any]]:
+        """
+        Get list of all available destinations from a specific origin.
+
+        Args:
+            origin: Origin airport code
+
+        Returns:
+            List of destination airports with codes, names, and flight counts
+        """
+        pipeline = [
+            {"$match": {"origin": origin.upper()}},
+            {"$group": {
+                "_id": "$destination",
+                "destination_name": {"$first": "$destination_name"},
+                "flight_count": {"$sum": 1}
+            }},
+            {"$sort": {"_id": ASCENDING}}
+        ]
+
+        results = list(self.flights_collection.aggregate(pipeline))
+
+        destinations = [
+            {
+                "code": r["_id"],
+                "name": r["destination_name"],
+                "flight_count": r["flight_count"]
+            }
+            for r in results
+        ]
+
+        return destinations
+
+    def find_round_trips(
+        self,
+        origin: str,
+        destination: str,
+        min_days: int,
+        max_days: int,
+        passengers: int = 2
+    ) -> List[Dict[str, Any]]:
+        """
+        Find all possible round trips (two-way) within specified trip length range.
+
+        Args:
+            origin: Origin airport code
+            destination: Destination airport code
+            min_days: Minimum trip duration in days
+            max_days: Maximum trip duration in days
+            passengers: Number of passengers (default 2)
+
+        Returns:
+            List of round trip combinations with pricing
+        """
+        from datetime import datetime, timedelta
+
+        # Get all outbound flights from origin to destination
+        outbound_flights = list(self.flights_collection.find({
+            "origin": origin.upper(),
+            "destination": destination.upper()
+        }).sort("date_out", ASCENDING))
+
+        # Get all return flights from destination to origin
+        return_flights = list(self.flights_collection.find({
+            "origin": destination.upper(),
+            "destination": origin.upper()
+        }).sort("date_out", ASCENDING))
+
+        # Find valid round trip combinations
+        round_trips = []
+
+        for outbound in outbound_flights:
+            outbound_date = datetime.strptime(outbound["date_out"], "%Y-%m-%d")
+
+            for return_flight in return_flights:
+                return_date = datetime.strptime(return_flight["date_out"], "%Y-%m-%d")
+
+                # Calculate trip duration
+                trip_duration = (return_date - outbound_date).days
+
+                # Check if trip duration is within range
+                if min_days <= trip_duration <= max_days:
+                    total_price = (outbound["current_price"] + return_flight["current_price"]) * passengers
+
+                    round_trips.append({
+                        "outbound_flight": {
+                            "flight_id": outbound["flight_id"],
+                            "flight_number": outbound["flight_number"],
+                            "date": outbound["date_out"],
+                            "departure_time": outbound["departure_time"],
+                            "arrival_time": outbound["arrival_time"],
+                            "duration": outbound["duration"],
+                            "price": outbound["current_price"],
+                            "currency": outbound["currency"]
+                        },
+                        "return_flight": {
+                            "flight_id": return_flight["flight_id"],
+                            "flight_number": return_flight["flight_number"],
+                            "date": return_flight["date_out"],
+                            "departure_time": return_flight["departure_time"],
+                            "arrival_time": return_flight["arrival_time"],
+                            "duration": return_flight["duration"],
+                            "price": return_flight["current_price"],
+                            "currency": return_flight["currency"]
+                        },
+                        "trip_duration_days": trip_duration,
+                        "total_price": round(total_price, 2),
+                        "price_per_person": round(total_price / passengers, 2),
+                        "passengers": passengers,
+                        "currency": outbound["currency"]
+                    })
+
+        # Sort by total price
+        round_trips.sort(key=lambda x: x["total_price"])
+
+        return round_trips
+
     def get_health(self) -> Tuple[Dict[str, Any], bool]:
         """
         Check API and database health.
