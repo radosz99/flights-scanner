@@ -28,7 +28,7 @@
           <div class="stat-label">Destinations</div>
         </div>
         <div class="stat-card">
-          <div class="stat-value">{{ stats.average_price.toFixed(2) }}€</div>
+          <div class="stat-value">{{ formatPrice(stats.average_price) }}</div>
           <div class="stat-label">Avg Price</div>
         </div>
       </div>
@@ -37,8 +37,8 @@
         <h3>Cheapest Flight</h3>
         <p>
           <strong>{{ stats.cheapest_flight.route }}</strong> -
-          {{ stats.cheapest_flight.price }} {{ stats.cheapest_flight.currency }} on
-          {{ stats.cheapest_flight.date }}
+          {{ formatPrice(stats.cheapest_flight.price) }} on
+          {{ formatDate(stats.cheapest_flight.date) }}
         </p>
       </div>
     </div>
@@ -90,7 +90,7 @@
 
         <div class="filter-row">
           <div class="filter-group">
-            <label>Min Price (€)</label>
+            <label>Min Price (PLN)</label>
             <input
               v-model.number="filters.minPrice"
               type="number"
@@ -101,7 +101,7 @@
           </div>
 
           <div class="filter-group">
-            <label>Max Price (€)</label>
+            <label>Max Price (PLN)</label>
             <input
               v-model.number="filters.maxPrice"
               type="number"
@@ -177,7 +177,7 @@
                     {{ flight.origin_name }} → {{ flight.destination_name }}
                   </div>
                 </td>
-                <td>{{ flight.date_out }}</td>
+                <td>{{ formatDate(flight.date_out) }}</td>
                 <td>
                   <div class="time-cell">
                     <div>{{ flight.departure_time }}</div>
@@ -186,7 +186,7 @@
                 </td>
                 <td>{{ flight.duration }}</td>
                 <td class="price-cell">
-                  <strong>{{ flight.current_price }} {{ flight.currency }}</strong>
+                  <strong>{{ formatPrice(flight.current_price) }}</strong>
                   <div v-if="flight.price_history.length > 1" class="price-changes">
                     {{ flight.price_history.length - 1 }} changes
                   </div>
@@ -305,6 +305,8 @@
 </template>
 
 <script setup>
+import { formatPrice, formatDate, formatDateTime } from '~/utils/formatters'
+
 const config = useRuntimeConfig()
 const apiBaseUrl = config.public.apiBaseUrl
 const scanStatus = ref(null)
@@ -462,12 +464,7 @@ const loadAllData = async () => {
   }
 }
 
-// Format datetime for display
-const formatDateTime = (dateString) => {
-  if (!dateString) return 'N/A'
-  const date = new Date(dateString)
-  return date.toLocaleString()
-}
+// Note: formatDateTime is now imported from utils/formatters.js
 
 // Load data on mount (client-side only)
 onMounted(() => {

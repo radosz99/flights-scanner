@@ -99,8 +99,8 @@
         <div v-for="(trip, index) in results.trips" :key="index" class="trip-card">
           <div class="trip-header">
             <div class="trip-price">
-              <div class="total-price">{{ trip.total_price }} {{ trip.currency }}</div>
-              <div class="price-detail">{{ trip.price_per_person }} {{ trip.currency }} / person</div>
+              <div class="total-price">{{ formatPrice(trip.total_price) }}</div>
+              <div class="price-detail">{{ formatPrice(trip.price_per_person) }} / person</div>
             </div>
             <div class="trip-duration">
               <strong>{{ trip.trip_duration_days }}</strong> days
@@ -123,7 +123,7 @@
                 <span class="flight-number">{{ trip.outbound_flight.flight_number }}</span>
                 <span class="duration">{{ trip.outbound_flight.duration }}</span>
               </div>
-              <div class="flight-price">{{ trip.outbound_flight.price }} {{ trip.outbound_flight.currency }}</div>
+              <div class="flight-price">{{ formatPrice(trip.outbound_flight.price) }}</div>
             </div>
           </div>
 
@@ -143,7 +143,7 @@
                 <span class="flight-number">{{ trip.return_flight.flight_number }}</span>
                 <span class="duration">{{ trip.return_flight.duration }}</span>
               </div>
-              <div class="flight-price">{{ trip.return_flight.price }} {{ trip.return_flight.currency }}</div>
+              <div class="flight-price">{{ formatPrice(trip.return_flight.price) }}</div>
             </div>
           </div>
         </div>
@@ -158,6 +158,7 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
+import { formatPrice, formatDate, formatTime } from '~/utils/formatters'
 
 const config = useRuntimeConfig()
 const apiBaseUrl = config.public.apiBaseUrl
@@ -191,35 +192,7 @@ const canSearch = computed(() => {
   )
 })
 
-// Helper function to format date (YYYY-MM-DD or ISO string to readable date)
-const formatDate = (dateStr) => {
-  if (!dateStr) return ''
-
-  // Handle both YYYY-MM-DD and ISO format
-  const date = new Date(dateStr)
-
-  // Format as: Mon, Jan 15, 2025
-  return date.toLocaleDateString('en-US', {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric'
-  })
-}
-
-// Helper function to format time (extract HH:MM from ISO string)
-const formatTime = (timeStr) => {
-  if (!timeStr) return ''
-
-  // Handle format: YYYY-MM-DDTHH:MM:SS.mmm
-  // Extract just the time part and remove seconds
-  const timePart = timeStr.split('T')[1]
-  if (!timePart) return timeStr
-
-  // Get HH:MM
-  const [hours, minutes] = timePart.split(':')
-  return `${hours}:${minutes}`
-}
+// Note: formatDate, formatTime, and formatPrice are now imported from utils/formatters.js
 
 // Load origins on mount
 onMounted(async () => {

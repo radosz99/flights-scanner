@@ -213,12 +213,13 @@ class APIService:
 
     def get_origins(self) -> List[Dict[str, Any]]:
         """
-        Get list of all available origin airports with flight counts.
+        Get list of all available Polish origin airports with flight counts.
 
         Returns:
-            List of origin airports with codes, names, and flight counts
+            List of Polish origin airports with codes, names, and flight counts
         """
         pipeline = [
+            {"$match": {"origin": {"$in": POLISH_AIRPORTS}}},
             {"$group": {
                 "_id": "$origin",
                 "origin_name": {"$first": "$origin_name"},
