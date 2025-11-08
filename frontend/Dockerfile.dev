@@ -1,0 +1,24 @@
+# Development Dockerfile for Nuxt 4 Frontend
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies (including dev dependencies)
+RUN npm ci
+
+# Copy source code
+COPY . .
+
+# Expose port
+EXPOSE 8901
+
+# Set environment variables for development
+ENV HOST=0.0.0.0 \
+    PORT=8901 \
+    NODE_ENV=development
+
+# Start development server with hot reload
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "8901"]

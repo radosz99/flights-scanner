@@ -29,9 +29,23 @@ services:
 
   # Frontend Service - Development Mode
   frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
     env_file:
       - .env
+    environment:
+      HOST: 0.0.0.0
+      PORT: 8901
+      NODE_ENV: development
     volumes:
       # Mount code for hot reload in development
       - ./frontend:/app
       - /app/node_modules
+    command: ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "8901"]
+    healthcheck:
+      # Disable healthcheck in dev mode for faster startup
+      test: ["CMD-SHELL", "exit 0"]
+      interval: 1m
+      timeout: 10s
+      retries: 1
