@@ -3,11 +3,11 @@
     <h1 class="dark:text-gray-100">Flight Price Chart</h1>
     <p class="subtitle dark:text-gray-400">View price trends for your selected route over the full date range</p>
 
-    <div v-if="loading" class="loading">
+    <div v-if="loading" class="loading dark:bg-yellow-900 dark:text-yellow-200 dark:border-yellow-700">
       {{ loadingMessage }}
     </div>
 
-    <div v-if="error" class="error">
+    <div v-if="error" class="error dark:bg-red-900 dark:text-red-200 dark:border-red-700">
       <strong>Error:</strong> {{ error }}
     </div>
 
@@ -17,8 +17,8 @@
 
       <div class="selection-grid">
         <div class="selection-group">
-          <label>Origin Airport</label>
-          <select v-model="selectedOrigin" @change="onOriginChange">
+          <label class="dark:text-gray-200">Origin Airport</label>
+          <select v-model="selectedOrigin" @change="onOriginChange" class="dark:bg-gray-600 dark:text-gray-100 dark:border-gray-500">
             <option value="">Select origin...</option>
             <option v-for="origin in origins" :key="origin.code" :value="origin.code">
               {{ origin.code }} - {{ origin.name }} ({{ origin.flight_count }} flights)
@@ -27,11 +27,12 @@
         </div>
 
         <div class="selection-group">
-          <label>Destination Airport</label>
+          <label class="dark:text-gray-200">Destination Airport</label>
           <select
             v-model="selectedDestination"
             @change="onDestinationChange"
             :disabled="!selectedOrigin || availableDestinations.length === 0"
+            class="dark:bg-gray-600 dark:text-gray-100 dark:border-gray-500 dark:disabled:bg-gray-700 dark:disabled:text-gray-400"
           >
             <option value="">{{ selectedOrigin ? 'Select destination...' : 'Select origin first' }}</option>
             <option v-for="dest in availableDestinations" :key="dest.code" :value="dest.code">
@@ -45,13 +46,13 @@
         <button
           @click="loadChartData"
           :disabled="!selectedOrigin || !selectedDestination || loading"
-          class="btn-primary"
+          class="btn-primary dark:bg-blue-600 dark:hover:bg-blue-700"
         >
           {{ loading ? 'Loading...' : 'Load Price Chart' }}
         </button>
         <button
           @click="clearSelection"
-          class="btn-secondary"
+          class="btn-secondary dark:bg-gray-600 dark:hover:bg-gray-700"
         >
           Clear Selection
         </button>
@@ -64,12 +65,12 @@
         <h2 class="dark:text-gray-100 dark:border-gray-700">
           Price Trends: {{ chartData.origin }} → {{ chartData.destination }}
         </h2>
-        <div class="chart-stats">
+        <div class="chart-stats dark:text-gray-400">
           <span class="stat-item">
-            <strong>Total Dates:</strong> {{ chartData.total_dates }}
+            <strong class="dark:text-gray-300">Total Dates:</strong> {{ chartData.total_dates }}
           </span>
           <span class="stat-item">
-            <strong>Date Range:</strong>
+            <strong class="dark:text-gray-300">Date Range:</strong>
             {{ chartData.data[0].date }} to {{ chartData.data[chartData.data.length - 1].date }}
           </span>
         </div>
@@ -79,48 +80,48 @@
         💡 <strong>Tip:</strong> Click on any legend item to show/hide that price line on the chart
       </div>
 
-      <div class="chart-container">
+      <div class="chart-container dark:bg-gray-700">
         <canvas ref="chartCanvas"></canvas>
       </div>
 
       <!-- Price Statistics Table -->
       <div class="price-stats">
-        <h3>Price Statistics by Date</h3>
+        <h3 class="dark:text-gray-100">Price Statistics by Date</h3>
         <div class="stats-summary">
-          <div class="stat-card">
-            <div class="stat-value">{{ overallStats.minPrice }}</div>
-            <div class="stat-label">Lowest Price</div>
+          <div class="stat-card dark:bg-gradient-to-br dark:from-purple-700 dark:to-purple-900">
+            <div class="stat-value dark:text-gray-100">{{ overallStats.minPrice }}</div>
+            <div class="stat-label dark:text-gray-200">Lowest Price</div>
           </div>
-          <div class="stat-card">
-            <div class="stat-value">{{ overallStats.maxPrice }}</div>
-            <div class="stat-label">Highest Price</div>
+          <div class="stat-card dark:bg-gradient-to-br dark:from-purple-700 dark:to-purple-900">
+            <div class="stat-value dark:text-gray-100">{{ overallStats.maxPrice }}</div>
+            <div class="stat-label dark:text-gray-200">Highest Price</div>
           </div>
-          <div class="stat-card">
-            <div class="stat-value">{{ overallStats.avgPrice }}</div>
-            <div class="stat-label">Average Price</div>
+          <div class="stat-card dark:bg-gradient-to-br dark:from-purple-700 dark:to-purple-900">
+            <div class="stat-value dark:text-gray-100">{{ overallStats.avgPrice }}</div>
+            <div class="stat-label dark:text-gray-200">Average Price</div>
           </div>
         </div>
 
         <div class="table-container">
           <table class="price-table">
-            <thead>
+            <thead class="dark:bg-gray-700 dark:border-gray-600">
               <tr>
-                <th>Date</th>
-                <th>Min Price</th>
-                <th>Current Price</th>
-                <th>Avg Price</th>
-                <th>Max Price</th>
-                <th>Flights</th>
+                <th class="dark:text-gray-200">Date</th>
+                <th class="dark:text-gray-200">Min Price</th>
+                <th class="dark:text-gray-200">Current Price</th>
+                <th class="dark:text-gray-200">Avg Price</th>
+                <th class="dark:text-gray-200">Max Price</th>
+                <th class="dark:text-gray-200">Flights</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="item in chartData.data" :key="item.date">
-                <td><strong>{{ formatDate(item.date) }}</strong></td>
-                <td class="price-cell min-price">{{ formatPrice(item.min_price) }}</td>
-                <td class="price-cell current-price">{{ formatPrice(item.current_price) }}</td>
-                <td class="price-cell avg-price">{{ formatPrice(item.avg_price) }}</td>
-                <td class="price-cell max-price">{{ formatPrice(item.max_price) }}</td>
-                <td>{{ item.flight_count }}</td>
+              <tr v-for="item in chartData.data" :key="item.date" class="dark:border-gray-700 dark:hover:bg-gray-700">
+                <td class="dark:text-gray-200"><strong>{{ formatDate(item.date) }}</strong></td>
+                <td class="price-cell min-price dark:text-green-400">{{ formatPrice(item.min_price) }}</td>
+                <td class="price-cell current-price dark:text-yellow-400">{{ formatPrice(item.current_price) }}</td>
+                <td class="price-cell avg-price dark:text-blue-400">{{ formatPrice(item.avg_price) }}</td>
+                <td class="price-cell max-price dark:text-red-400">{{ formatPrice(item.max_price) }}</td>
+                <td class="dark:text-gray-200">{{ item.flight_count }}</td>
               </tr>
             </tbody>
           </table>
@@ -128,7 +129,7 @@
       </div>
     </div>
 
-    <div v-else-if="!loading && selectedOrigin && selectedDestination" class="no-data">
+    <div v-else-if="!loading && selectedOrigin && selectedDestination" class="no-data dark:bg-gray-700 dark:text-gray-300">
       No price data available for the selected route. Try selecting a different route.
     </div>
   </div>

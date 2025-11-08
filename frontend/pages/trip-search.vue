@@ -3,11 +3,11 @@
     <h1 class="dark:text-gray-100">Round Trip Search</h1>
     <p class="subtitle dark:text-gray-400">Find the best round trip deals with flexible duration</p>
 
-    <div v-if="loading" class="loading">
+    <div v-if="loading" class="loading dark:bg-yellow-900 dark:text-yellow-200 dark:border-yellow-700">
       {{ loadingMessage }}
     </div>
 
-    <div v-if="error" class="error">
+    <div v-if="error" class="error dark:bg-red-900 dark:text-red-200 dark:border-red-700">
       <strong>Error:</strong> {{ error }}
     </div>
 
@@ -17,8 +17,8 @@
 
       <div class="form-grid">
         <div class="form-group">
-          <label>Departure Airport</label>
-          <select v-model="searchParams.origin" @change="onOriginChange">
+          <label class="dark:text-gray-200">Departure Airport</label>
+          <select v-model="searchParams.origin" @change="onOriginChange" class="dark:bg-gray-600 dark:text-gray-100 dark:border-gray-500">
             <option value="">Select departure...</option>
             <option v-for="origin in origins" :key="origin.code" :value="origin.code">
               {{ origin.code }} - {{ origin.name }}
@@ -27,10 +27,11 @@
         </div>
 
         <div class="form-group">
-          <label>Destination Airport</label>
+          <label class="dark:text-gray-200">Destination Airport</label>
           <select
             v-model="searchParams.destination"
             :disabled="!searchParams.origin || availableDestinations.length === 0"
+            class="dark:bg-gray-600 dark:text-gray-100 dark:border-gray-500 dark:disabled:bg-gray-700 dark:disabled:text-gray-400"
           >
             <option value="">{{ searchParams.origin ? 'Select destination...' : 'Select departure first' }}</option>
             <option v-for="dest in availableDestinations" :key="dest.code" :value="dest.code">
@@ -40,7 +41,7 @@
         </div>
 
         <div class="form-group">
-          <label>Minimum Days</label>
+          <label class="dark:text-gray-200">Minimum Days</label>
           <input
             type="number"
             v-model.number="searchParams.minDays"
@@ -48,11 +49,12 @@
             max="365"
             placeholder="e.g., 3"
             @input="onMinDaysChange"
+            class="dark:bg-gray-600 dark:text-gray-100 dark:border-gray-500 dark:placeholder-gray-400"
           />
         </div>
 
         <div class="form-group">
-          <label>Maximum Days</label>
+          <label class="dark:text-gray-200">Maximum Days</label>
           <input
             type="number"
             v-model.number="searchParams.maxDays"
@@ -60,17 +62,19 @@
             max="365"
             placeholder="e.g., 7"
             @input="onMaxDaysChange"
+            class="dark:bg-gray-600 dark:text-gray-100 dark:border-gray-500 dark:placeholder-gray-400"
           />
         </div>
 
         <div class="form-group">
-          <label>Max Results</label>
+          <label class="dark:text-gray-200">Max Results</label>
           <input
             type="number"
             v-model.number="searchParams.limit"
             min="10"
             max="500"
             placeholder="e.g., 100"
+            class="dark:bg-gray-600 dark:text-gray-100 dark:border-gray-500 dark:placeholder-gray-400"
           />
         </div>
       </div>
@@ -78,7 +82,7 @@
       <div class="action-buttons">
         <button
           @click="clearSearch"
-          class="btn-secondary"
+          class="btn-secondary dark:bg-gray-600 dark:hover:bg-gray-700"
         >
           Clear
         </button>
@@ -86,26 +90,26 @@
     </div>
 
     <!-- Destinations Preview -->
-    <div v-if="searchParams.origin && destinationsPreview.length > 0" class="destinations-preview dark:from-blue-900 dark:to-blue-800 dark:border-blue-700">
-      <h2>Available Destinations from {{ searchParams.origin }}</h2>
-      <p class="preview-subtitle">Showing lowest round-trip prices ({{ searchParams.minDays }}-{{ searchParams.maxDays }} days)</p>
+    <div v-if="searchParams.origin && destinationsPreview.length > 0" class="destinations-preview dark:bg-gradient-to-br dark:from-blue-900 dark:to-blue-800 dark:border-blue-700">
+      <h2 class="dark:text-gray-100">Available Destinations from {{ searchParams.origin }}</h2>
+      <p class="preview-subtitle dark:text-blue-200">Showing lowest round-trip prices ({{ searchParams.minDays }}-{{ searchParams.maxDays }} days)</p>
       <div class="destinations-grid">
         <div
           v-for="dest in destinationsPreview"
           :key="dest.destination"
-          class="destination-card"
-          :class="{ 'selected': searchParams.destination === dest.destination }"
+          class="destination-card dark:bg-gray-700 dark:border-gray-600 dark:hover:border-blue-500"
+          :class="{ 'selected': searchParams.destination === dest.destination, 'dark:selected': searchParams.destination === dest.destination }"
           @click="selectDestination(dest)"
         >
           <div class="destination-info">
-            <div class="destination-code">
+            <div class="destination-code dark:text-gray-100">
               <strong>{{ dest.destination }}</strong>
             </div>
-            <div class="destination-name">{{ dest.destination_name }}</div>
+            <div class="destination-name dark:text-gray-400">{{ dest.destination_name }}</div>
           </div>
-          <div class="destination-price">
-            <div class="price-label">From</div>
-            <div class="price-value">{{ formatPrice(dest.min_total_price) }}</div>
+          <div class="destination-price dark:border-gray-600">
+            <div class="price-label dark:text-gray-400">From</div>
+            <div class="price-value dark:text-green-400">{{ formatPrice(dest.min_total_price) }}</div>
           </div>
         </div>
       </div>
@@ -115,35 +119,35 @@
     <div v-if="exampleRoutes.length > 0 && !searchParams.origin" class="example-routes dark:bg-gray-800">
       <div class="collapsible-header" @click="toggleExampleRoutes">
         <h2 class="dark:text-gray-100 dark:border-gray-700">Popular Round Trip Routes</h2>
-        <button class="toggle-btn" :aria-label="showExampleRoutes ? 'Collapse' : 'Expand'">
+        <button class="toggle-btn dark:text-gray-300 dark:hover:text-blue-400" :aria-label="showExampleRoutes ? 'Collapse' : 'Expand'">
           {{ showExampleRoutes ? '▼' : '▶' }}
         </button>
       </div>
       <div v-if="showExampleRoutes">
-        <p class="example-subtitle">Click on a route to search for round trips</p>
+        <p class="example-subtitle dark:text-gray-400">Click on a route to search for round trips</p>
         <div class="routes-grid">
         <div
           v-for="route in exampleRoutes"
           :key="`${route.origin}-${route.destination}`"
-          class="route-card"
+          class="route-card dark:bg-gray-700 dark:border-gray-600 dark:hover:border-blue-500 dark:hover:bg-gray-600"
           @click="selectExampleRoute(route)"
         >
           <div class="route-info">
-            <div class="route-airports">
+            <div class="route-airports dark:text-gray-100">
               <strong>{{ route.origin }}</strong> ⇄ <strong>{{ route.destination }}</strong>
             </div>
-            <div class="route-names">
+            <div class="route-names dark:text-gray-400">
               {{ route.origin_name }} ⇄ {{ route.destination_name }}
             </div>
           </div>
-          <div class="route-stats">
+          <div class="route-stats dark:border-gray-600">
             <div class="stat-item">
-              <span class="stat-label">Outbound:</span>
-              <span class="stat-value">{{ route.outbound_flights || 0 }} flights</span>
+              <span class="stat-label dark:text-gray-400">Outbound:</span>
+              <span class="stat-value dark:text-gray-200">{{ route.outbound_flights || 0 }} flights</span>
             </div>
             <div class="stat-item">
-              <span class="stat-label">Return:</span>
-              <span class="stat-value">{{ route.return_flights || 0 }} flights</span>
+              <span class="stat-label dark:text-gray-400">Return:</span>
+              <span class="stat-value dark:text-gray-200">{{ route.return_flights || 0 }} flights</span>
             </div>
           </div>
         </div>
@@ -153,72 +157,78 @@
 
     <!-- Results -->
     <div v-if="results && results.trips.length > 0" class="results-section">
-      <div class="results-header">
-        <h2>Found {{ results.total_combinations }} Round Trips</h2>
-        <p class="results-info">
+      <div class="results-header dark:border-gray-700">
+        <h2 class="dark:text-gray-100">Found {{ results.total_combinations }} Round Trips</h2>
+        <p class="results-info dark:text-gray-400">
           Showing {{ results.showing }} results for
-          <strong>{{ results.origin }} → {{ results.destination }}</strong>
+          <strong class="dark:text-gray-200">{{ results.origin }} → {{ results.destination }}</strong>
           ({{ results.min_days }}-{{ results.max_days }} days)
         </p>
       </div>
 
-      <!-- Trip Cards -->
-      <div class="trips-grid">
-        <div v-for="(trip, index) in results.trips" :key="index" class="trip-card">
-          <div class="trip-header">
-            <div class="trip-price">
-              <div class="total-price">{{ formatPrice(trip.total_price) }}</div>
-              <div class="price-detail">{{ formatPrice(trip.price_per_person) }} / person</div>
-            </div>
-            <div class="trip-duration">
-              <strong>{{ trip.trip_duration_days }}</strong> days
-            </div>
-          </div>
-
-          <!-- Outbound Flight -->
-          <div class="flight-segment outbound">
-            <div class="segment-header">
-              <span class="segment-label">Outbound</span>
-              <span class="segment-date">{{ formatDate(trip.outbound_flight.date) }}</span>
-            </div>
-            <div class="flight-details">
-              <div class="flight-time">
-                <div class="time">{{ formatTime(trip.outbound_flight.departure_time) }}</div>
-                <div class="arrow">→</div>
-                <div class="time">{{ formatTime(trip.outbound_flight.arrival_time) }}</div>
-              </div>
-              <div class="flight-info">
-                <span class="flight-number">{{ trip.outbound_flight.flight_number }}</span>
-                <span class="duration">{{ trip.outbound_flight.duration }}</span>
-              </div>
-              <div class="flight-price">{{ formatPrice(trip.outbound_flight.price) }}</div>
-            </div>
-          </div>
-
-          <!-- Return Flight -->
-          <div class="flight-segment return">
-            <div class="segment-header">
-              <span class="segment-label">Return</span>
-              <span class="segment-date">{{ formatDate(trip.return_flight.date) }}</span>
-            </div>
-            <div class="flight-details">
-              <div class="flight-time">
-                <div class="time">{{ formatTime(trip.return_flight.departure_time) }}</div>
-                <div class="arrow">→</div>
-                <div class="time">{{ formatTime(trip.return_flight.arrival_time) }}</div>
-              </div>
-              <div class="flight-info">
-                <span class="flight-number">{{ trip.return_flight.flight_number }}</span>
-                <span class="duration">{{ trip.return_flight.duration }}</span>
-              </div>
-              <div class="flight-price">{{ formatPrice(trip.return_flight.price) }}</div>
-            </div>
-          </div>
-        </div>
+      <!-- Trips Table -->
+      <div class="trips-table-container">
+        <table class="trips-table">
+          <thead class="dark:bg-gray-700 dark:border-gray-600">
+            <tr>
+              <th class="dark:text-gray-200">Duration</th>
+              <th class="dark:text-gray-200">Outbound</th>
+              <th class="dark:text-gray-200">Outbound Times</th>
+              <th class="dark:text-gray-200">Return</th>
+              <th class="dark:text-gray-200">Return Times</th>
+              <th class="dark:text-gray-200">Total Price</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(trip, index) in results.trips" :key="index" class="dark:border-gray-700 dark:hover:bg-gray-700">
+              <td class="duration-cell dark:text-gray-100">
+                <strong>{{ trip.trip_duration_days }} days</strong>
+              </td>
+              <td class="date-cell dark:text-gray-200">
+                <div class="date-info">
+                  <div class="date">{{ formatDate(trip.outbound_flight.date) }}</div>
+                  <div class="flight-details-small dark:text-gray-400">
+                    <span>{{ trip.outbound_flight.flight_number }}</span>
+                    <span>{{ trip.outbound_flight.duration }}</span>
+                  </div>
+                </div>
+              </td>
+              <td class="time-cell dark:text-gray-200">
+                <div class="time-info">
+                  <span class="time">{{ formatTime(trip.outbound_flight.departure_time) }}</span>
+                  <span class="arrow dark:text-blue-400">→</span>
+                  <span class="time">{{ formatTime(trip.outbound_flight.arrival_time) }}</span>
+                </div>
+              </td>
+              <td class="date-cell dark:text-gray-200">
+                <div class="date-info">
+                  <div class="date">{{ formatDate(trip.return_flight.date) }}</div>
+                  <div class="flight-details-small dark:text-gray-400">
+                    <span>{{ trip.return_flight.flight_number }}</span>
+                    <span>{{ trip.return_flight.duration }}</span>
+                  </div>
+                </div>
+              </td>
+              <td class="time-cell dark:text-gray-200">
+                <div class="time-info">
+                  <span class="time">{{ formatTime(trip.return_flight.departure_time) }}</span>
+                  <span class="arrow dark:text-blue-400">→</span>
+                  <span class="time">{{ formatTime(trip.return_flight.arrival_time) }}</span>
+                </div>
+              </td>
+              <td class="price-cell dark:text-green-400">
+                <div class="price-info">
+                  <div class="total-price">{{ formatPrice(trip.total_price) }}</div>
+                  <div class="per-person dark:text-gray-400">{{ formatPrice(trip.price_per_person) }} /p</div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
-    <div v-else-if="!loading && searched" class="no-results">
+    <div v-else-if="!loading && searched" class="no-results dark:bg-gray-700 dark:text-gray-300">
       <p>No round trips found matching your criteria. Try adjusting your search parameters.</p>
     </div>
   </div>
@@ -797,6 +807,8 @@ h2 {
 
 .results-header {
   margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #e0e0e0;
 }
 
 .results-info {
@@ -805,150 +817,126 @@ h2 {
   margin-top: 0.5rem;
 }
 
-.trips-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-  gap: 1.5rem;
-}
-
-/* Trip Card */
-.trip-card {
+/* Trips Table */
+.trips-table-container {
+  overflow-x: auto;
   background: white;
   border-radius: 10px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
-  transition: transform 0.2s, box-shadow 0.2s;
-  min-width: 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.trip-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+:deep(.dark) .trips-table-container {
+  background: #1f2937;
 }
 
-.trip-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1.25rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-}
-
-.trip-price {
-  display: flex;
-  flex-direction: column;
-}
-
-.total-price {
-  font-size: 1.75rem;
-  font-weight: 700;
-}
-
-.price-detail {
+.trips-table {
+  width: 100%;
+  border-collapse: collapse;
   font-size: 0.9rem;
-  opacity: 0.9;
-  margin-top: 0.25rem;
 }
 
-.trip-duration {
-  text-align: right;
-  font-size: 1.5rem;
+.trips-table thead {
+  background: #f8f9fa;
+  border-bottom: 2px solid #dee2e6;
 }
 
-/* Flight Segment */
-.flight-segment {
-  padding: 1.25rem;
-  border-bottom: 1px solid #e9ecef;
-}
-
-.flight-segment:last-child {
-  border-bottom: none;
-}
-
-.segment-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 0.75rem;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-
-.segment-label {
+.trips-table th {
+  padding: 1rem 0.75rem;
+  text-align: left;
   font-weight: 600;
   color: #495057;
-  font-size: 0.9rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+  background: #f8f9fa;
+  z-index: 10;
+}
+
+.trips-table tbody tr {
+  border-bottom: 1px solid #dee2e6;
+  transition: background-color 0.2s;
+}
+
+.trips-table tbody tr:hover {
+  background: #f8f9fa;
+}
+
+.trips-table td {
+  padding: 0.75rem;
+  vertical-align: middle;
+}
+
+.duration-cell {
+  font-size: 1rem;
   white-space: nowrap;
 }
 
-.segment-date {
-  color: #6c757d;
-  font-size: 0.85rem;
-  font-weight: 500;
-  text-align: right;
-  line-height: 1.3;
-  word-wrap: break-word;
-  overflow-wrap: break-word;
+.date-cell {
+  min-width: 140px;
 }
 
-.flight-details {
+.date-info {
   display: flex;
   flex-direction: column;
+  gap: 0.25rem;
+}
+
+.date {
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+.flight-details-small {
+  font-size: 0.75rem;
+  color: #6c757d;
+  display: flex;
   gap: 0.5rem;
 }
 
-.flight-time {
+.time-cell {
+  min-width: 140px;
+}
+
+.time-info {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: #2c3e50;
-  flex-wrap: nowrap;
+  gap: 0.5rem;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+  font-weight: 500;
 }
 
 .time {
-  font-family: 'Courier New', monospace;
   white-space: nowrap;
-  min-width: 3.5rem;
 }
 
 .arrow {
   color: #007bff;
-  font-size: 1.5rem;
+  font-size: 1.2rem;
 }
 
-.flight-info {
-  display: flex;
-  gap: 1rem;
-  font-size: 0.9rem;
-  color: #6c757d;
-}
-
-.flight-number {
-  font-weight: 600;
-}
-
-.duration {
-  color: #495057;
-}
-
-.flight-price {
-  font-size: 1.1rem;
+.price-cell {
+  text-align: right;
   font-weight: 700;
   color: #28a745;
-  margin-top: 0.25rem;
+  min-width: 120px;
 }
 
-.outbound {
-  background: #f8f9fa;
+.price-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
 }
 
-.return {
-  background: white;
+.total-price {
+  font-size: 1.2rem;
+}
+
+.per-person {
+  font-size: 0.75rem;
+  color: #6c757d;
+  font-weight: normal;
 }
 
 /* Buttons */

@@ -48,6 +48,11 @@ defineEmits(['toggle-dark-mode'])
   z-index: 1000;
 }
 
+:deep(.dark) .app-header {
+  background: linear-gradient(135deg, #4c51bf 0%, #5a3f7c 100%);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
 .header-container {
   max-width: 1400px;
   margin: 0 auto;

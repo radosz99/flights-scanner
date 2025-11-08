@@ -3,40 +3,40 @@
     <h1 class="dark:text-gray-100">Flights Scanner</h1>
     <p class="dark:text-gray-300">Backend API: <code class="dark:bg-gray-700 dark:text-gray-200">{{ apiBaseUrl }}</code></p>
 
-    <div v-if="loading" class="loading">
+    <div v-if="loading" class="loading dark:bg-yellow-900 dark:text-yellow-200 dark:border-yellow-700">
       {{ loadingMessage }}
     </div>
 
-    <div v-if="error" class="error">
+    <div v-if="error" class="error dark:bg-red-900 dark:text-red-200 dark:border-red-700">
       <strong>Error:</strong> {{ error }}
     </div>
 
     <!-- Database Statistics -->
-    <div v-if="stats" class="stats-overview dark:from-purple-900 dark:to-purple-700">
-      <h2 class="dark:border-purple-600">Database Statistics</h2>
+    <div v-if="stats" class="stats-overview dark:bg-gradient-to-br dark:from-purple-900 dark:to-purple-700">
+      <h2 class="dark:text-gray-100 dark:border-purple-600">Database Statistics</h2>
       <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-value">{{ stats.total_flights }}</div>
-          <div class="stat-label">Total Flights</div>
+        <div class="stat-card dark:bg-purple-800/30 dark:border-purple-600">
+          <div class="stat-value dark:text-gray-100">{{ stats.total_flights }}</div>
+          <div class="stat-label dark:text-gray-200">Total Flights</div>
         </div>
-        <div class="stat-card">
-          <div class="stat-value">{{ stats.unique_origins }}</div>
-          <div class="stat-label">Origins</div>
+        <div class="stat-card dark:bg-purple-800/30 dark:border-purple-600">
+          <div class="stat-value dark:text-gray-100">{{ stats.unique_origins }}</div>
+          <div class="stat-label dark:text-gray-200">Origins</div>
         </div>
-        <div class="stat-card">
-          <div class="stat-value">{{ stats.unique_destinations }}</div>
-          <div class="stat-label">Destinations</div>
+        <div class="stat-card dark:bg-purple-800/30 dark:border-purple-600">
+          <div class="stat-value dark:text-gray-100">{{ stats.unique_destinations }}</div>
+          <div class="stat-label dark:text-gray-200">Destinations</div>
         </div>
-        <div class="stat-card">
-          <div class="stat-value">{{ formatPrice(stats.average_price) }}</div>
-          <div class="stat-label">Avg Price</div>
+        <div class="stat-card dark:bg-purple-800/30 dark:border-purple-600">
+          <div class="stat-value dark:text-gray-100">{{ formatPrice(stats.average_price) }}</div>
+          <div class="stat-label dark:text-gray-200">Avg Price</div>
         </div>
       </div>
 
-      <div v-if="stats.cheapest_flight" class="flight-highlight">
-        <h3>Cheapest Flight</h3>
-        <p>
-          <strong>{{ stats.cheapest_flight.route }}</strong> -
+      <div v-if="stats.cheapest_flight" class="flight-highlight dark:bg-purple-800/30 dark:border-purple-600">
+        <h3 class="dark:text-gray-100">Cheapest Flight</h3>
+        <p class="dark:text-gray-200">
+          <strong class="dark:text-gray-100">{{ stats.cheapest_flight.route }}</strong> -
           {{ formatPrice(stats.cheapest_flight.price) }} on
           {{ formatDate(stats.cheapest_flight.date) }}
         </p>
@@ -50,78 +50,82 @@
       <div class="filters dark:bg-gray-700">
         <div class="filter-row">
           <div class="filter-group">
-            <label>Origin (select multiple)</label>
+            <label class="dark:text-gray-200">Origin</label>
             <select
-              v-model="filters.origins"
-              multiple
-              size="4"
-              @change="debouncedSearch"
+              v-model="filters.origin"
+              @change="onOriginChange"
+              class="dark:bg-gray-600 dark:text-gray-100 dark:border-gray-500"
             >
-              <option v-for="origin in originsList" :key="origin.code" :value="origin.code">
+              <option value="">All origins</option>
+              <option v-for="origin in filteredOriginsList" :key="origin.code" :value="origin.code">
                 {{ origin.code }} - {{ origin.name }}
               </option>
             </select>
           </div>
 
           <div class="filter-group">
-            <label>Destination (select multiple)</label>
+            <label class="dark:text-gray-200">Destination</label>
             <select
-              v-model="filters.destinations"
-              multiple
-              size="4"
-              @change="debouncedSearch"
+              v-model="filters.destination"
+              @change="onDestinationChange"
+              class="dark:bg-gray-600 dark:text-gray-100 dark:border-gray-500"
             >
-              <option v-for="dest in destinationsList" :key="dest.code" :value="dest.code">
+              <option value="">All destinations</option>
+              <option v-for="dest in filteredDestinationsList" :key="dest.code" :value="dest.code">
                 {{ dest.code }} - {{ dest.name }}
               </option>
             </select>
           </div>
 
           <div class="filter-group">
-            <label>Date From</label>
+            <label class="dark:text-gray-200">Date From</label>
             <input
               v-model="filters.dateFrom"
               type="date"
               @change="searchFlights"
+              class="dark:bg-gray-600 dark:text-gray-100 dark:border-gray-500"
             />
           </div>
 
           <div class="filter-group">
-            <label>Date To</label>
+            <label class="dark:text-gray-200">Date To</label>
             <input
               v-model="filters.dateTo"
               type="date"
               @change="searchFlights"
+              class="dark:bg-gray-600 dark:text-gray-100 dark:border-gray-500"
             />
           </div>
         </div>
 
         <div class="filter-row">
           <div class="filter-group">
-            <label>Min Price (PLN)</label>
+            <label class="dark:text-gray-200">Min Price (PLN)</label>
             <input
               v-model.number="filters.minPrice"
               type="number"
               min="0"
               placeholder="Min"
               @input="debouncedSearch"
+              class="dark:bg-gray-600 dark:text-gray-100 dark:border-gray-500 dark:placeholder-gray-400"
             />
           </div>
 
           <div class="filter-group">
-            <label>Max Price (PLN)</label>
+            <label class="dark:text-gray-200">Max Price (PLN)</label>
             <input
               v-model.number="filters.maxPrice"
               type="number"
               min="0"
               placeholder="Max"
               @input="debouncedSearch"
+              class="dark:bg-gray-600 dark:text-gray-100 dark:border-gray-500 dark:placeholder-gray-400"
             />
           </div>
 
           <div class="filter-group">
-            <label>Sort By</label>
-            <select v-model="filters.sortBy" @change="searchFlights">
+            <label class="dark:text-gray-200">Sort By</label>
+            <select v-model="filters.sortBy" @change="searchFlights" class="dark:bg-gray-600 dark:text-gray-100 dark:border-gray-500">
               <option value="price">Price (Low to High)</option>
               <option value="price_desc">Price (High to Low)</option>
               <option value="date">Date (Earliest)</option>
@@ -130,8 +134,8 @@
           </div>
 
           <div class="filter-group">
-            <label>Page Size</label>
-            <select v-model="filters.pageSize" @change="searchFlights">
+            <label class="dark:text-gray-200">Page Size</label>
+            <select v-model="filters.pageSize" @change="searchFlights" class="dark:bg-gray-600 dark:text-gray-100 dark:border-gray-500">
               <option :value="25">25</option>
               <option :value="50">50</option>
               <option :value="100">100</option>
@@ -140,10 +144,10 @@
         </div>
 
         <div class="filter-actions">
-          <button @click="searchFlights" class="btn-primary" :disabled="loading">
+          <button @click="searchFlights" class="btn-primary dark:bg-blue-600 dark:hover:bg-blue-700" :disabled="loading">
             Search Flights
           </button>
-          <button @click="clearFilters" class="btn-secondary">
+          <button @click="clearFilters" class="btn-secondary dark:bg-gray-600 dark:hover:bg-gray-700">
             Clear Filters
           </button>
         </div>
@@ -151,49 +155,49 @@
 
       <!-- Flights Results -->
       <div v-if="flightsData" class="flights-results">
-        <div class="results-header">
-          <h3>Found {{ flightsData.total }} flights</h3>
-          <div class="pagination-info">
+        <div class="results-header dark:border-gray-700">
+          <h3 class="dark:text-gray-100">Found {{ flightsData.total }} flights</h3>
+          <div class="pagination-info dark:text-gray-400">
             Page {{ flightsData.page }} of {{ Math.ceil(flightsData.total / flightsData.page_size) }}
           </div>
         </div>
 
-        <div v-if="flightsData.flights.length === 0" class="no-results">
+        <div v-if="flightsData.flights.length === 0" class="no-results dark:bg-gray-700 dark:text-gray-300">
           No flights found matching your criteria.
         </div>
 
         <div v-else class="flights-table-container">
           <table class="flights-table">
-            <thead>
+            <thead class="dark:bg-gray-700 dark:border-gray-600">
               <tr>
-                <th>Route</th>
-                <th>Date</th>
-                <th>Time</th>
-                <th>Duration</th>
-                <th>Price</th>
+                <th class="dark:text-gray-200">Route</th>
+                <th class="dark:text-gray-200">Date</th>
+                <th class="dark:text-gray-200">Time</th>
+                <th class="dark:text-gray-200">Duration</th>
+                <th class="dark:text-gray-200">Price</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="flight in flightsData.flights" :key="flight.flight_id">
-                <td class="route-cell">
+              <tr v-for="flight in flightsData.flights" :key="flight.flight_id" class="dark:border-gray-700 dark:hover:bg-gray-700">
+                <td class="route-cell dark:text-gray-100">
                   <div class="route">
                     <strong>{{ flight.origin }}</strong> → <strong>{{ flight.destination }}</strong>
                   </div>
-                  <div class="route-names">
+                  <div class="route-names dark:text-gray-400">
                     {{ flight.origin_name }} → {{ flight.destination_name }}
                   </div>
                 </td>
-                <td>{{ formatDate(flight.date_out) }}</td>
+                <td class="dark:text-gray-200">{{ formatDate(flight.date_out) }}</td>
                 <td>
                   <div class="time-cell">
-                    <div>{{ formatTime(flight.departure_time) }}</div>
-                    <div class="arrival-time">{{ formatTime(flight.arrival_time) }}</div>
+                    <div class="dark:text-gray-200">{{ formatTime(flight.departure_time) }}</div>
+                    <div class="arrival-time dark:text-gray-400">{{ formatTime(flight.arrival_time) }}</div>
                   </div>
                 </td>
-                <td>{{ flight.duration }}</td>
-                <td class="price-cell">
+                <td class="dark:text-gray-200">{{ flight.duration }}</td>
+                <td class="price-cell dark:text-green-400">
                   <strong>{{ formatPrice(flight.current_price) }}</strong>
-                  <div v-if="flight.price_history.length > 1" class="price-changes">
+                  <div v-if="flight.price_history.length > 1" class="price-changes dark:text-gray-400">
                     {{ flight.price_history.length - 1 }} changes
                   </div>
                 </td>
@@ -207,17 +211,17 @@
           <button
             @click="changePage(flightsData.page - 1)"
             :disabled="flightsData.page === 1"
-            class="btn-secondary"
+            class="btn-secondary dark:bg-gray-600 dark:hover:bg-gray-700"
           >
             Previous
           </button>
-          <span class="page-info">
+          <span class="page-info dark:text-gray-300">
             Page {{ flightsData.page }} of {{ Math.ceil(flightsData.total / flightsData.page_size) }}
           </span>
           <button
             @click="changePage(flightsData.page + 1)"
             :disabled="flightsData.page >= Math.ceil(flightsData.total / flightsData.page_size)"
-            class="btn-secondary"
+            class="btn-secondary dark:bg-gray-600 dark:hover:bg-gray-700"
           >
             Next
           </button>
@@ -290,15 +294,15 @@
 
     <!-- Action Buttons -->
     <div class="actions">
-      <button @click="loadAllData" :disabled="loading" class="btn-primary">
+      <button @click="loadAllData" :disabled="loading" class="btn-primary dark:bg-blue-600 dark:hover:bg-blue-700">
         {{ loading ? 'Loading...' : 'Refresh All Data' }}
       </button>
 
-      <button @click="checkLatestScan" :disabled="loading" class="btn-secondary">
+      <button @click="checkLatestScan" :disabled="loading" class="btn-secondary dark:bg-gray-600 dark:hover:bg-gray-700">
         {{ loading ? 'Checking...' : 'Check Latest Scan' }}
       </button>
 
-      <button @click="triggerScan" :disabled="loading || scanning" class="btn-success">
+      <button @click="triggerScan" :disabled="loading || scanning" class="btn-success dark:bg-green-600 dark:hover:bg-green-700">
         {{ scanning ? 'Starting Scan...' : 'Trigger New Scan' }}
       </button>
     </div>
@@ -306,6 +310,7 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import { formatPrice, formatDate, formatDateTime, formatTime } from '~/utils/formatters'
 
 const config = useRuntimeConfig()
@@ -319,11 +324,12 @@ const stats = ref(null)
 const flightsData = ref(null)
 const originsList = ref([])
 const destinationsList = ref([])
+const allRoutes = ref([]) // Store all possible routes for filtering
 
-// Filters
+// Filters - changed to single values instead of arrays
 const filters = ref({
-  origins: [],
-  destinations: [],
+  origin: '',
+  destination: '',
   dateFrom: '',
   dateTo: '',
   minPrice: null,
@@ -331,6 +337,35 @@ const filters = ref({
   sortBy: 'price',
   page: 1,
   pageSize: 50
+})
+
+// Computed filtered lists based on current selections
+const filteredOriginsList = computed(() => {
+  if (!filters.value.destination) {
+    // No destination selected, show all origins
+    return originsList.value
+  }
+  // Filter origins that have routes to the selected destination
+  const validOrigins = new Set(
+    allRoutes.value
+      .filter(route => route.destination === filters.value.destination)
+      .map(route => route.origin)
+  )
+  return originsList.value.filter(origin => validOrigins.has(origin.code))
+})
+
+const filteredDestinationsList = computed(() => {
+  if (!filters.value.origin) {
+    // No origin selected, show all destinations
+    return destinationsList.value
+  }
+  // Filter destinations that have routes from the selected origin
+  const validDestinations = new Set(
+    allRoutes.value
+      .filter(route => route.origin === filters.value.origin)
+      .map(route => route.destination)
+  )
+  return destinationsList.value.filter(dest => validDestinations.has(dest.code))
 })
 
 // Debounce timer
@@ -344,6 +379,28 @@ const debouncedSearch = () => {
   }, 500)
 }
 
+const onOriginChange = async () => {
+  // When origin changes, clear destination if it's no longer valid
+  if (filters.value.origin && filters.value.destination) {
+    const validDests = filteredDestinationsList.value.map(d => d.code)
+    if (!validDests.includes(filters.value.destination)) {
+      filters.value.destination = ''
+    }
+  }
+  debouncedSearch()
+}
+
+const onDestinationChange = async () => {
+  // When destination changes, clear origin if it's no longer valid
+  if (filters.value.destination && filters.value.origin) {
+    const validOrigins = filteredOriginsList.value.map(o => o.code)
+    if (!validOrigins.includes(filters.value.origin)) {
+      filters.value.origin = ''
+    }
+  }
+  debouncedSearch()
+}
+
 const searchFlights = async () => {
   loading.value = true
   loadingMessage.value = 'Searching flights...'
@@ -353,12 +410,12 @@ const searchFlights = async () => {
     // Build query params
     const params = new URLSearchParams()
 
-    // Handle multiple origins and destinations
-    if (filters.value.origins && filters.value.origins.length > 0) {
-      params.append('origin', filters.value.origins.join(','))
+    // Handle single origin and destination
+    if (filters.value.origin) {
+      params.append('origin', filters.value.origin)
     }
-    if (filters.value.destinations && filters.value.destinations.length > 0) {
-      params.append('destination', filters.value.destinations.join(','))
+    if (filters.value.destination) {
+      params.append('destination', filters.value.destination)
     }
     if (filters.value.dateFrom) params.append('date_from', filters.value.dateFrom)
     if (filters.value.dateTo) params.append('date_to', filters.value.dateTo)
@@ -436,8 +493,8 @@ const triggerScan = async () => {
 
 const clearFilters = () => {
   filters.value = {
-    origins: [],
-    destinations: [],
+    origin: '',
+    destination: '',
     dateFrom: '',
     dateTo: '',
     minPrice: null,
@@ -455,9 +512,13 @@ const loadAirportsLists = async () => {
     const originsResponse = await $fetch(`${apiBaseUrl}/airports/origins`)
     originsList.value = originsResponse.origins || []
 
-    // Load all destinations (we'll get them from all available destinations)
+    // Load all destinations
     const destsResponse = await $fetch(`${apiBaseUrl}/airports/destinations`)
     destinationsList.value = destsResponse.destinations || []
+
+    // Load all routes to enable smart filtering
+    const routesResponse = await $fetch(`${apiBaseUrl}/airports/routes`)
+    allRoutes.value = routesResponse.routes || []
   } catch (e) {
     console.error('Failed to load airports lists:', e)
   }
