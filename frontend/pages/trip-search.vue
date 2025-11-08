@@ -1,7 +1,7 @@
 <template>
-  <div class="container">
-    <h1>Round Trip Search</h1>
-    <p class="subtitle">Find the best round trip deals with flexible duration</p>
+  <div class="container dark:bg-gray-900">
+    <h1 class="dark:text-gray-100">Round Trip Search</h1>
+    <p class="subtitle dark:text-gray-400">Find the best round trip deals with flexible duration</p>
 
     <div v-if="loading" class="loading">
       {{ loadingMessage }}
@@ -12,8 +12,8 @@
     </div>
 
     <!-- Search Form -->
-    <div class="search-form">
-      <h2>Search Parameters</h2>
+    <div class="search-form dark:bg-gray-800">
+      <h2 class="dark:text-gray-100 dark:border-gray-700">Search Parameters</h2>
 
       <div class="form-grid">
         <div class="form-group">
@@ -86,7 +86,7 @@
     </div>
 
     <!-- Destinations Preview -->
-    <div v-if="searchParams.origin && destinationsPreview.length > 0" class="destinations-preview">
+    <div v-if="searchParams.origin && destinationsPreview.length > 0" class="destinations-preview dark:from-blue-900 dark:to-blue-800 dark:border-blue-700">
       <h2>Available Destinations from {{ searchParams.origin }}</h2>
       <p class="preview-subtitle">Showing lowest round-trip prices ({{ searchParams.minDays }}-{{ searchParams.maxDays }} days)</p>
       <div class="destinations-grid">
@@ -112,10 +112,16 @@
     </div>
 
     <!-- Example Routes -->
-    <div v-if="exampleRoutes.length > 0 && !searchParams.origin" class="example-routes">
-      <h2>Popular Round Trip Routes</h2>
-      <p class="example-subtitle">Click on a route to search for round trips</p>
-      <div class="routes-grid">
+    <div v-if="exampleRoutes.length > 0 && !searchParams.origin" class="example-routes dark:bg-gray-800">
+      <div class="collapsible-header" @click="toggleExampleRoutes">
+        <h2 class="dark:text-gray-100 dark:border-gray-700">Popular Round Trip Routes</h2>
+        <button class="toggle-btn" :aria-label="showExampleRoutes ? 'Collapse' : 'Expand'">
+          {{ showExampleRoutes ? '▼' : '▶' }}
+        </button>
+      </div>
+      <div v-if="showExampleRoutes">
+        <p class="example-subtitle">Click on a route to search for round trips</p>
+        <div class="routes-grid">
         <div
           v-for="route in exampleRoutes"
           :key="`${route.origin}-${route.destination}`"
@@ -133,14 +139,15 @@
           <div class="route-stats">
             <div class="stat-item">
               <span class="stat-label">Outbound:</span>
-              <span class="stat-value">{{ route.outbound_flights }} flights</span>
+              <span class="stat-value">{{ route.outbound_flights || 0 }} flights</span>
             </div>
             <div class="stat-item">
               <span class="stat-label">Return:</span>
-              <span class="stat-value">{{ route.return_flights }} flights</span>
+              <span class="stat-value">{{ route.return_flights || 0 }} flights</span>
             </div>
           </div>
         </div>
+      </div>
       </div>
     </div>
 
@@ -228,6 +235,7 @@ const loading = ref(false)
 const loadingMessage = ref('Loading...')
 const error = ref(null)
 const searched = ref(false)
+const showExampleRoutes = ref(false)
 
 const origins = ref([])
 const availableDestinations = ref([])
@@ -451,6 +459,10 @@ const loadDestinationsPreview = async () => {
 const selectDestination = (dest) => {
   searchParams.value.destination = dest.destination
   // Auto-search will be triggered by the watch on destination
+}
+
+const toggleExampleRoutes = () => {
+  showExampleRoutes.value = !showExampleRoutes.value
 }
 
 const clearSearch = () => {
@@ -680,6 +692,33 @@ h2 {
   background: white;
   border-radius: 10px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.collapsible-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+.collapsible-header:hover h2 {
+  color: #007bff;
+}
+
+.toggle-btn {
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  color: #495057;
+  cursor: pointer;
+  padding: 0.5rem;
+  transition: transform 0.2s;
+}
+
+.toggle-btn:hover {
+  color: #007bff;
+  transform: scale(1.1);
 }
 
 .example-subtitle {

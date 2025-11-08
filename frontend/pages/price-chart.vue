@@ -1,7 +1,7 @@
 <template>
-  <div class="container">
-    <h1>Flight Price Chart</h1>
-    <p class="subtitle">View price trends for your selected route over the full date range</p>
+  <div class="container dark:bg-gray-900">
+    <h1 class="dark:text-gray-100">Flight Price Chart</h1>
+    <p class="subtitle dark:text-gray-400">View price trends for your selected route over the full date range</p>
 
     <div v-if="loading" class="loading">
       {{ loadingMessage }}
@@ -12,8 +12,8 @@
     </div>
 
     <!-- Route Selection -->
-    <div class="route-selection">
-      <h2>Select Route</h2>
+    <div class="route-selection dark:bg-gray-800">
+      <h2 class="dark:text-gray-100 dark:border-gray-700">Select Route</h2>
 
       <div class="selection-grid">
         <div class="selection-group">
@@ -59,9 +59,9 @@
     </div>
 
     <!-- Chart Display -->
-    <div v-if="chartData && chartData.data.length > 0" class="chart-section">
+    <div v-if="chartData && chartData.data.length > 0" class="chart-section dark:bg-gray-800">
       <div class="chart-header">
-        <h2>
+        <h2 class="dark:text-gray-100 dark:border-gray-700">
           Price Trends: {{ chartData.origin }} → {{ chartData.destination }}
         </h2>
         <div class="chart-stats">
@@ -73,6 +73,10 @@
             {{ chartData.data[0].date }} to {{ chartData.data[chartData.data.length - 1].date }}
           </span>
         </div>
+      </div>
+
+      <div class="chart-info-text dark:bg-blue-900 dark:text-blue-200 dark:border-blue-700">
+        💡 <strong>Tip:</strong> Click on any legend item to show/hide that price line on the chart
       </div>
 
       <div class="chart-container">
@@ -609,6 +613,17 @@ h3 {
 .stat-item {
   display: flex;
   gap: 0.5rem;
+}
+
+.chart-info-text {
+  background: #e7f3ff;
+  border: 2px solid #2196f3;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin: 1rem 0;
+  color: #1565c0;
+  font-size: 0.95rem;
+  text-align: center;
 }
 
 .chart-container {

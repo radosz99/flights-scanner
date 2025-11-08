@@ -18,10 +18,25 @@
         <NuxtLink to="/trip-search" class="nav-link">
           Trip Search
         </NuxtLink>
+        <button @click="$emit('toggle-dark-mode')" class="dark-mode-toggle" :aria-label="isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'">
+          <span v-if="isDarkMode">☀️</span>
+          <span v-else>🌙</span>
+        </button>
       </nav>
     </div>
   </header>
 </template>
+
+<script setup>
+defineProps({
+  isDarkMode: {
+    type: Boolean,
+    default: false
+  }
+})
+
+defineEmits(['toggle-dark-mode'])
+</script>
 
 <style scoped>
 .app-header {
@@ -89,6 +104,25 @@
 .nav-link.router-link-active {
   background: rgba(255, 255, 255, 0.2);
   font-weight: 600;
+}
+
+.dark-mode-toggle {
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  color: white;
+  font-size: 1.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dark-mode-toggle:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: scale(1.1);
 }
 
 @media (max-width: 768px) {

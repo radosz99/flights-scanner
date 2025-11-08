@@ -1,7 +1,7 @@
 <template>
-  <div class="container">
-    <h1>Flights Scanner</h1>
-    <p>Backend API: <code>{{ apiBaseUrl }}</code></p>
+  <div class="container dark:bg-gray-900">
+    <h1 class="dark:text-gray-100">Flights Scanner</h1>
+    <p class="dark:text-gray-300">Backend API: <code class="dark:bg-gray-700 dark:text-gray-200">{{ apiBaseUrl }}</code></p>
 
     <div v-if="loading" class="loading">
       {{ loadingMessage }}
@@ -12,8 +12,8 @@
     </div>
 
     <!-- Database Statistics -->
-    <div v-if="stats" class="stats-overview">
-      <h2>Database Statistics</h2>
+    <div v-if="stats" class="stats-overview dark:from-purple-900 dark:to-purple-700">
+      <h2 class="dark:border-purple-600">Database Statistics</h2>
       <div class="stats-grid">
         <div class="stat-card">
           <div class="stat-value">{{ stats.total_flights }}</div>
@@ -44,29 +44,37 @@
     </div>
 
     <!-- Flights Search and Filters -->
-    <div class="flights-section">
-      <h2>Search Flights</h2>
+    <div class="flights-section dark:bg-gray-800">
+      <h2 class="dark:text-gray-100 dark:border-gray-700">Search Flights</h2>
 
-      <div class="filters">
+      <div class="filters dark:bg-gray-700">
         <div class="filter-row">
           <div class="filter-group">
-            <label>Origin</label>
-            <input
-              v-model="filters.origin"
-              type="text"
-              placeholder="e.g. WRO, KRK"
-              @input="debouncedSearch"
-            />
+            <label>Origin (select multiple)</label>
+            <select
+              v-model="filters.origins"
+              multiple
+              size="4"
+              @change="debouncedSearch"
+            >
+              <option v-for="origin in originsList" :key="origin.code" :value="origin.code">
+                {{ origin.code }} - {{ origin.name }}
+              </option>
+            </select>
           </div>
 
           <div class="filter-group">
-            <label>Destination</label>
-            <input
-              v-model="filters.destination"
-              type="text"
-              placeholder="e.g. BCN, ALC"
-              @input="debouncedSearch"
-            />
+            <label>Destination (select multiple)</label>
+            <select
+              v-model="filters.destinations"
+              multiple
+              size="4"
+              @change="debouncedSearch"
+            >
+              <option v-for="dest in destinationsList" :key="dest.code" :value="dest.code">
+                {{ dest.code }} - {{ dest.name }}
+              </option>
+            </select>
           </div>
 
           <div class="filter-group">
@@ -218,8 +226,8 @@
     </div>
 
     <!-- Scan Status Section -->
-    <div v-if="scanStatus" class="scan-status">
-      <h2>Latest Scan Status</h2>
+    <div v-if="scanStatus" class="scan-status dark:bg-green-900 dark:text-green-100 dark:border-green-700">
+      <h2 class="dark:text-green-100">Latest Scan Status</h2>
 
       <div class="scan-info">
         <div class="info-row">
@@ -309,11 +317,13 @@ const scanning = ref(false)
 const loadingMessage = ref('Loading...')
 const stats = ref(null)
 const flightsData = ref(null)
+const originsList = ref([])
+const destinationsList = ref([])
 
 // Filters
 const filters = ref({
-  origin: '',
-  destination: '',
+  origins: [],
+  destinations: [],
   dateFrom: '',
   dateTo: '',
   minPrice: null,
@@ -343,8 +353,13 @@ const searchFlights = async () => {
     // Build query params
     const params = new URLSearchParams()
 
-    if (filters.value.origin) params.append('origin', filters.value.origin)
-    if (filters.value.destination) params.append('destination', filters.value.destination)
+    // Handle multiple origins and destinations
+    if (filters.value.origins && filters.value.origins.length > 0) {
+      params.append('origin', filters.value.origins.join(','))
+    }
+    if (filters.value.destinations && filters.value.destinations.length > 0) {
+      params.append('destination', filters.value.destinations.join(','))
+    }
     if (filters.value.dateFrom) params.append('date_from', filters.value.dateFrom)
     if (filters.value.dateTo) params.append('date_to', filters.value.dateTo)
     if (filters.value.minPrice) params.append('min_price', filters.value.minPrice)
@@ -421,8 +436,8 @@ const triggerScan = async () => {
 
 const clearFilters = () => {
   filters.value = {
-    origin: '',
-    destination: '',
+    origins: [],
+    destinations: [],
     dateFrom: '',
     dateTo: '',
     minPrice: null,
@@ -432,6 +447,20 @@ const clearFilters = () => {
     pageSize: 50
   }
   searchFlights()
+}
+
+const loadAirportsLists = async () => {
+  try {
+    // Load all origins
+    const originsResponse = await $fetch(`${apiBaseUrl}/airports/origins`)
+    originsList.value = originsResponse.origins || []
+
+    // Load all destinations (we'll get them from all available destinations)
+    const destsResponse = await $fetch(`${apiBaseUrl}/airports/destinations`)
+    destinationsList.value = destsResponse.destinations || []
+  } catch (e) {
+    console.error('Failed to load airports lists:', e)
+  }
 }
 
 const changePage = (newPage) => {
@@ -446,6 +475,7 @@ const loadAllData = async () => {
 
   try {
     await Promise.all([
+      loadAirportsLists(),
       loadStats(),
       searchFlights(),
       checkLatestScan()
@@ -630,6 +660,28 @@ code {
   border-radius: 4px;
   font-size: 1rem;
   transition: border-color 0.2s;
+}
+
+.filter-group select[multiple] {
+  padding: 0.25rem;
+  min-height: 120px;
+  cursor: pointer;
+}
+
+.filter-group select[multiple] option {
+  padding: 0.5rem;
+  border-radius: 3px;
+  margin: 2px 0;
+  cursor: pointer;
+}
+
+.filter-group select[multiple] option:hover {
+  background: #e7f3ff;
+}
+
+.filter-group select[multiple] option:checked {
+  background: #007bff;
+  color: white;
 }
 
 .filter-group input:focus,
