@@ -20,6 +20,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
 
 from .ryanair import get_valid_cookie, get_ryanair_flights
 from config import settings
+from constants import POLISH_AIRPORTS
 from datetime import datetime, timedelta
 from loguru import logger
 from pymongo import MongoClient, ASCENDING
@@ -39,7 +40,7 @@ TRIP_DURATION_DAYS = 4  # How many days between date_out and date_in
 SCAN_UNTIL_DATE = "2025-12-31"  # Scan all date ranges until this date
 
 # Departure airports to scan (all Polish airports)
-DEPARTURE_AIRPORTS = ["GDN", "SZN", "KRK", "KTW", "WRO", "POZ", "WMI", "WAW", "LCJ", "LUZ", "RZE", "SZY", "BZG"]
+DEPARTURE_AIRPORTS = POLISH_AIRPORTS
 
 # MongoDB collection names
 FLIGHTS_COLLECTION = "ryanair_flights"

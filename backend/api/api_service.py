@@ -11,6 +11,12 @@ from pymongo import MongoClient, ASCENDING, DESCENDING
 from typing import Optional, List, Dict, Any, Tuple
 from datetime import date
 from loguru import logger
+import sys
+import os
+
+# Add parent directory to path to import constants
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+from constants import POLISH_AIRPORTS
 
 
 class APIService:
@@ -549,12 +555,9 @@ class APIService:
         Returns:
             List of route pairs (origin-destination combinations)
         """
-        # Polish airport codes
-        polish_airports = ["WRO", "KRK", "GDN", "POZ", "WAW", "KTW", "WMI", "SZN", "LCJ", "LUZ", "RZE", "SZY", "BZG"]
-
         # Get unique routes from Polish airports
         pipeline = [
-            {"$match": {"origin": {"$in": polish_airports}}},
+            {"$match": {"origin": {"$in": POLISH_AIRPORTS}}},
             {"$group": {
                 "_id": {
                     "origin": "$origin",
@@ -604,12 +607,9 @@ class APIService:
         Returns:
             List of one-way routes with sample flights
         """
-        # Polish airport codes
-        polish_airports = ["WRO", "KRK", "GDN", "POZ", "WAW", "KTW", "WMI", "SZN", "LCJ", "LUZ", "RZE", "SZY", "BZG"]
-
         # Get unique routes from Polish airports with min prices
         pipeline = [
-            {"$match": {"origin": {"$in": polish_airports}}},
+            {"$match": {"origin": {"$in": POLISH_AIRPORTS}}},
             {"$group": {
                 "_id": {
                     "origin": "$origin",

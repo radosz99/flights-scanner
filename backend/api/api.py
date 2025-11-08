@@ -33,6 +33,7 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from config import settings
+from constants import POLISH_AIRPORTS
 from api_models import (
     PriceHistoryEntry,
     FlightSegment,
@@ -544,7 +545,7 @@ async def trigger_scan(scan_request: ScanRequest, background_tasks: BackgroundTa
         from datetime import datetime
 
         # Always use all default departure airports (all Polish airports)
-        departure_airports = ["GDN", "SZN", "KRK", "KTW", "WRO", "POZ", "WMI", "WAW", "LCJ", "LUZ", "RZE", "SZY", "BZG"]
+        departure_airports = POLISH_AIRPORTS
 
         trip_duration_days = scan_request.trip_duration_days or 4
         scan_until_date = scan_request.scan_until_date or "2025-12-31"
