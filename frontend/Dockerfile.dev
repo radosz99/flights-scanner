@@ -9,8 +9,8 @@ COPY package*.json ./
 # Install dependencies (including dev dependencies)
 RUN npm ci
 
-# Copy source code
-COPY . .
+# Note: Source code is mounted as volume in docker-compose.dev.yml
+# This allows for hot reload during development
 
 # Expose port
 EXPOSE 8901

@@ -41,7 +41,8 @@ services:
     volumes:
       # Mount code for hot reload in development
       - ./frontend:/app
-      - /app/node_modules
+      # Preserve node_modules from the image
+      - frontend_node_modules:/app/node_modules
     command: ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "8901"]
     healthcheck:
       # Disable healthcheck in dev mode for faster startup
@@ -49,3 +50,7 @@ services:
       interval: 1m
       timeout: 10s
       retries: 1
+
+volumes:
+  frontend_node_modules:
+    name: flights-scanner-frontend-node-modules
