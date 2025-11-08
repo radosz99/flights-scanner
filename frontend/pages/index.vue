@@ -166,20 +166,20 @@
           No flights found matching your criteria.
         </div>
 
-        <div v-else class="flights-table-container">
+        <div v-else class="flights-table-container bg-white dark:bg-gray-800">
           <table class="flights-table">
-            <thead class="dark:bg-gray-700 dark:border-gray-600">
+            <thead class="bg-gray-100 dark:bg-gray-700 dark:border-gray-600">
               <tr>
-                <th class="dark:text-gray-200">Route</th>
-                <th class="dark:text-gray-200">Date</th>
-                <th class="dark:text-gray-200">Time</th>
-                <th class="dark:text-gray-200">Duration</th>
-                <th class="dark:text-gray-200">Price</th>
+                <th class="dark:text-gray-200 dark:bg-gray-700">Route</th>
+                <th class="dark:text-gray-200 dark:bg-gray-700">Date</th>
+                <th class="dark:text-gray-200 dark:bg-gray-700">Time</th>
+                <th class="dark:text-gray-200 dark:bg-gray-700">Duration</th>
+                <th class="dark:text-gray-200 dark:bg-gray-700">Price</th>
               </tr>
             </thead>
-            <tbody>
-              <tr v-for="flight in flightsData.flights" :key="flight.flight_id" class="dark:border-gray-700 dark:hover:bg-gray-700">
-                <td class="route-cell dark:text-gray-100">
+            <tbody class="bg-white dark:bg-gray-800">
+              <tr v-for="flight in flightsData.flights" :key="flight.flight_id" class="dark:border-gray-700 dark:hover:bg-gray-700 dark:bg-gray-800">
+                <td class="route-cell dark:text-gray-100 dark:bg-gray-800">
                   <div class="route">
                     <strong>{{ flight.origin }}</strong> → <strong>{{ flight.destination }}</strong>
                   </div>
@@ -187,15 +187,15 @@
                     {{ flight.origin_name }} → {{ flight.destination_name }}
                   </div>
                 </td>
-                <td class="dark:text-gray-200">{{ formatDate(flight.date_out) }}</td>
-                <td>
+                <td class="dark:text-gray-200 dark:bg-gray-800">{{ formatDate(flight.date_out) }}</td>
+                <td class="dark:bg-gray-800">
                   <div class="time-cell">
                     <div class="dark:text-gray-200">{{ formatTime(flight.departure_time) }}</div>
                     <div class="arrival-time dark:text-gray-400">{{ formatTime(flight.arrival_time) }}</div>
                   </div>
                 </td>
-                <td class="dark:text-gray-200">{{ flight.duration }}</td>
-                <td class="price-cell dark:text-green-400">
+                <td class="dark:text-gray-200 dark:bg-gray-800">{{ flight.duration }}</td>
+                <td class="price-cell dark:text-green-400 dark:bg-gray-800">
                   <strong>{{ formatPrice(flight.current_price) }}</strong>
                   <div v-if="flight.price_history.length > 1" class="price-changes dark:text-gray-400">
                     {{ flight.price_history.length - 1 }} changes

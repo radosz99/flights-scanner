@@ -1,0 +1,32 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install required packages
+RUN pip install --no-cache-dir requests loguru
+
+# Install supercronic (better cron for containers)
+ENV SUPERCRONIC_URL=https://github.com/aptible/supercronic/releases/download/v0.2.29/supercronic-linux-amd64 \
+    SUPERCRONIC=supercronic-linux-amd64 \
+    SUPERCRONIC_SHA1SUM=cd48d45c4b10f3f0bfdd3a57d054cd05ac96812b
+
+RUN apt-get update && apt-get install -y curl ca-certificates && \
+    curl -fsSLO "$SUPERCRONIC_URL" && \
+    echo "${SUPERCRONIC_SHA1SUM}  ${SUPERCRONIC}" | sha1sum -c - && \
+    chmod +x "$SUPERCRONIC" && \
+    mv "$SUPERCRONIC" /usr/local/bin/supercronic && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Copy trigger script
+COPY trigger_scan.py /app/trigger_scan.py
+RUN chmod +x /app/trigger_scan.py
+
+# Create crontab file
+# Runs at 00:00, 08:00, 16:00 UTC daily
+RUN echo "0 0,8,16 * * * cd /app && python3 /app/trigger_scan.py >> /app/logs/scan.log 2>&1" > /app/crontab
+
+# Create logs directory
+RUN mkdir -p /app/logs
+
+# Run supercronic
+CMD ["supercronic", "/app/crontab"]

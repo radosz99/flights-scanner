@@ -7,7 +7,7 @@ A Python application for fetching and analyzing flight data from Ryanair, Wizz A
 The easiest way to run the entire application:
 
 ```bash
-# Build and start all services (MongoDB, Backend API, Frontend)
+# Build and start all services (MongoDB, Backend API, Frontend, Scheduler)
 make docker-up
 
 # View logs
@@ -18,8 +18,25 @@ make docker-logs
 - Frontend: http://localhost:8901
 - Backend API: http://localhost:8900
 - MongoDB: mongodb://localhost:8902
+- **Scheduler**: Automatically scans flights every 8 hours (00:00, 08:00, 16:00 UTC)
 
 📖 **For detailed Docker instructions, see [DOCKER_SETUP.md](DOCKER_SETUP.md)**
+
+## ⏰ Automatic Scheduling
+
+The scheduler service runs automatically in Docker and triggers flight scans every 8 hours.
+
+**Configuration** (in `docker-compose.yml`):
+- **Trip Duration**: 7 days (configurable via `TRIP_DURATION_DAYS`)
+- **Scan Until**: ~2026-03-31 (configurable via `SCAN_UNTIL_DAYS`)
+- **Schedule**: 00:00, 08:00, 16:00 UTC daily
+
+**View scheduler logs:**
+```bash
+docker logs -f flights-scanner-scheduler
+```
+
+No manual setup needed - just run `make docker-up` and scans happen automatically! 🎉
 
 ## Features
 

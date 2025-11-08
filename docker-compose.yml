@@ -82,6 +82,25 @@ services:
       retries: 3
       start_period: 40s
 
+  # Scheduler Service - Automatically triggers scans every 8 hours
+  scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile.scheduler
+    container_name: flights-scanner-scheduler
+    restart: unless-stopped
+    environment:
+      API_URL: http://backend:8900
+      TRIP_DURATION_DAYS: 7
+      SCAN_UNTIL_DAYS: 455  # Days from now (~2026-03-31)
+    volumes:
+      - scheduler_logs:/app/logs
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - flights-scanner-network
+
 networks:
   flights-scanner-network:
     driver: bridge
@@ -92,3 +111,5 @@ volumes:
     name: flights-scanner-mongodb-data
   mongodb_config:
     name: flights-scanner-mongodb-config
+  scheduler_logs:
+    name: flights-scanner-scheduler-logs

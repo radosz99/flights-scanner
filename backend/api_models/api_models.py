@@ -96,7 +96,7 @@ class ScanRequest(BaseModel):
         description="Number of days between outbound and return flight"
     )
     scan_until_date: Optional[str] = Field(
-        default="2025-12-31",
+        default="2026-03-31",
         description="Scan all date ranges until this date (YYYY-MM-DD)"
     )
 

@@ -592,7 +592,7 @@ async def trigger_scan(scan_request: ScanRequest, background_tasks: BackgroundTa
         departure_airports = POLISH_AIRPORTS
 
         trip_duration_days = scan_request.trip_duration_days or 7
-        scan_until_date = scan_request.scan_until_date or "2025-12-31"
+        scan_until_date = scan_request.scan_until_date or "2026-03-31"
 
         # Calculate total date ranges for progress tracking
         today = datetime.now()
