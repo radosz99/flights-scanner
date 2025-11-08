@@ -62,17 +62,6 @@
         </div>
 
         <div class="form-group">
-          <label>Passengers</label>
-          <input
-            type="number"
-            v-model.number="searchParams.passengers"
-            min="1"
-            max="10"
-            placeholder="e.g., 2"
-          />
-        </div>
-
-        <div class="form-group">
           <label>Max Results</label>
           <input
             type="number"
@@ -85,13 +74,6 @@
       </div>
 
       <div class="action-buttons">
-        <button
-          @click="searchTrips"
-          :disabled="!canSearch || loading"
-          class="btn-primary"
-        >
-          {{ loading ? 'Searching...' : 'Search Trips' }}
-        </button>
         <button
           @click="clearSearch"
           class="btn-secondary"
@@ -108,7 +90,7 @@
         <p class="results-info">
           Showing {{ results.showing }} results for
           <strong>{{ results.origin }} → {{ results.destination }}</strong>
-          ({{ results.min_days }}-{{ results.max_days }} days, {{ results.passengers }} passengers)
+          ({{ results.min_days }}-{{ results.max_days }} days)
         </p>
       </div>
 
@@ -175,7 +157,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 
 const config = useRuntimeConfig()
 const apiBaseUrl = config.public.apiBaseUrl
@@ -193,7 +175,7 @@ const searchParams = ref({
   destination: '',
   minDays: 3,
   maxDays: 7,
-  passengers: 2,
+  passengers: 1,
   limit: 100
 })
 
@@ -205,14 +187,20 @@ const canSearch = computed(() => {
     searchParams.value.destination &&
     searchParams.value.minDays > 0 &&
     searchParams.value.maxDays > 0 &&
-    searchParams.value.minDays <= searchParams.value.maxDays &&
-    searchParams.value.passengers > 0
+    searchParams.value.minDays <= searchParams.value.maxDays
   )
 })
 
 // Load origins on mount
 onMounted(async () => {
   await loadOrigins()
+})
+
+// Auto-search when destination is selected
+watch(() => searchParams.value.destination, (newDest, oldDest) => {
+  if (newDest && newDest !== oldDest && canSearch.value) {
+    searchTrips()
+  }
 })
 
 const loadOrigins = async () => {
@@ -313,7 +301,7 @@ const clearSearch = () => {
     destination: '',
     minDays: 3,
     maxDays: 7,
-    passengers: 2,
+    passengers: 1,
     limit: 100
   }
   availableDestinations.value = []
