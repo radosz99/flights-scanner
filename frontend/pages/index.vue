@@ -163,8 +163,6 @@
                 <th>Time</th>
                 <th>Duration</th>
                 <th>Price</th>
-                <th>Seats Left</th>
-                <th>Flight #</th>
               </tr>
             </thead>
             <tbody>
@@ -180,8 +178,8 @@
                 <td>{{ formatDate(flight.date_out) }}</td>
                 <td>
                   <div class="time-cell">
-                    <div>{{ flight.departure_time }}</div>
-                    <div class="arrival-time">{{ flight.arrival_time }}</div>
+                    <div>{{ formatTime(flight.departure_time) }}</div>
+                    <div class="arrival-time">{{ formatTime(flight.arrival_time) }}</div>
                   </div>
                 </td>
                 <td>{{ flight.duration }}</td>
@@ -190,11 +188,6 @@
                   <div v-if="flight.price_history.length > 1" class="price-changes">
                     {{ flight.price_history.length - 1 }} changes
                   </div>
-                </td>
-                <td>{{ flight.fares_left }}</td>
-                <td>
-                  <code>{{ flight.flight_number }}</code>
-                  <div class="operator">{{ flight.operator }}</div>
                 </td>
               </tr>
             </tbody>
@@ -305,7 +298,7 @@
 </template>
 
 <script setup>
-import { formatPrice, formatDate, formatDateTime } from '~/utils/formatters'
+import { formatPrice, formatDate, formatDateTime, formatTime } from '~/utils/formatters'
 
 const config = useRuntimeConfig()
 const apiBaseUrl = config.public.apiBaseUrl

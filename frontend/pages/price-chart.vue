@@ -103,6 +103,7 @@
               <tr>
                 <th>Date</th>
                 <th>Min Price</th>
+                <th>Current Price</th>
                 <th>Avg Price</th>
                 <th>Max Price</th>
                 <th>Flights</th>
@@ -111,9 +112,10 @@
             <tbody>
               <tr v-for="item in chartData.data" :key="item.date">
                 <td><strong>{{ formatDate(item.date) }}</strong></td>
-                <td class="price-cell">{{ formatPrice(item.min_price) }}</td>
-                <td class="price-cell">{{ formatPrice(item.avg_price) }}</td>
-                <td class="price-cell">{{ formatPrice(item.max_price) }}</td>
+                <td class="price-cell min-price">{{ formatPrice(item.min_price) }}</td>
+                <td class="price-cell current-price">{{ formatPrice(item.current_price) }}</td>
+                <td class="price-cell avg-price">{{ formatPrice(item.avg_price) }}</td>
+                <td class="price-cell max-price">{{ formatPrice(item.max_price) }}</td>
                 <td>{{ item.flight_count }}</td>
               </tr>
             </tbody>
@@ -286,6 +288,7 @@ const renderChart = () => {
   const data = chartData.value.data
   const labels = data.map(d => d.date)
   const minPrices = data.map(d => d.min_price)
+  const currentPrices = data.map(d => d.current_price)
   const avgPrices = data.map(d => d.avg_price)
   const maxPrices = data.map(d => d.max_price)
 
@@ -301,6 +304,16 @@ const renderChart = () => {
           data: minPrices,
           borderColor: '#28a745',
           backgroundColor: 'rgba(40, 167, 69, 0.1)',
+          borderWidth: 2,
+          pointRadius: 3,
+          pointHoverRadius: 5,
+          tension: 0.1
+        },
+        {
+          label: 'Current Price',
+          data: currentPrices,
+          borderColor: '#ffc107',
+          backgroundColor: 'rgba(255, 193, 7, 0.1)',
           borderWidth: 2,
           pointRadius: 3,
           pointHoverRadius: 5,
@@ -347,6 +360,17 @@ const renderChart = () => {
             },
             usePointStyle: true,
             padding: 20
+          },
+          onClick: (e, legendItem, legend) => {
+            const index = legendItem.datasetIndex
+            const chart = legend.chart
+            const meta = chart.getDatasetMeta(index)
+
+            // Toggle visibility
+            meta.hidden = meta.hidden === null ? !chart.data.datasets[index].hidden : null
+
+            // Re-render chart
+            chart.update()
           }
         },
         title: {
@@ -667,7 +691,22 @@ h3 {
 
 .price-cell {
   font-weight: 600;
+}
+
+.price-cell.min-price {
   color: #28a745;
+}
+
+.price-cell.current-price {
+  color: #ffc107;
+}
+
+.price-cell.avg-price {
+  color: #007bff;
+}
+
+.price-cell.max-price {
+  color: #dc3545;
 }
 
 /* Buttons */

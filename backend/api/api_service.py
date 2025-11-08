@@ -421,6 +421,7 @@ class APIService:
                 "min_price": {"$min": "$current_price"},
                 "max_price": {"$max": "$current_price"},
                 "avg_price": {"$avg": "$current_price"},
+                "current_price": {"$first": "$current_price"},  # Sample current price
                 "flight_count": {"$sum": 1},
                 "currency": {"$first": "$currency"}
             }},
@@ -438,6 +439,7 @@ class APIService:
                 "min_price": round(r["min_price"], 2),
                 "max_price": round(r["max_price"], 2),
                 "avg_price": round(r["avg_price"], 2),
+                "current_price": round(r["current_price"], 2),
                 "flight_count": r["flight_count"],
                 "currency": r["currency"]
             }
@@ -571,6 +573,79 @@ class APIService:
         round_trips.sort(key=lambda x: x["total_price"])
 
         return round_trips
+
+    def get_round_trips_preview(
+        self,
+        origin: str,
+        min_days: int,
+        max_days: int
+    ) -> List[Dict[str, Any]]:
+        """
+        Get preview of all destinations from origin with lowest round-trip prices.
+
+        Args:
+            origin: Origin airport code
+            min_days: Minimum trip duration in days
+            max_days: Maximum trip duration in days
+
+        Returns:
+            List of destinations with minimum total round-trip prices
+        """
+        from datetime import datetime
+
+        # Get all possible destinations from this origin
+        destinations = self.get_destinations_from_origin(origin)
+
+        preview_data = []
+
+        for dest in destinations:
+            destination_code = dest["code"]
+
+            # Get all outbound flights
+            outbound_flights = list(self.flights_collection.find({
+                "origin": origin.upper(),
+                "destination": destination_code
+            }))
+
+            # Get all return flights
+            return_flights = list(self.flights_collection.find({
+                "origin": destination_code,
+                "destination": origin.upper()
+            }))
+
+            if not outbound_flights or not return_flights:
+                continue
+
+            # Find the cheapest valid round trip
+            min_price = float('inf')
+
+            for outbound in outbound_flights:
+                outbound_date_str = outbound["departure_time"].split("T")[0]
+                outbound_date = datetime.strptime(outbound_date_str, "%Y-%m-%d")
+
+                for return_flight in return_flights:
+                    return_date_str = return_flight["departure_time"].split("T")[0]
+                    return_date = datetime.strptime(return_date_str, "%Y-%m-%d")
+
+                    trip_duration = (return_date - outbound_date).days
+
+                    if min_days <= trip_duration <= max_days:
+                        total_price = outbound["current_price"] + return_flight["current_price"]
+                        if total_price < min_price:
+                            min_price = total_price
+
+            if min_price != float('inf'):
+                preview_data.append({
+                    "destination": destination_code,
+                    "destination_name": dest["name"],
+                    "min_total_price": round(min_price, 2),
+                    "flight_count": dest["flight_count"]
+                })
+
+        # Sort by price
+        preview_data.sort(key=lambda x: x["min_total_price"])
+
+        return preview_data
 
     def get_all_two_way_routes(self, limit: int = 100) -> List[Dict[str, Any]]:
         """

@@ -209,6 +209,37 @@ async def get_round_trips(
     }
 
 
+@app.get("/flights/round-trips/preview")
+async def get_round_trips_preview(
+    origin: str = Query(..., description="Origin airport code (e.g., WRO)"),
+    min_days: int = Query(3, ge=1, description="Minimum trip duration in days"),
+    max_days: int = Query(7, ge=1, description="Maximum trip duration in days")
+):
+    """
+    Get preview of all available destinations from origin with lowest round-trip prices.
+
+    Returns a list of destinations with minimum round-trip prices for the given duration range.
+    """
+    if min_days > max_days:
+        raise HTTPException(
+            status_code=400,
+            detail="min_days must be less than or equal to max_days"
+        )
+
+    preview_data = api_service.get_round_trips_preview(
+        origin=origin,
+        min_days=min_days,
+        max_days=max_days
+    )
+
+    return {
+        "origin": origin.upper(),
+        "min_days": min_days,
+        "max_days": max_days,
+        "destinations": preview_data
+    }
+
+
 @app.get("/flights/{flight_id}", response_model=FlightResponse)
 async def get_flight(flight_id: str):
     """

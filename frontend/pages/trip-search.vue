@@ -47,6 +47,7 @@
             min="1"
             max="365"
             placeholder="e.g., 3"
+            @input="onMinDaysChange"
           />
         </div>
 
@@ -58,6 +59,7 @@
             min="1"
             max="365"
             placeholder="e.g., 7"
+            @input="onMaxDaysChange"
           />
         </div>
 
@@ -83,8 +85,34 @@
       </div>
     </div>
 
+    <!-- Destinations Preview -->
+    <div v-if="searchParams.origin && destinationsPreview.length > 0" class="destinations-preview">
+      <h2>Available Destinations from {{ searchParams.origin }}</h2>
+      <p class="preview-subtitle">Showing lowest round-trip prices ({{ searchParams.minDays }}-{{ searchParams.maxDays }} days)</p>
+      <div class="destinations-grid">
+        <div
+          v-for="dest in destinationsPreview"
+          :key="dest.destination"
+          class="destination-card"
+          :class="{ 'selected': searchParams.destination === dest.destination }"
+          @click="selectDestination(dest)"
+        >
+          <div class="destination-info">
+            <div class="destination-code">
+              <strong>{{ dest.destination }}</strong>
+            </div>
+            <div class="destination-name">{{ dest.destination_name }}</div>
+          </div>
+          <div class="destination-price">
+            <div class="price-label">From</div>
+            <div class="price-value">{{ formatPrice(dest.min_total_price) }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Example Routes -->
-    <div v-if="exampleRoutes.length > 0" class="example-routes">
+    <div v-if="exampleRoutes.length > 0 && !searchParams.origin" class="example-routes">
       <h2>Popular Round Trip Routes</h2>
       <p class="example-subtitle">Click on a route to search for round trips</p>
       <div class="routes-grid">
@@ -204,6 +232,7 @@ const searched = ref(false)
 const origins = ref([])
 const availableDestinations = ref([])
 const exampleRoutes = ref([])
+const destinationsPreview = ref([])
 
 const searchParams = ref({
   origin: '',
@@ -239,6 +268,18 @@ onMounted(async () => {
 // Auto-search when destination is selected
 watch(() => searchParams.value.destination, (newDest, oldDest) => {
   if (newDest && newDest !== oldDest && canSearch.value) {
+    searchTrips()
+  }
+})
+
+// Refetch destinations preview when min/max days change
+watch(() => [searchParams.value.minDays, searchParams.value.maxDays], () => {
+  if (searchParams.value.origin) {
+    loadDestinationsPreview()
+  }
+
+  // If we already have results, refetch them with new day range
+  if (results.value && canSearch.value) {
     searchTrips()
   }
 })
@@ -287,9 +328,27 @@ const onOriginChange = async () => {
 
   // Load destinations for selected origin
   if (searchParams.value.origin) {
-    await loadDestinationsFromOrigin(searchParams.value.origin)
+    await Promise.all([
+      loadDestinationsFromOrigin(searchParams.value.origin),
+      loadDestinationsPreview()
+    ])
   } else {
     availableDestinations.value = []
+    destinationsPreview.value = []
+  }
+}
+
+const onMinDaysChange = () => {
+  // Ensure minDays doesn't exceed maxDays
+  if (searchParams.value.minDays > searchParams.value.maxDays) {
+    searchParams.value.maxDays = searchParams.value.minDays
+  }
+}
+
+const onMaxDaysChange = () => {
+  // Ensure maxDays is at least minDays
+  if (searchParams.value.maxDays < searchParams.value.minDays) {
+    searchParams.value.minDays = searchParams.value.maxDays
   }
 }
 
@@ -352,7 +411,10 @@ const selectExampleRoute = async (route) => {
   searchParams.value.origin = route.origin
 
   // Load destinations for this origin
-  await loadDestinationsFromOrigin(route.origin)
+  await Promise.all([
+    loadDestinationsFromOrigin(route.origin),
+    loadDestinationsPreview()
+  ])
 
   // Set the destination
   searchParams.value.destination = route.destination
@@ -361,6 +423,34 @@ const selectExampleRoute = async (route) => {
   if (canSearch.value) {
     searchTrips()
   }
+}
+
+const loadDestinationsPreview = async () => {
+  if (!searchParams.value.origin) {
+    destinationsPreview.value = []
+    return
+  }
+
+  try {
+    // Fetch round trips summary for this origin
+    const response = await $fetch(`${apiBaseUrl}/flights/round-trips/preview`, {
+      params: {
+        origin: searchParams.value.origin,
+        min_days: searchParams.value.minDays,
+        max_days: searchParams.value.maxDays
+      }
+    })
+
+    destinationsPreview.value = response.destinations || []
+  } catch (e) {
+    console.error('Failed to load destinations preview:', e)
+    destinationsPreview.value = []
+  }
+}
+
+const selectDestination = (dest) => {
+  searchParams.value.destination = dest.destination
+  // Auto-search will be triggered by the watch on destination
 }
 
 const clearSearch = () => {
@@ -496,6 +586,91 @@ h2 {
   display: flex;
   gap: 1rem;
   margin-top: 1.5rem;
+}
+
+/* Destinations Preview */
+.destinations-preview {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+  border-radius: 10px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border: 2px solid #2196f3;
+}
+
+.preview-subtitle {
+  color: #1565c0;
+  font-size: 0.95rem;
+  margin-top: -0.5rem;
+  margin-bottom: 1rem;
+  font-weight: 500;
+}
+
+.destinations-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.destination-card {
+  background: white;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.destination-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 123, 255, 0.2);
+  border-color: #007bff;
+}
+
+.destination-card.selected {
+  background: linear-gradient(135deg, #e7f1ff 0%, #cfe2ff 100%);
+  border-color: #007bff;
+  border-width: 3px;
+}
+
+.destination-info {
+  margin-bottom: 0.75rem;
+}
+
+.destination-code {
+  font-size: 1.3rem;
+  color: #2c3e50;
+  margin-bottom: 0.25rem;
+}
+
+.destination-name {
+  font-size: 0.8rem;
+  color: #6c757d;
+  line-height: 1.3;
+}
+
+.destination-price {
+  padding-top: 0.75rem;
+  border-top: 1px solid #e0e0e0;
+  text-align: center;
+}
+
+.price-label {
+  font-size: 0.75rem;
+  color: #6c757d;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.25rem;
+}
+
+.price-value {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #28a745;
 }
 
 /* Example Routes */
