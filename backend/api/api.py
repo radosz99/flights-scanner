@@ -240,6 +240,16 @@ async def get_origins():
     return {"origins": origins}
 
 
+@app.get("/airports/polish-origins")
+async def get_polish_origins():
+    """
+    Get list of all available Polish origin airports with flight counts.
+    Used for trip search where we only want to show Polish departure airports.
+    """
+    origins = api_service.get_polish_origins()
+    return {"origins": origins}
+
+
 @app.get("/airports/destinations")
 async def get_destinations():
     """

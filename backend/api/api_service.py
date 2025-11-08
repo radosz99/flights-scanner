@@ -213,6 +213,35 @@ class APIService:
 
     def get_origins(self) -> List[Dict[str, Any]]:
         """
+        Get list of all available origin airports with flight counts.
+
+        Returns:
+            List of origin airports with codes, names, and flight counts
+        """
+        pipeline = [
+            {"$group": {
+                "_id": "$origin",
+                "origin_name": {"$first": "$origin_name"},
+                "flight_count": {"$sum": 1}
+            }},
+            {"$sort": {"_id": ASCENDING}}
+        ]
+
+        results = list(self.flights_collection.aggregate(pipeline))
+
+        origins = [
+            {
+                "code": r["_id"],
+                "name": r["origin_name"],
+                "flight_count": r["flight_count"]
+            }
+            for r in results
+        ]
+
+        return origins
+
+    def get_polish_origins(self) -> List[Dict[str, Any]]:
+        """
         Get list of all available Polish origin airports with flight counts.
 
         Returns:

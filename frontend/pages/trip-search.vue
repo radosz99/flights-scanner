@@ -83,6 +83,39 @@
       </div>
     </div>
 
+    <!-- Example Routes -->
+    <div v-if="exampleRoutes.length > 0" class="example-routes">
+      <h2>Popular Round Trip Routes</h2>
+      <p class="example-subtitle">Click on a route to search for round trips</p>
+      <div class="routes-grid">
+        <div
+          v-for="route in exampleRoutes"
+          :key="`${route.origin}-${route.destination}`"
+          class="route-card"
+          @click="selectExampleRoute(route)"
+        >
+          <div class="route-info">
+            <div class="route-airports">
+              <strong>{{ route.origin }}</strong> ⇄ <strong>{{ route.destination }}</strong>
+            </div>
+            <div class="route-names">
+              {{ route.origin_name }} ⇄ {{ route.destination_name }}
+            </div>
+          </div>
+          <div class="route-stats">
+            <div class="stat-item">
+              <span class="stat-label">Outbound:</span>
+              <span class="stat-value">{{ route.outbound_flights }} flights</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Return:</span>
+              <span class="stat-value">{{ route.return_flights }} flights</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Results -->
     <div v-if="results && results.trips.length > 0" class="results-section">
       <div class="results-header">
@@ -170,6 +203,7 @@ const searched = ref(false)
 
 const origins = ref([])
 const availableDestinations = ref([])
+const exampleRoutes = ref([])
 
 const searchParams = ref({
   origin: '',
@@ -194,9 +228,12 @@ const canSearch = computed(() => {
 
 // Note: formatDate, formatTime, and formatPrice are now imported from utils/formatters.js
 
-// Load origins on mount
+// Load origins and example routes on mount
 onMounted(async () => {
-  await loadOrigins()
+  await Promise.all([
+    loadOrigins(),
+    loadExampleRoutes()
+  ])
 })
 
 // Auto-search when destination is selected
@@ -212,7 +249,7 @@ const loadOrigins = async () => {
   error.value = null
 
   try {
-    const response = await $fetch(`${apiBaseUrl}/airports/origins`)
+    const response = await $fetch(`${apiBaseUrl}/airports/polish-origins`)
     origins.value = response.origins || []
   } catch (e) {
     error.value = e.message || 'Failed to load airports'
@@ -295,6 +332,34 @@ const searchTrips = async () => {
     }
   } finally {
     loading.value = false
+  }
+}
+
+const loadExampleRoutes = async () => {
+  try {
+    const response = await $fetch(`${apiBaseUrl}/airports/two-way-routes`, {
+      params: { limit: 20 }
+    })
+    exampleRoutes.value = response.routes || []
+  } catch (e) {
+    console.error('Failed to load example routes:', e)
+    exampleRoutes.value = []
+  }
+}
+
+const selectExampleRoute = async (route) => {
+  // Set the origin
+  searchParams.value.origin = route.origin
+
+  // Load destinations for this origin
+  await loadDestinationsFromOrigin(route.origin)
+
+  // Set the destination
+  searchParams.value.destination = route.destination
+
+  // Trigger search automatically
+  if (canSearch.value) {
+    searchTrips()
   }
 }
 
@@ -431,6 +496,84 @@ h2 {
   display: flex;
   gap: 1rem;
   margin-top: 1.5rem;
+}
+
+/* Example Routes */
+.example-routes {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.example-subtitle {
+  color: #6c757d;
+  font-size: 0.95rem;
+  margin-top: -0.5rem;
+  margin-bottom: 1rem;
+}
+
+.routes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.route-card {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border: 2px solid #dee2e6;
+  border-radius: 8px;
+  padding: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.route-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  border-color: #007bff;
+  background: linear-gradient(135deg, #e7f1ff 0%, #cfe2ff 100%);
+}
+
+.route-info {
+  margin-bottom: 0.75rem;
+}
+
+.route-airports {
+  font-size: 1.1rem;
+  color: #2c3e50;
+  margin-bottom: 0.25rem;
+}
+
+.route-names {
+  font-size: 0.8rem;
+  color: #6c757d;
+  line-height: 1.3;
+}
+
+.route-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #dee2e6;
+}
+
+.stat-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+}
+
+.stat-label {
+  color: #6c757d;
+}
+
+.stat-value {
+  color: #495057;
+  font-weight: 600;
 }
 
 /* Results Section */

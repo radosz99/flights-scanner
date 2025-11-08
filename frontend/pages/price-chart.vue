@@ -84,15 +84,15 @@
         <h3>Price Statistics by Date</h3>
         <div class="stats-summary">
           <div class="stat-card">
-            <div class="stat-value">{{ overallStats.minPrice }}{{ overallStats.currency }}</div>
+            <div class="stat-value">{{ overallStats.minPrice }}</div>
             <div class="stat-label">Lowest Price</div>
           </div>
           <div class="stat-card">
-            <div class="stat-value">{{ overallStats.maxPrice }}{{ overallStats.currency }}</div>
+            <div class="stat-value">{{ overallStats.maxPrice }}</div>
             <div class="stat-label">Highest Price</div>
           </div>
           <div class="stat-card">
-            <div class="stat-value">{{ overallStats.avgPrice }}{{ overallStats.currency }}</div>
+            <div class="stat-value">{{ overallStats.avgPrice }}</div>
             <div class="stat-label">Average Price</div>
           </div>
         </div>
@@ -110,10 +110,10 @@
             </thead>
             <tbody>
               <tr v-for="item in chartData.data" :key="item.date">
-                <td><strong>{{ item.date }}</strong></td>
-                <td class="price-cell">{{ item.min_price }} {{ item.currency }}</td>
-                <td class="price-cell">{{ item.avg_price }} {{ item.currency }}</td>
-                <td class="price-cell">{{ item.max_price }} {{ item.currency }}</td>
+                <td><strong>{{ formatDate(item.date) }}</strong></td>
+                <td class="price-cell">{{ formatPrice(item.min_price) }}</td>
+                <td class="price-cell">{{ formatPrice(item.avg_price) }}</td>
+                <td class="price-cell">{{ formatPrice(item.max_price) }}</td>
                 <td>{{ item.flight_count }}</td>
               </tr>
             </tbody>
@@ -131,6 +131,7 @@
 <script setup>
 import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { Chart, registerables } from 'chart.js'
+import { formatPrice, formatDate } from '~/utils/formatters'
 
 // Register Chart.js components
 Chart.register(...registerables)
@@ -154,16 +155,19 @@ let chartInstance = null
 // Computed overall statistics
 const overallStats = computed(() => {
   if (!chartData.value || !chartData.value.data || chartData.value.data.length === 0) {
-    return { minPrice: 0, maxPrice: 0, avgPrice: 0, currency: '' }
+    return { minPrice: 'N/A', maxPrice: 'N/A', avgPrice: 'N/A' }
   }
 
   const data = chartData.value.data
   const minPrice = Math.min(...data.map(d => d.min_price))
   const maxPrice = Math.max(...data.map(d => d.max_price))
-  const avgPrice = (data.reduce((sum, d) => sum + d.avg_price, 0) / data.length).toFixed(2)
-  const currency = data[0].currency || ''
+  const avgPrice = data.reduce((sum, d) => sum + d.avg_price, 0) / data.length
 
-  return { minPrice, maxPrice, avgPrice, currency }
+  return {
+    minPrice: formatPrice(minPrice),
+    maxPrice: formatPrice(maxPrice),
+    avgPrice: formatPrice(avgPrice)
+  }
 })
 
 // Load origins and destinations on mount
@@ -369,8 +373,7 @@ const renderChart = () => {
             label: function(context) {
               const label = context.dataset.label || ''
               const value = context.parsed.y
-              const currency = data[context.dataIndex].currency || ''
-              return `${label}: ${value} ${currency}`
+              return `${label}: ${value.toFixed(2)} PLN`
             }
           }
         }
@@ -398,7 +401,7 @@ const renderChart = () => {
           display: true,
           title: {
             display: true,
-            text: `Price (${data[0].currency || ''})`,
+            text: 'Price (PLN)',
             font: {
               size: 14,
               weight: 'bold'
@@ -408,6 +411,9 @@ const renderChart = () => {
           ticks: {
             font: {
               size: 12
+            },
+            callback: function(value) {
+              return value.toFixed(2) + ' PLN'
             }
           }
         }
