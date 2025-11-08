@@ -137,6 +137,27 @@ async def get_flights(
     )
 
 
+@app.get("/flights/price-chart")
+async def get_price_chart(
+    origin: str = Query(..., description="Origin airport code (e.g., WRO)"),
+    destination: str = Query(..., description="Destination airport code (e.g., BCN)")
+):
+    """
+    Get price chart data for a specific route over the full date range.
+
+    Returns all flights for the route grouped by date with min, max, and average prices.
+    """
+    chart_data = api_service.get_price_chart(origin=origin, destination=destination)
+
+    if not chart_data:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No flights found for route {origin.upper()} → {destination.upper()}"
+        )
+
+    return chart_data
+
+
 @app.get("/flights/{flight_id}", response_model=FlightResponse)
 async def get_flight(flight_id: str):
     """
@@ -312,27 +333,6 @@ async def get_latest_scan():
         raise HTTPException(status_code=404, detail="No scan iterations found")
 
     return ScanIterationResponse(**scan)
-
-
-@app.get("/flights/price-chart")
-async def get_price_chart(
-    origin: str = Query(..., description="Origin airport code (e.g., WRO)"),
-    destination: str = Query(..., description="Destination airport code (e.g., BCN)")
-):
-    """
-    Get price chart data for a specific route over the full date range.
-
-    Returns all flights for the route grouped by date with min, max, and average prices.
-    """
-    chart_data = api_service.get_price_chart(origin=origin, destination=destination)
-
-    if not chart_data:
-        raise HTTPException(
-            status_code=404,
-            detail=f"No flights found for route {origin.upper()} → {destination.upper()}"
-        )
-
-    return chart_data
 
 
 @app.get("/health")
