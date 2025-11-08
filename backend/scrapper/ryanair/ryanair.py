@@ -538,10 +538,10 @@ def get_ryanair_flights(
     teen: int = 0,
     chd: int = 0,
     inf: int = 0,
-    flex_days_before_out: int = 2,
-    flex_days_out: int = 2,
-    flex_days_before_in: int = 2,
-    flex_days_in: int = 2,
+    flex_days_before_out: int = 3,
+    flex_days_out: int = 3,
+    flex_days_before_in: int = 3,
+    flex_days_in: int = 3,
     cookies: Optional[str] = None,
 ) -> RyanairResponse:
     """

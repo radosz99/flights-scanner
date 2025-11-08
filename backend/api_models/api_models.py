@@ -90,7 +90,7 @@ class ScanIterationResponse(BaseModel):
 class ScanRequest(BaseModel):
     """Request model for triggering a scan."""
     trip_duration_days: Optional[int] = Field(
-        default=4,
+        default=7,
         ge=1,
         le=30,
         description="Number of days between outbound and return flight"
