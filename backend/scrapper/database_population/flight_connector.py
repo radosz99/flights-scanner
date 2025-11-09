@@ -49,6 +49,8 @@ class Airport(BaseModel):
     size: int = Field(description="Size/importance indicator")
     coordinates: List[int] = Field(description="Pixel coordinates on tile")
     tile: str = Field(description="Tile where this airport was found (e.g., '0-0')")
+    latitude: Optional[float] = Field(default=None, description="Geographic latitude in decimal degrees")
+    longitude: Optional[float] = Field(default=None, description="Geographic longitude in decimal degrees")
 
 
 class AirlineRoutes(BaseModel):
@@ -530,6 +532,8 @@ def save_to_mongodb(
                 "size": airport.size,
                 "coordinates": airport.coordinates,
                 "tile": airport.tile,
+                "latitude": airport.latitude,
+                "longitude": airport.longitude,
                 "updated_at": datetime.utcnow(),
             }
 
@@ -651,6 +655,8 @@ def load_from_mongodb(
                 size=airport_doc["size"],
                 coordinates=airport_doc["coordinates"],
                 tile=airport_doc["tile"],
+                latitude=airport_doc.get("latitude"),
+                longitude=airport_doc.get("longitude"),
             )
             database.add_airport(airport)
 

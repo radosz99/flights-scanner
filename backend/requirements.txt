@@ -9,3 +9,4 @@ uvicorn[standard]>=0.24.0
 gunicorn>=21.2.0
 pytest>=7.4.0
 pytest-cov>=4.1.0
+airportsdata>=20241001
