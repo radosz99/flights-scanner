@@ -1,7 +1,7 @@
 <template>
   <div class="container dark:bg-gray-900">
-    <h1 class="dark:text-gray-100">Flights Scanner</h1>
-    <p class="dark:text-gray-300">Backend API: <code class="dark:bg-gray-700 dark:text-gray-200">{{ apiBaseUrl }}</code></p>
+    <h1 class="text-gray-800 dark:text-gray-100">Flights Scanner</h1>
+    <p class="text-gray-600 dark:text-gray-300">Backend API: <code class="bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200">{{ apiBaseUrl }}</code></p>
 
     <div v-if="loading" class="loading dark:bg-yellow-900 dark:text-yellow-200 dark:border-yellow-700">
       {{ loadingMessage }}
@@ -231,61 +231,61 @@
 
     <!-- Scan Status Section -->
     <div v-if="scanStatus" class="scan-status dark:bg-green-900 dark:text-green-100 dark:border-green-700">
-      <h2 class="dark:text-green-100">Latest Scan Status</h2>
+      <h2 class="dark:text-green-100 dark:border-green-600">Latest Scan Status</h2>
 
       <div class="scan-info">
         <div class="info-row">
-          <strong>Status:</strong>
-          <span :class="'status-badge status-' + scanStatus.status">{{ scanStatus.status.toUpperCase() }}</span>
+          <strong class="dark:text-gray-100">Status:</strong>
+          <span :class="['status-badge', 'status-' + scanStatus.status, getStatusDarkClass(scanStatus.status)]">{{ scanStatus.status.toUpperCase() }}</span>
         </div>
 
         <div class="info-row">
-          <strong>Started:</strong> {{ formatDateTime(scanStatus.start_time) }}
+          <strong class="dark:text-gray-100">Started:</strong> <span class="dark:text-gray-200">{{ formatDateTime(scanStatus.start_time) }}</span>
         </div>
 
         <div v-if="scanStatus.end_time" class="info-row">
-          <strong>Completed:</strong> {{ formatDateTime(scanStatus.end_time) }}
+          <strong class="dark:text-gray-100">Completed:</strong> <span class="dark:text-gray-200">{{ formatDateTime(scanStatus.end_time) }}</span>
         </div>
 
-        <div v-if="scanStatus.progress" class="progress-section">
-          <h3>Progress</h3>
+        <div v-if="scanStatus.progress" class="progress-section dark:border-green-600">
+          <h3 class="dark:text-gray-100">Progress</h3>
 
-          <div class="progress-bar-container">
-            <div class="progress-bar" :style="{ width: scanStatus.progress.percentage + '%' }">
+          <div class="progress-bar-container dark:bg-green-950/50">
+            <div class="progress-bar dark:bg-gradient-to-r dark:from-green-500 dark:to-emerald-400" :style="{ width: scanStatus.progress.percentage + '%' }">
               <span class="progress-text">{{ scanStatus.progress.percentage }}%</span>
             </div>
           </div>
 
           <div class="progress-details">
             <div class="info-row">
-              <strong>Date Ranges:</strong>
-              {{ scanStatus.progress.completed_date_ranges }} / {{ scanStatus.progress.total_date_ranges }}
+              <strong class="dark:text-gray-100">Date Ranges:</strong>
+              <span class="dark:text-gray-200">{{ scanStatus.progress.completed_date_ranges }} / {{ scanStatus.progress.total_date_ranges }}</span>
             </div>
 
             <div v-if="scanStatus.progress.current_date_range" class="info-row">
-              <strong>Current Range:</strong> {{ scanStatus.progress.current_date_range }}
+              <strong class="dark:text-gray-100">Current Range:</strong> <span class="dark:text-gray-200">{{ scanStatus.progress.current_date_range }}</span>
             </div>
           </div>
         </div>
 
-        <div class="stats-section">
-          <h3>Statistics</h3>
+        <div class="stats-section dark:border-green-600">
+          <h3 class="dark:text-gray-100">Statistics</h3>
           <div class="stats-grid">
-            <div class="stat-card">
-              <div class="stat-value">{{ scanStatus.stats.total_routes }}</div>
-              <div class="stat-label">Total Routes</div>
+            <div class="stat-card dark:bg-green-950/30 dark:border-green-600">
+              <div class="stat-value dark:text-gray-100">{{ scanStatus.stats.total_routes }}</div>
+              <div class="stat-label dark:text-gray-200">Total Routes</div>
             </div>
-            <div class="stat-card">
-              <div class="stat-value">{{ scanStatus.stats.successful_queries }}</div>
-              <div class="stat-label">Successful</div>
+            <div class="stat-card dark:bg-green-950/30 dark:border-green-600">
+              <div class="stat-value dark:text-gray-100">{{ scanStatus.stats.successful_queries }}</div>
+              <div class="stat-label dark:text-gray-200">Successful</div>
             </div>
-            <div class="stat-card">
-              <div class="stat-value">{{ scanStatus.stats.failed_queries }}</div>
-              <div class="stat-label">Failed</div>
+            <div class="stat-card dark:bg-green-950/30 dark:border-green-600">
+              <div class="stat-value dark:text-gray-100">{{ scanStatus.stats.failed_queries }}</div>
+              <div class="stat-label dark:text-gray-200">Failed</div>
             </div>
-            <div class="stat-card">
-              <div class="stat-value">{{ scanStatus.stats.flights_saved }}</div>
-              <div class="stat-label">Flights Saved</div>
+            <div class="stat-card dark:bg-green-950/30 dark:border-green-600">
+              <div class="stat-value dark:text-gray-100">{{ scanStatus.stats.flights_saved }}</div>
+              <div class="stat-label dark:text-gray-200">Flights Saved</div>
             </div>
           </div>
         </div>
@@ -549,6 +549,16 @@ const loadAllData = async () => {
 }
 
 // Note: formatDateTime is now imported from utils/formatters.js
+
+// Helper function for status badge dark mode classes
+const getStatusDarkClass = (status) => {
+  const darkClasses = {
+    'running': 'dark:bg-yellow-900 dark:text-yellow-200',
+    'completed': 'dark:bg-green-900 dark:text-green-200',
+    'failed': 'dark:bg-red-900 dark:text-red-200'
+  }
+  return darkClasses[status] || ''
+}
 
 // Load data on mount (client-side only)
 onMounted(() => {
