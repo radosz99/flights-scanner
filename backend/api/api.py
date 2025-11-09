@@ -43,6 +43,8 @@ from api_models import (
     ScanIterationResponse,
     ScanRequest,
     ScanTriggerResponse,
+    UpdateCoordinatesRequest,
+    UpdateCoordinatesResponse,
 )
 
 # Add scrapper directory to path to import scanner modules
@@ -345,6 +347,149 @@ async def get_destinations_from_origin(origin: str):
     return {"destinations": destinations}
 
 
+@app.get("/airports/coordinates")
+async def get_airports_with_coordinates(
+    airline: str = Query("ryanair", description="Airline name (ryanair, wizzair)"),
+    format: str = Query("simple", description="Output format: simple, geojson, or connections")
+):
+    """
+    Get all airports with their geographic coordinates for map visualization.
+
+    This endpoint returns airport data with latitude/longitude coordinates
+    in various formats suitable for different mapping libraries.
+
+    Formats:
+    - simple: List of airports with code, name, lat, lon, and connection count
+    - geojson: GeoJSON FeatureCollection for Leaflet, Mapbox GL JS
+    - connections: GeoJSON LineStrings showing routes between airports
+
+    Args:
+        airline: Airline name (default: ryanair)
+        format: Output format (default: simple)
+
+    Returns:
+        Airport data with coordinates in the requested format
+    """
+    try:
+        from scrapper.database_population import load_from_mongodb
+
+        airline = airline.lower()
+
+        # Validate airline
+        if airline not in ["ryanair", "wizzair"]:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid airline. Must be 'ryanair' or 'wizzair'"
+            )
+
+        # Load database
+        database = load_from_mongodb(airline, settings.mongo_uri)
+
+        if not database:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to load {airline} database from MongoDB"
+            )
+
+        # Format output based on requested format
+        if format == "simple":
+            airports = []
+            for airport in database.get_all_airports():
+                if airport.latitude is None or airport.longitude is None:
+                    continue
+
+                airports.append({
+                    "code": airport.code,
+                    "name": airport.name,
+                    "latitude": airport.latitude,
+                    "longitude": airport.longitude,
+                    "connections": database.get_connections_from(airport.code),
+                    "connection_count": len(database.get_connections_from(airport.code))
+                })
+
+            # Sort by connection count (hub airports first)
+            airports.sort(key=lambda x: x["connection_count"], reverse=True)
+            return {"airports": airports, "total": len(airports), "format": "simple"}
+
+        elif format == "geojson":
+            features = []
+            for airport in database.get_all_airports():
+                if airport.latitude is None or airport.longitude is None:
+                    continue
+
+                feature = {
+                    "type": "Feature",
+                    "geometry": {
+                        "type": "Point",
+                        "coordinates": [airport.longitude, airport.latitude]
+                    },
+                    "properties": {
+                        "code": airport.code,
+                        "name": airport.name,
+                        "airport_id": airport.airport_id,
+                        "size": airport.size,
+                        "connections": len(database.get_connections_from(airport.code))
+                    }
+                }
+                features.append(feature)
+
+            return {
+                "type": "FeatureCollection",
+                "features": features
+            }
+
+        elif format == "connections":
+            features = []
+            for from_code in database.connections:
+                from_airport = database.get_airport_by_code(from_code)
+                if not from_airport or from_airport.latitude is None:
+                    continue
+
+                for to_code in database.get_connections_from(from_code):
+                    to_airport = database.get_airport_by_code(to_code)
+                    if not to_airport or to_airport.latitude is None:
+                        continue
+
+                    feature = {
+                        "type": "Feature",
+                        "geometry": {
+                            "type": "LineString",
+                            "coordinates": [
+                                [from_airport.longitude, from_airport.latitude],
+                                [to_airport.longitude, to_airport.latitude]
+                            ]
+                        },
+                        "properties": {
+                            "from": from_code,
+                            "to": to_code,
+                            "from_name": from_airport.name,
+                            "to_name": to_airport.name,
+                            "airline": airline
+                        }
+                    }
+                    features.append(feature)
+
+            return {
+                "type": "FeatureCollection",
+                "features": features
+            }
+
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid format. Must be 'simple', 'geojson', or 'connections'"
+            )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get airports with coordinates: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to retrieve airport coordinates: {str(e)}"
+        )
+
+
 @app.post("/airports/populate")
 async def populate_airports(background_tasks: BackgroundTasks):
     """
@@ -394,6 +539,85 @@ async def populate_airports(background_tasks: BackgroundTasks):
     except Exception as e:
         logger.error(f"Failed to trigger airport population: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to trigger population: {str(e)}")
+
+
+@app.post("/airports/update-coordinates", response_model=UpdateCoordinatesResponse)
+async def update_airport_coordinates(
+    request: UpdateCoordinatesRequest,
+    background_tasks: BackgroundTasks
+):
+    """
+    Update airport coordinates (latitude/longitude) for all airports.
+
+    This endpoint triggers a background task that:
+    1. Loads airport data from MongoDB for the specified airline
+    2. Fetches real geographic coordinates using the airportsdata package
+    3. Updates each airport with latitude and longitude
+    4. Saves the updated data back to MongoDB
+
+    The coordinates enable map visualizations and geographic queries.
+
+    Args:
+        request: UpdateCoordinatesRequest with airline name
+        background_tasks: FastAPI background tasks handler
+
+    Returns:
+        UpdateCoordinatesResponse with status information
+
+    The task runs in the background and returns immediately.
+    Check the logs to monitor progress.
+    """
+    try:
+        from scrapper.database_population.update_airport_coordinates import main as update_coords_main
+
+        airline = request.airline.lower()
+
+        # Validate airline
+        if airline not in ["ryanair", "wizzair"]:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid airline. Must be 'ryanair' or 'wizzair'"
+            )
+
+        def run_coordinate_update():
+            """Background task to update coordinates."""
+            try:
+                logger.info(f"Starting coordinate update for {airline}...")
+
+                success = update_coords_main(
+                    airline_name=airline,
+                    mongo_uri=settings.mongo_uri,
+                    verbose=True
+                )
+
+                if success:
+                    logger.success(f"Coordinates updated successfully for {airline}")
+                else:
+                    logger.error(f"Failed to update coordinates for {airline}")
+
+            except Exception as e:
+                logger.error(f"Error during coordinate update: {e}")
+                import traceback
+                traceback.print_exc()
+
+        # Start background task
+        background_tasks.add_task(run_coordinate_update)
+
+        return UpdateCoordinatesResponse(
+            message=f"Coordinate update started for {airline} airports",
+            status="started",
+            airline=airline,
+            background_task_started=True
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to trigger coordinate update: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to trigger coordinate update: {str(e)}"
+        )
 
 
 @app.delete("/airports/clear")

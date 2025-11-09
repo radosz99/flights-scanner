@@ -16,6 +16,8 @@ from .api_models import (
     ScanIterationResponse,
     ScanRequest,
     ScanTriggerResponse,
+    UpdateCoordinatesRequest,
+    UpdateCoordinatesResponse,
 )
 from .ryanair_models import (
     Fare as RyanairFare,
@@ -52,6 +54,8 @@ __all__ = [
     "ScanIterationResponse",
     "ScanRequest",
     "ScanTriggerResponse",
+    "UpdateCoordinatesRequest",
+    "UpdateCoordinatesResponse",
     # Ryanair models
     "RyanairFare",
     "RegularFare",

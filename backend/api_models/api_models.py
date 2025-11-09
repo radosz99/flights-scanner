@@ -107,3 +107,19 @@ class ScanTriggerResponse(BaseModel):
     status: str
     scan_id: Optional[str] = None
     config: Optional[Dict[str, Any]] = None
+
+
+class UpdateCoordinatesRequest(BaseModel):
+    """Request model for updating airport coordinates."""
+    airline: Optional[str] = Field(
+        default="ryanair",
+        description="Airline name (ryanair, wizzair, etc.)"
+    )
+
+
+class UpdateCoordinatesResponse(BaseModel):
+    """Response model for coordinate update trigger."""
+    message: str
+    status: str
+    airline: str
+    background_task_started: bool
