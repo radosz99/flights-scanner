@@ -54,7 +54,20 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1
+    PYTHONDONTWRITEBYTECODE=1 \
+    GUNICORN_WORKERS=4 \
+    MAX_SCAN_WORKERS=4 \
+    WORKER_TIMEOUT=300
 
 # Run the application with gunicorn and uvicorn workers
-CMD ["gunicorn", "api.api:app", "--workers", "2", "--worker-class", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:8900"]
+# Uses environment variables for configuration:
+# - GUNICORN_WORKERS: Number of Gunicorn worker processes (default: 4)
+# - MAX_SCAN_WORKERS: Thread pool size for background scans (default: 4)
+# - WORKER_TIMEOUT: Timeout for workers in seconds (default: 300)
+CMD gunicorn api.api:app \
+    --workers ${GUNICORN_WORKERS} \
+    --worker-class uvicorn.workers.UvicornWorker \
+    --bind 0.0.0.0:8900 \
+    --timeout ${WORKER_TIMEOUT} \
+    --access-logfile - \
+    --error-logfile -

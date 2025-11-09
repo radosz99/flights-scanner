@@ -39,6 +39,15 @@ services:
       # Python settings
       PYTHONUNBUFFERED: 1
       PYTHONDONTWRITEBYTECODE: 1
+      # Gunicorn worker settings for API performance
+      # GUNICORN_WORKERS: Number of API worker processes (default: 4)
+      # Increase for high-traffic scenarios, decrease for low-memory environments
+      GUNICORN_WORKERS: ${GUNICORN_WORKERS:-4}
+      # MAX_SCAN_WORKERS: Thread pool size for background flight scans (default: 4)
+      # Controls how many scans can run concurrently without blocking the API
+      MAX_SCAN_WORKERS: ${MAX_SCAN_WORKERS:-4}
+      # WORKER_TIMEOUT: Worker timeout in seconds (default: 300)
+      WORKER_TIMEOUT: ${WORKER_TIMEOUT:-300}
     # Optional: mount code for development (comment out for production)
     # volumes:
     #   - ./backend:/app

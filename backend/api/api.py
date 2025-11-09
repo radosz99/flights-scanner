@@ -28,6 +28,8 @@ from datetime import datetime, date
 from loguru import logger
 import sys
 import os
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 
 # Add parent directory to path to import config and models
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
@@ -57,6 +59,10 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scrapper"))
 FLIGHTS_COLLECTION = "ryanair_flights"
 SCAN_ITERATIONS_COLLECTION = "scan_iterations"
 
+# Thread pool for running CPU/IO-intensive scanner tasks
+# This prevents blocking the async event loop
+MAX_SCAN_WORKERS = int(os.getenv("MAX_SCAN_WORKERS", "4"))
+scan_executor = ThreadPoolExecutor(max_workers=MAX_SCAN_WORKERS, thread_name_prefix="scanner")
 
 # ============================================================================
 # FASTAPI APPLICATION
@@ -799,11 +805,11 @@ def run_scanner_background(
 
 
 @app.post("/scans/run", response_model=ScanTriggerResponse)
-async def trigger_scan(scan_request: ScanRequest, background_tasks: BackgroundTasks):
+async def trigger_scan(scan_request: ScanRequest):
     """
     Trigger a new flight scan.
 
-    This endpoint starts a background scan job and returns immediately.
+    This endpoint starts a background scan job in a separate thread pool and returns immediately.
     Use GET /scans/latest or GET /scans to check the scan progress.
 
     Note: Scans all default Polish airports (GDN, SZN, KRK, KTW, WRO, POZ, WMI, WAW, LCJ, LUZ, RZE, SZY, BZG).
@@ -840,8 +846,11 @@ async def trigger_scan(scan_request: ScanRequest, background_tasks: BackgroundTa
 
         scan_id = scan_manager.start_scan(config)
 
-        # Start background scan
-        background_tasks.add_task(
+        # Run scanner in thread pool to avoid blocking API workers
+        # This uses asyncio.get_event_loop().run_in_executor which runs the function in a separate thread
+        loop = asyncio.get_event_loop()
+        loop.run_in_executor(
+            scan_executor,
             run_scanner_background,
             departure_airports,
             trip_duration_days,
@@ -849,10 +858,10 @@ async def trigger_scan(scan_request: ScanRequest, background_tasks: BackgroundTa
             scan_id
         )
 
-        logger.info(f"Scan triggered: {scan_id}")
+        logger.info(f"Scan triggered in thread pool: {scan_id}")
 
         return ScanTriggerResponse(
-            message="Scan started successfully. Use GET /scans/latest to check progress.",
+            message="Scan started successfully in background thread pool. Use GET /scans/latest to check progress.",
             status="started",
             scan_id=scan_id,
             config=config
@@ -864,7 +873,7 @@ async def trigger_scan(scan_request: ScanRequest, background_tasks: BackgroundTa
 
 
 # ============================================================================
-# STARTUP EVENT
+# STARTUP AND SHUTDOWN EVENTS
 # ============================================================================
 
 @app.on_event("startup")
@@ -876,6 +885,7 @@ async def startup_event():
     logger.info(f"MongoDB URI: {settings.mongo_uri}")
     logger.info(f"Database: {settings.MONGO_DATABASE}")
     logger.info(f"Flights Collection: {FLIGHTS_COLLECTION}")
+    logger.info(f"Scan Thread Pool Workers: {MAX_SCAN_WORKERS}")
     logger.info("=" * 60)
 
     try:
@@ -884,6 +894,15 @@ async def startup_event():
         logger.success(f"✓ MongoDB connected - {flight_count} flights in database")
     except Exception as e:
         logger.error(f"✗ MongoDB connection failed: {e}")
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Clean up resources on shutdown."""
+    logger.info("Shutting down API...")
+    logger.info("Shutting down scan thread pool...")
+    scan_executor.shutdown(wait=False)  # Don't wait for running scans to complete
+    logger.info("API shutdown complete")
 
 
 if __name__ == "__main__":
