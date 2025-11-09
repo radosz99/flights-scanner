@@ -21,6 +21,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
 from .ryanair import get_valid_cookie, get_ryanair_flights
 from config import settings
 from constants import POLISH_AIRPORTS
+from database_population import load_from_mongodb
 from datetime import datetime, timedelta
 from loguru import logger
 from pymongo import MongoClient, ASCENDING
