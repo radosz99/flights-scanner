@@ -53,8 +53,49 @@
       @select="selectExampleRoute"
     />
 
+    <!-- View Toggle (only show when there are results) -->
+    <div
+      v-if="results && results.trips.length > 0"
+      class="mt-8 flex justify-center items-center gap-2"
+    >
+      <span class="text-gray-600 dark:text-gray-400 mr-2">View:</span>
+      <div class="inline-flex rounded-lg shadow-sm" role="group">
+        <button
+          @click="viewMode = 'table'"
+          :class="[
+            'px-6 py-2.5 text-sm font-medium rounded-l-lg border transition-colors',
+            viewMode === 'table'
+              ? 'bg-blue-600 text-white border-blue-600 dark:bg-blue-500 dark:border-blue-500'
+              : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700'
+          ]"
+        >
+          <svg class="w-5 h-5 inline mr-1 -mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+          </svg>
+          Table
+        </button>
+        <button
+          @click="viewMode = 'map'"
+          :class="[
+            'px-6 py-2.5 text-sm font-medium rounded-r-lg border-t border-r border-b transition-colors',
+            viewMode === 'map'
+              ? 'bg-blue-600 text-white border-blue-600 dark:bg-blue-500 dark:border-blue-500'
+              : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700'
+          ]"
+        >
+          <svg class="w-5 h-5 inline mr-1 -mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+          </svg>
+          Map
+        </button>
+      </div>
+    </div>
+
     <!-- Trips Table -->
-    <TripsTable :results="results" />
+    <TripsTable v-if="viewMode === 'table'" :results="results" />
+
+    <!-- Trips Map -->
+    <TripsMap v-if="viewMode === 'map'" :results="results" />
 
     <!-- No Results -->
     <div
@@ -93,6 +134,7 @@ const searchParams = ref({
 })
 
 const results = ref(null)
+const viewMode = ref('table') // 'table' or 'map'
 
 // Computed
 const canSearch = computed(() => {
