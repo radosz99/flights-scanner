@@ -38,6 +38,8 @@ docker logs -f flights-scanner-scheduler
 
 No manual setup needed - just run `make docker-up` and scans happen automatically! 🎉
 
+📖 **For advanced scheduling options (systemd, cron, custom schedules), see [SCHEDULER.md](SCHEDULER.md)**
+
 ## Features
 
 ### 1. Ryanair API Integration (`ryanair.py`)
@@ -365,6 +367,11 @@ print(f"Ryanair flights from Wrocław: {destinations}")
 
 ## Files
 
+### Documentation
+- `SCHEDULER.md` - Comprehensive scheduling guide (systemd, cron, Docker, manual triggers)
+- `DOCKER_SETUP.md` - Docker setup and deployment instructions
+
+### Core Modules
 - `ryanair.py` - Ryanair API integration module with Selenium automation support
 - `ryanair_models.py` - Pydantic models for Ryanair API responses
 - `wizz_air.py` - Wizz Air API integration module (includes header/cookie support)
