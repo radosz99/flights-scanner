@@ -29,16 +29,13 @@
         <!-- Origin Airports (Multi-select) - Polish airports only -->
         <div class="form-group">
           <label class="dark:text-gray-200">Origin Airports (Polish only)</label>
-          <select
-            v-model="searchParams.origins"
-            multiple
-            class="multi-select dark:bg-gray-600 dark:text-gray-100 dark:border-gray-500"
-          >
-            <option v-for="airport in polishAirports" :key="airport.code" :value="airport.code">
-              {{ airport.code }} - {{ airport.name }}
-            </option>
-          </select>
-          <p class="help-text dark:text-gray-400">Hold Ctrl/Cmd to select multiple Polish airports</p>
+          <MultiSelectDropdown
+            :options="polishAirportsOptions"
+            :selected-values="searchParams.origins"
+            @update:selected-values="searchParams.origins = $event"
+            placeholder="Select Polish airports..."
+            search-placeholder="Search airports..."
+          />
         </div>
 
         <!-- Destination Selection Mode -->
@@ -56,16 +53,13 @@
         <!-- Destination Airports (Multi-select) -->
         <div v-if="destinationMode === 'airports'" class="form-group">
           <label class="dark:text-gray-200">Destination Airports</label>
-          <select
-            v-model="searchParams.destinations"
-            multiple
-            class="multi-select dark:bg-gray-600 dark:text-gray-100 dark:border-gray-500"
-          >
-            <option v-for="airport in allAirports" :key="airport.code" :value="airport.code">
-              {{ airport.code }} - {{ airport.name }}
-            </option>
-          </select>
-          <p class="help-text dark:text-gray-400">Hold Ctrl/Cmd to select multiple</p>
+          <MultiSelectDropdown
+            :options="allAirportsOptions"
+            :selected-values="searchParams.destinations"
+            @update:selected-values="searchParams.destinations = $event"
+            placeholder="Select destination airports..."
+            search-placeholder="Search airports..."
+          />
         </div>
 
         <!-- Destination Country -->
@@ -312,9 +306,27 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { formatPrice, formatDate, formatTime } from '~/utils/formatters'
+import MultiSelectDropdown from '~/components/MultiSelectDropdown.vue'
 
 const config = useRuntimeConfig()
 const apiBaseUrl = config.public.apiBaseUrl
+
+// List of Polish airport codes
+const POLISH_AIRPORT_CODES = [
+  'BZG', // Bydgoszcz
+  'GDN', // Gdańsk
+  'KRK', // Krakow
+  'KTW', // Katowice
+  'LCJ', // Lodz
+  'LUZ', // Lublin
+  'POZ', // Poznań
+  'RZE', // Rzeszów
+  'SZY', // Olsztyn-Mazury
+  'SZZ', // Szczecin
+  'WAW', // Warsaw (Chopin)
+  'WMI', // Warsaw (Modlin)
+  'WRO'  // Wroclaw
+]
 
 // State
 const loading = ref(false)
@@ -378,9 +390,23 @@ const countries = computed(() => {
 // Computed property for Polish airports only (for origin selection)
 const polishAirports = computed(() => {
   return allAirports.value.filter(airport => {
-    const country = extractCountry(airport.name)
-    return country === 'Poland'
+    return POLISH_AIRPORT_CODES.includes(airport.code)
   }).sort((a, b) => a.code.localeCompare(b.code))
+})
+
+// Options formatted for MultiSelectDropdown component
+const polishAirportsOptions = computed(() => {
+  return polishAirports.value.map(airport => ({
+    value: airport.code,
+    label: `${airport.code} - ${airport.name}`
+  }))
+})
+
+const allAirportsOptions = computed(() => {
+  return allAirports.value.map(airport => ({
+    value: airport.code,
+    label: `${airport.code} - ${airport.name}`
+  }))
 })
 
 // Methods
