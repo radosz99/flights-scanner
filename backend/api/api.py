@@ -28,6 +28,7 @@ from datetime import datetime, date
 from loguru import logger
 import sys
 import os
+import pycountry
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 
@@ -426,15 +427,36 @@ async def get_countries(
         # Group airports by country
         countries = {}
         for airport in database.get_all_airports():
-            country = airport.country or "Unknown"
-            if country not in countries:
-                countries[country] = {
-                    "country": country,
+            country_iso2 = airport.country
+
+            # Skip airports without country information
+            if not country_iso2 or country_iso2 == "Unknown":
+                continue
+
+            # Convert ISO2 code to full country name using pycountry
+            try:
+                country_obj = pycountry.countries.get(alpha_2=country_iso2)
+                if country_obj:
+                    country_name = country_obj.name
+                    country_code = country_iso2
+                else:
+                    # Fallback if country not found in pycountry
+                    country_name = country_iso2
+                    country_code = country_iso2
+            except Exception:
+                # Fallback in case of any error
+                country_name = country_iso2
+                country_code = country_iso2
+
+            if country_code not in countries:
+                countries[country_code] = {
+                    "country": country_name,
+                    "country_code": country_code,
                     "airport_count": 0,
                     "airports": []
                 }
-            countries[country]["airport_count"] += 1
-            countries[country]["airports"].append({
+            countries[country_code]["airport_count"] += 1
+            countries[country_code]["airports"].append({
                 "code": airport.code,
                 "name": airport.name
             })
