@@ -490,63 +490,34 @@ const searchTrips = async () => {
 }
 
 const searchTwoWayTrips = async () => {
-  // For two-way trips with flexible matching, we need to find:
-  // - Outbound: from any origin to any destination
-  // - Return: from any destination back to any origin (not necessarily the same origin)
+  // Use the efficient batch endpoint that handles multiple origins and destinations
+  // in a single request with flexible two-way matching
 
-  const allTrips = []
-
-  // Search for each origin-destination combination
-  for (const origin of searchParams.value.origins) {
-    for (const destination of searchParams.value.destinations) {
-      try {
-        const params = {
-          origin: origin,
-          destination: destination,
-          min_days: searchParams.value.minDays,
-          max_days: searchParams.value.maxDays,
-          limit: searchParams.value.limit
-        }
-
-        if (searchParams.value.dateFrom) params.date_from = searchParams.value.dateFrom
-        if (searchParams.value.dateTo) params.date_to = searchParams.value.dateTo
-
-        const response = await $fetch(`${apiBaseUrl}/flights/round-trips`, { params })
-
-        if (response.trips && response.trips.length > 0) {
-          // Filter trips where return destination is in our selected origins
-          const validTrips = response.trips.filter(trip => {
-            const returnDestination = trip.return.destination
-            const matchesOrigins = searchParams.value.origins.includes(returnDestination)
-
-            // Apply price filters if set
-            let matchesPrice = true
-            if (searchParams.value.minPrice !== null && trip.total_price < searchParams.value.minPrice) {
-              matchesPrice = false
-            }
-            if (searchParams.value.maxPrice !== null && trip.total_price > searchParams.value.maxPrice) {
-              matchesPrice = false
-            }
-
-            return matchesOrigins && matchesPrice
-          })
-
-          allTrips.push(...validTrips)
-        }
-      } catch (e) {
-        // Continue with next combination if this one fails
-        console.error(`Failed to search ${origin} to ${destination}:`, e)
-      }
+  try {
+    const params = {
+      origins: searchParams.value.origins.join(','),
+      destinations: searchParams.value.destinations.join(','),
+      min_days: searchParams.value.minDays,
+      max_days: searchParams.value.maxDays,
+      passengers: 1, // Default to 1 passenger for price display
+      limit: searchParams.value.limit
     }
-  }
 
-  // Sort by total price and limit results
-  allTrips.sort((a, b) => a.total_price - b.total_price)
-  const limitedTrips = allTrips.slice(0, searchParams.value.limit)
+    // Add optional filters
+    if (searchParams.value.dateFrom) params.date_from = searchParams.value.dateFrom
+    if (searchParams.value.dateTo) params.date_to = searchParams.value.dateTo
+    if (searchParams.value.minPrice !== null) params.min_price = searchParams.value.minPrice
+    if (searchParams.value.maxPrice !== null) params.max_price = searchParams.value.maxPrice
 
-  results.value = {
-    total: allTrips.length,
-    trips: limitedTrips
+    const response = await $fetch(`${apiBaseUrl}/flights/round-trips-batch`, { params })
+
+    results.value = {
+      total: response.total,
+      trips: response.trips
+    }
+  } catch (e) {
+    console.error('Failed to search trips:', e)
+    throw e
   }
 }
 

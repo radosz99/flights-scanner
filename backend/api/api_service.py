@@ -827,6 +827,145 @@ class APIService:
 
         return routes
 
+    def find_round_trips_batch(
+        self,
+        origins: List[str],
+        destinations: List[str],
+        min_days: int,
+        max_days: int,
+        passengers: int = 1,
+        date_from: Optional[str] = None,
+        date_to: Optional[str] = None,
+        min_price: Optional[float] = None,
+        max_price: Optional[float] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Find all possible round trips from multiple origins to multiple destinations.
+
+        This is an efficient batch search that processes all origin-destination combinations
+        in a single operation using MongoDB aggregation.
+
+        Args:
+            origins: List of origin airport codes
+            destinations: List of destination airport codes
+            min_days: Minimum trip duration in days
+            max_days: Maximum trip duration in days
+            passengers: Number of passengers (default 1)
+            date_from: Optional filter for departure date from (YYYY-MM-DD)
+            date_to: Optional filter for departure date to (YYYY-MM-DD)
+            min_price: Optional minimum total price filter
+            max_price: Optional maximum total price filter
+
+        Returns:
+            List of round trip combinations with pricing
+        """
+        from datetime import datetime, timedelta
+
+        # Normalize inputs
+        origins_upper = [o.upper() for o in origins]
+        destinations_upper = [d.upper() for d in destinations]
+
+        # Build outbound flight query
+        outbound_query = {
+            "origin": {"$in": origins_upper},
+            "destination": {"$in": destinations_upper}
+        }
+
+        # Build return flight query (flexible matching - return to any origin)
+        return_query = {
+            "origin": {"$in": destinations_upper},
+            "destination": {"$in": origins_upper}
+        }
+
+        # Add date filters if provided
+        if date_from or date_to:
+            date_filter = {}
+            if date_from:
+                date_filter["$gte"] = date_from
+            if date_to:
+                date_filter["$lte"] = date_to
+            outbound_query["date_out"] = date_filter
+            return_query["date_out"] = date_filter
+
+        # Fetch outbound flights
+        outbound_flights = list(self.flights_collection.find(outbound_query).sort("departure_time", ASCENDING))
+
+        # Fetch return flights
+        return_flights = list(self.flights_collection.find(return_query).sort("departure_time", ASCENDING))
+
+        logger.info(f"Found {len(outbound_flights)} outbound flights and {len(return_flights)} return flights")
+
+        # Find valid round trip combinations
+        round_trips = []
+
+        for outbound in outbound_flights:
+            # Extract date from date_out field
+            outbound_date_str = outbound["date_out"]
+            outbound_date = datetime.strptime(outbound_date_str, "%Y-%m-%d")
+
+            for return_flight in return_flights:
+                # Return flight must originate from where the outbound flight lands
+                if return_flight["origin"] != outbound["destination"]:
+                    continue
+
+                # Extract date from date_out field
+                return_date_str = return_flight["date_out"]
+                return_date = datetime.strptime(return_date_str, "%Y-%m-%d")
+
+                # Calculate trip duration
+                trip_duration = (return_date - outbound_date).days
+
+                # Check if trip duration is within range
+                if min_days <= trip_duration <= max_days:
+                    total_price = (outbound["current_price"] + return_flight["current_price"]) * passengers
+
+                    # Apply price filters if provided
+                    if min_price is not None and total_price < min_price:
+                        continue
+                    if max_price is not None and total_price > max_price:
+                        continue
+
+                    trip_data = {
+                        "outbound": {
+                            "flight_id": outbound["flight_id"],
+                            "origin": outbound["origin"],
+                            "origin_name": outbound.get("origin_name", outbound["origin"]),
+                            "destination": outbound["destination"],
+                            "destination_name": outbound.get("destination_name", outbound["destination"]),
+                            "date_out": outbound_date_str,
+                            "departure_time": outbound["departure_time"],
+                            "arrival_time": outbound["arrival_time"],
+                            "duration": outbound["duration"],
+                            "current_price": outbound["current_price"]
+                        },
+                        "return": {
+                            "flight_id": return_flight["flight_id"],
+                            "origin": return_flight["origin"],
+                            "origin_name": return_flight.get("origin_name", return_flight["origin"]),
+                            "destination": return_flight["destination"],
+                            "destination_name": return_flight.get("destination_name", return_flight["destination"]),
+                            "date_out": return_date_str,
+                            "departure_time": return_flight["departure_time"],
+                            "arrival_time": return_flight["arrival_time"],
+                            "duration": return_flight["duration"],
+                            "current_price": return_flight["current_price"]
+                        },
+                        "trip_duration_days": trip_duration,
+                        "total_price": round(total_price, 2),
+                        "price_per_person": round(total_price / passengers, 2) if passengers > 0 else round(total_price, 2),
+                        "passengers": passengers,
+                        "currency": outbound["currency"]
+                    }
+
+                    round_trips.append(trip_data)
+
+        # Sort by total price
+        round_trips.sort(key=lambda x: x["total_price"])
+
+        logger.info(f"Found {len(round_trips)} valid round trips")
+
+        return round_trips
+
     def get_health(self) -> Tuple[Dict[str, Any], bool]:
         """
         Check API and database health.

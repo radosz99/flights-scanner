@@ -251,6 +251,91 @@ async def get_round_trips_preview(
     }
 
 
+@app.get("/flights/round-trips-batch")
+async def get_round_trips_batch(
+    origins: str = Query(..., description="Comma-separated origin airport codes (e.g., WRO,WAW,KRK)"),
+    destinations: str = Query(..., description="Comma-separated destination airport codes (e.g., BCN,AGP,MAD)"),
+    min_days: int = Query(..., ge=1, description="Minimum trip duration in days"),
+    max_days: int = Query(..., ge=1, description="Maximum trip duration in days"),
+    passengers: int = Query(1, ge=1, le=10, description="Number of passengers"),
+    date_from: Optional[str] = Query(None, description="Filter flights departing from this date (YYYY-MM-DD)"),
+    date_to: Optional[str] = Query(None, description="Filter flights departing until this date (YYYY-MM-DD)"),
+    min_price: Optional[float] = Query(None, description="Minimum total price filter"),
+    max_price: Optional[float] = Query(None, description="Maximum total price filter"),
+    limit: int = Query(100, ge=1, le=1000, description="Maximum number of results")
+):
+    """
+    Find all possible round trips from multiple origins to multiple destinations (BATCH).
+
+    This is an efficient batch endpoint that searches all origin-destination combinations
+    in a single request. It supports flexible two-way matching where the return flight
+    can go back to ANY of the selected origin airports.
+
+    Args:
+        origins: Comma-separated list of origin airport codes
+        destinations: Comma-separated list of destination airport codes
+        min_days: Minimum trip duration in days
+        max_days: Maximum trip duration in days
+        passengers: Number of passengers (default 1)
+        date_from: Optional departure date filter (YYYY-MM-DD)
+        date_to: Optional departure date filter (YYYY-MM-DD)
+        min_price: Optional minimum total price filter
+        max_price: Optional maximum total price filter
+        limit: Maximum number of results to return
+
+    Returns:
+        Batch search results with all matching round trips sorted by price
+    """
+    if min_days > max_days:
+        raise HTTPException(
+            status_code=400,
+            detail="min_days must be less than or equal to max_days"
+        )
+
+    # Parse comma-separated airport codes
+    origins_list = [o.strip().upper() for o in origins.split(",") if o.strip()]
+    destinations_list = [d.strip().upper() for d in destinations.split(",") if d.strip()]
+
+    if not origins_list or not destinations_list:
+        raise HTTPException(
+            status_code=400,
+            detail="Both origins and destinations must contain at least one airport code"
+        )
+
+    # Call the batch search service method
+    round_trips = api_service.find_round_trips_batch(
+        origins=origins_list,
+        destinations=destinations_list,
+        min_days=min_days,
+        max_days=max_days,
+        passengers=passengers,
+        date_from=date_from,
+        date_to=date_to,
+        min_price=min_price,
+        max_price=max_price
+    )
+
+    if not round_trips:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No round trips found for the specified criteria"
+        )
+
+    # Apply limit
+    limited_trips = round_trips[:limit]
+
+    return {
+        "origins": origins_list,
+        "destinations": destinations_list,
+        "min_days": min_days,
+        "max_days": max_days,
+        "passengers": passengers,
+        "total": len(round_trips),
+        "showing": len(limited_trips),
+        "trips": limited_trips
+    }
+
+
 @app.get("/flights/{flight_id}", response_model=FlightResponse)
 async def get_flight(flight_id: str):
     """
