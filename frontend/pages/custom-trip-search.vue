@@ -2,7 +2,7 @@
   <div class="container dark:bg-gray-900 min-h-screen">
     <h1 class="text-gray-800 dark:text-gray-100 text-4xl font-bold mb-4">Custom Trip Search</h1>
     <p class="text-gray-600 dark:text-gray-300 text-lg mb-8">
-      Advanced search for one-way and two-way routes with flexible origin and destination matching
+      Search for one-way or round-trip flights with flexible origin and destination matching. Use batch search to efficiently find flights across multiple airports.
     </p>
 
     <!-- Loading -->
@@ -92,8 +92,8 @@
           </p>
         </div>
 
-        <!-- Return from Same Airport Checkbox -->
-        <div class="form-group checkbox-group">
+        <!-- Return from Same Airport Checkbox (only for two-way routes) -->
+        <div v-if="searchParams.twoWayRoutes" class="form-group checkbox-group">
           <label class="checkbox-label dark:text-gray-200">
             <input
               v-model="searchParams.returnFromSameAirport"
@@ -107,8 +107,8 @@
           </p>
         </div>
 
-        <!-- Return to Same Airport Checkbox -->
-        <div class="form-group checkbox-group">
+        <!-- Return to Same Airport Checkbox (only for two-way routes) -->
+        <div v-if="searchParams.twoWayRoutes" class="form-group checkbox-group">
           <label class="checkbox-label dark:text-gray-200">
             <input
               v-model="searchParams.returnToSameAirport"
@@ -142,8 +142,8 @@
           />
         </div>
 
-        <!-- Min Days -->
-        <div class="form-group">
+        <!-- Min Days (only for two-way routes) -->
+        <div v-if="searchParams.twoWayRoutes" class="form-group">
           <label class="dark:text-gray-200">Minimum Trip Days</label>
           <input
             v-model.number="searchParams.minDays"
@@ -154,8 +154,8 @@
           />
         </div>
 
-        <!-- Max Days -->
-        <div class="form-group">
+        <!-- Max Days (only for two-way routes) -->
+        <div v-if="searchParams.twoWayRoutes" class="form-group">
           <label class="dark:text-gray-200">Maximum Trip Days</label>
           <input
             v-model.number="searchParams.maxDays"
@@ -204,7 +204,7 @@
 
         <!-- Outbound Weekdays -->
         <div class="form-group">
-          <label class="dark:text-gray-200">Outbound Flight Days</label>
+          <label class="dark:text-gray-200">{{ searchParams.twoWayRoutes ? 'Outbound Flight Days' : 'Flight Days' }}</label>
           <MultiSelectDropdown
             :options="weekdayOptions"
             :selected-values="searchParams.outboundWeekdays"
@@ -214,12 +214,12 @@
             :show-selected-items="false"
           />
           <p class="help-text dark:text-gray-400">
-            Select specific days of the week for outbound flights
+            Select specific days of the week for {{ searchParams.twoWayRoutes ? 'outbound' : '' }} flights
           </p>
         </div>
 
-        <!-- Return Weekdays -->
-        <div class="form-group">
+        <!-- Return Weekdays (only for two-way routes) -->
+        <div v-if="searchParams.twoWayRoutes" class="form-group">
           <label class="dark:text-gray-200">Return Flight Days</label>
           <MultiSelectDropdown
             :options="weekdayOptions"
@@ -269,10 +269,10 @@
         <table class="trips-table">
           <thead class="dark:bg-gray-700 dark:border-gray-600">
             <tr>
-              <th class="dark:text-gray-200">Outbound</th>
-              <th class="dark:text-gray-200">Return</th>
-              <th class="dark:text-gray-200">Dates</th>
-              <th class="dark:text-gray-200">Duration</th>
+              <th class="dark:text-gray-200">{{ searchParams.twoWayRoutes ? 'Outbound' : 'Flight' }}</th>
+              <th v-if="searchParams.twoWayRoutes" class="dark:text-gray-200">Return</th>
+              <th class="dark:text-gray-200">{{ searchParams.twoWayRoutes ? 'Dates' : 'Date' }}</th>
+              <th v-if="searchParams.twoWayRoutes" class="dark:text-gray-200">Duration</th>
               <th class="dark:text-gray-200">Total Price</th>
               <th class="dark:text-gray-200">Details</th>
             </tr>
@@ -283,7 +283,7 @@
               :key="index"
               class="dark:border-gray-700 dark:hover:bg-gray-700"
             >
-              <!-- Outbound -->
+              <!-- Outbound / One-way Flight -->
               <td class="dark:text-gray-200 dark:bg-gray-800">
                 <div class="flight-info">
                   <div class="route">
@@ -296,13 +296,13 @@
                     {{ formatTime(trip.outbound.departure_time) }} - {{ formatTime(trip.outbound.arrival_time) }}
                   </div>
                   <div class="price dark:text-green-400">
-                    {{ formatPrice(trip.outbound.current_price) }}
+                    {{ formatPrice(searchParams.twoWayRoutes ? trip.outbound.current_price : trip.outbound.price_per_person) }}
                   </div>
                 </div>
               </td>
 
-              <!-- Return -->
-              <td class="dark:text-gray-200 dark:bg-gray-800">
+              <!-- Return (only for two-way routes) -->
+              <td v-if="searchParams.twoWayRoutes && trip.return" class="dark:text-gray-200 dark:bg-gray-800">
                 <div class="flight-info">
                   <div class="route">
                     <strong>{{ trip.return.origin }}</strong> → <strong>{{ trip.return.destination }}</strong>
@@ -322,13 +322,13 @@
               <!-- Dates -->
               <td class="dark:text-gray-200 dark:bg-gray-800">
                 <div class="date-info">
-                  <div>Out: {{ formatDate(trip.outbound.date_out) }}</div>
-                  <div>Return: {{ formatDate(trip.return.date_out) }}</div>
+                  <div>{{ searchParams.twoWayRoutes ? 'Out: ' : '' }}{{ formatDate(trip.outbound.date_out) }}</div>
+                  <div v-if="searchParams.twoWayRoutes && trip.return">Return: {{ formatDate(trip.return.date_out) }}</div>
                 </div>
               </td>
 
-              <!-- Duration -->
-              <td class="dark:text-gray-200 dark:bg-gray-800 text-center">
+              <!-- Duration (only for two-way routes) -->
+              <td v-if="searchParams.twoWayRoutes" class="dark:text-gray-200 dark:bg-gray-800 text-center">
                 <div class="duration-info">
                   <div><strong>{{ trip.trip_duration_days }}</strong> days</div>
                   <div class="stay-duration dark:text-gray-400">{{ trip.stay_duration }}</div>
@@ -344,8 +344,9 @@
               <td class="dark:text-gray-200 dark:bg-gray-800">
                 <div class="details-info">
                   <div class="detail-row">
-                    <span class="dark:text-gray-400">Flight durations:</span>
-                    <span>{{ trip.outbound.duration }} / {{ trip.return.duration }}</span>
+                    <span class="dark:text-gray-400">{{ searchParams.twoWayRoutes ? 'Flight durations:' : 'Duration:' }}</span>
+                    <span v-if="searchParams.twoWayRoutes && trip.return">{{ trip.outbound.duration }} / {{ trip.return.duration }}</span>
+                    <span v-else>{{ trip.outbound.duration }}</span>
                   </div>
                 </div>
               </td>
@@ -431,11 +432,17 @@ const results = ref(null)
 const canSearch = computed(() => {
   const hasOrigins = searchParams.value.origins.length > 0
   const hasDestinations = searchParams.value.destinations.length > 0
-  const validDuration = searchParams.value.minDays > 0 &&
-                        searchParams.value.maxDays > 0 &&
-                        searchParams.value.minDays <= searchParams.value.maxDays
 
-  return hasOrigins && hasDestinations && validDuration
+  // For two-way routes, validate trip duration
+  if (searchParams.value.twoWayRoutes) {
+    const validDuration = searchParams.value.minDays > 0 &&
+                          searchParams.value.maxDays > 0 &&
+                          searchParams.value.minDays <= searchParams.value.maxDays
+    return hasOrigins && hasDestinations && validDuration
+  }
+
+  // For one-way routes, just need origins and destinations
+  return hasOrigins && hasDestinations
 })
 
 // Options formatted for MultiSelectDropdown component (countries)
@@ -619,45 +626,41 @@ const searchTwoWayTrips = async () => {
 }
 
 const searchOneWayTrips = async () => {
-  // For one-way trips, we search each origin-destination pair independently
-  const allTrips = []
-
-  for (const origin of searchParams.value.origins) {
-    for (const destination of searchParams.value.destinations) {
-      try {
-        const params = {
-          origin: origin,
-          destination: destination
-        }
-
-        if (searchParams.value.dateFrom) params.date_from = searchParams.value.dateFrom
-        if (searchParams.value.dateTo) params.date_to = searchParams.value.dateTo
-        if (searchParams.value.minPrice) params.min_price = searchParams.value.minPrice
-        if (searchParams.value.maxPrice) params.max_price = searchParams.value.maxPrice
-
-        const response = await $fetch(`${apiBaseUrl}/flights`, { params })
-
-        if (response.flights && response.flights.length > 0) {
-          allTrips.push(...response.flights)
-        }
-      } catch (e) {
-        console.error(`Failed to search ${origin} to ${destination}:`, e)
-      }
+  // Use the efficient batch endpoint for one-way flights
+  try {
+    const params = {
+      origins: searchParams.value.origins.join(','),
+      destinations: searchParams.value.destinations.join(','),
+      passengers: 1, // Default to 1 passenger for price display
+      limit: searchParams.value.limit
     }
-  }
 
-  // Sort by price and limit results
-  allTrips.sort((a, b) => a.current_price - b.current_price)
-  const limitedTrips = allTrips.slice(0, searchParams.value.limit)
+    // Add optional filters
+    if (searchParams.value.dateFrom) params.date_from = searchParams.value.dateFrom
+    if (searchParams.value.dateTo) params.date_to = searchParams.value.dateTo
+    if (searchParams.value.minPrice !== null) params.min_price = searchParams.value.minPrice
+    if (searchParams.value.maxPrice !== null) params.max_price = searchParams.value.maxPrice
 
-  results.value = {
-    total: allTrips.length,
-    trips: limitedTrips.map(flight => ({
-      outbound: flight,
-      return: null,
-      trip_duration_days: null,
-      total_price: flight.current_price
-    }))
+    // Add weekday filter if selected
+    if (searchParams.value.outboundWeekdays.length > 0) {
+      params.outbound_weekdays = searchParams.value.outboundWeekdays.join(',')
+    }
+
+    const response = await $fetch(`${apiBaseUrl}/flights/one-way-batch`, { params })
+
+    results.value = {
+      total: response.total,
+      trips: response.flights.map(flight => ({
+        outbound: flight,
+        return: null,
+        trip_duration_days: null,
+        stay_duration: null,
+        total_price: flight.total_price
+      }))
+    }
+  } catch (e) {
+    console.error('Failed to search one-way trips:', e)
+    throw e
   }
 }
 

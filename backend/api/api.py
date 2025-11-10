@@ -423,6 +423,135 @@ async def get_round_trips_batch(
     }
 
 
+@app.get("/flights/one-way-batch")
+async def get_one_way_flights_batch(
+    origins: str = Query(..., description="Comma-separated origin airport codes (e.g., WRO,WAW,KRK)"),
+    destinations: str = Query(..., description="Comma-separated destination airport codes (e.g., BCN,AGP,MAD)"),
+    passengers: int = Query(1, ge=1, le=10, description="Number of passengers"),
+    date_from: Optional[str] = Query(None, description="Filter flights departing from this date (YYYY-MM-DD)"),
+    date_to: Optional[str] = Query(None, description="Filter flights departing until this date (YYYY-MM-DD)"),
+    min_price: Optional[float] = Query(None, description="Minimum price filter (per person)"),
+    max_price: Optional[float] = Query(None, description="Maximum price filter (per person)"),
+    limit: int = Query(100, ge=1, le=1000, description="Maximum number of results"),
+    outbound_weekdays: Optional[str] = Query(None, description="Comma-separated weekday numbers for flights (0=Monday, 6=Sunday)")
+):
+    """
+    Find all one-way flights from multiple origins to multiple destinations (BATCH).
+
+    This endpoint efficiently searches all origin-destination combinations
+    in a single request for one-way flights only (no return flights).
+
+    Args:
+        origins: Comma-separated list of origin airport codes
+        destinations: Comma-separated list of destination airport codes
+        passengers: Number of passengers (default 1)
+        date_from: Optional departure date filter (YYYY-MM-DD)
+        date_to: Optional departure date filter (YYYY-MM-DD)
+        min_price: Optional minimum price filter (per person)
+        max_price: Optional maximum price filter (per person)
+        limit: Maximum number of results to return
+        outbound_weekdays: Filter flights by weekdays (e.g., "0,1,2,3,4")
+
+    Returns:
+        Batch search results with all matching one-way flights sorted by price
+    """
+    # Parse comma-separated airport codes
+    origins_list = [o.strip().upper() for o in origins.split(",") if o.strip()]
+    destinations_list = [d.strip().upper() for d in destinations.split(",") if d.strip()]
+
+    if not origins_list or not destinations_list:
+        raise HTTPException(
+            status_code=400,
+            detail="Both origins and destinations must contain at least one airport code"
+        )
+
+    # Parse weekday parameters
+    outbound_weekdays_list = None
+    if outbound_weekdays:
+        try:
+            outbound_weekdays_list = [int(d.strip()) for d in outbound_weekdays.split(",") if d.strip()]
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid outbound_weekdays format. Use comma-separated numbers 0-6.")
+
+    # Build MongoDB query
+    query = {
+        "origin": {"$in": origins_list},
+        "destination": {"$in": destinations_list}
+    }
+
+    # Add optional date filters
+    if date_from or date_to:
+        date_filter = {}
+        if date_from:
+            date_filter["$gte"] = date_from
+        if date_to:
+            date_filter["$lte"] = date_to
+        query["date_out"] = date_filter
+
+    # Add optional price filters
+    if min_price is not None or max_price is not None:
+        price_filter = {}
+        if min_price is not None:
+            price_filter["$gte"] = min_price
+        if max_price is not None:
+            price_filter["$lte"] = max_price
+        query["current_price"] = price_filter
+
+    # Fetch all matching flights
+    flights = list(flights_collection.find(query).sort("current_price", ASCENDING))
+
+    logger.info(f"Found {len(flights)} one-way flights before weekday filtering")
+
+    # Apply weekday filter if specified
+    if outbound_weekdays_list is not None:
+        filtered_flights = []
+        for flight in flights:
+            flight_date_str = flight["date_out"]
+            flight_date = datetime.strptime(flight_date_str.split('T')[0], "%Y-%m-%d")
+            if flight_date.weekday() in outbound_weekdays_list:
+                filtered_flights.append(flight)
+        flights = filtered_flights
+        logger.info(f"After weekday filtering: {len(flights)} flights")
+
+    if not flights:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No one-way flights found for the specified criteria"
+        )
+
+    # Apply limit
+    limited_flights = flights[:limit]
+
+    # Format response - calculate total price based on passengers
+    formatted_flights = []
+    for flight in limited_flights:
+        total_price = flight["current_price"] * passengers
+        formatted_flights.append({
+            "flight_id": flight["flight_id"],
+            "origin": flight["origin"],
+            "origin_name": flight.get("origin_name", flight["origin"]),
+            "destination": flight["destination"],
+            "destination_name": flight.get("destination_name", flight["destination"]),
+            "date_out": flight["date_out"],
+            "departure_time": flight["departure_time"],
+            "arrival_time": flight["arrival_time"],
+            "duration": flight["duration"],
+            "price_per_person": flight["current_price"],
+            "total_price": round(total_price, 2),
+            "passengers": passengers,
+            "currency": flight["currency"]
+        })
+
+    return {
+        "origins": origins_list,
+        "destinations": destinations_list,
+        "passengers": passengers,
+        "total": len(flights),
+        "showing": len(formatted_flights),
+        "flights": formatted_flights
+    }
+
+
 @app.get("/flights/{flight_id}", response_model=FlightResponse)
 async def get_flight(flight_id: str):
     """
