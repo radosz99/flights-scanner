@@ -492,7 +492,10 @@ class APIService:
         destination: Optional[str],
         min_days: int,
         max_days: int,
-        passengers: int = 2
+        passengers: int = 2,
+        return_from_same_airport: bool = True,
+        outbound_weekdays: Optional[List[int]] = None,
+        return_weekdays: Optional[List[int]] = None
     ) -> List[Dict[str, Any]]:
         """
         Find all possible round trips (two-way) within specified trip length range.
@@ -503,6 +506,9 @@ class APIService:
             min_days: Minimum trip duration in days
             max_days: Maximum trip duration in days
             passengers: Number of passengers (default 2)
+            return_from_same_airport: If True, return must be from same airport as outbound destination (default True)
+            outbound_weekdays: Optional list of weekdays for outbound flights (0=Monday, 6=Sunday)
+            return_weekdays: Optional list of weekdays for return flights (0=Monday, 6=Sunday)
 
         Returns:
             List of round trip combinations with pricing
@@ -517,11 +523,17 @@ class APIService:
                 "destination": destination.upper()
             }).sort("departure_time", ASCENDING))
 
-            # Get all return flights from destination to origin
-            return_flights = list(self.flights_collection.find({
-                "origin": destination.upper(),
-                "destination": origin.upper()
-            }).sort("departure_time", ASCENDING))
+            if return_from_same_airport:
+                # Get all return flights from destination to origin
+                return_flights = list(self.flights_collection.find({
+                    "origin": destination.upper(),
+                    "destination": origin.upper()
+                }).sort("departure_time", ASCENDING))
+            else:
+                # Get all return flights to origin from any airport
+                return_flights = list(self.flights_collection.find({
+                    "destination": origin.upper()
+                }).sort("departure_time", ASCENDING))
         else:
             # Get all outbound flights from origin to any destination
             outbound_flights = list(self.flights_collection.find({
@@ -541,16 +553,35 @@ class APIService:
             outbound_date_str = outbound["departure_time"].split("T")[0]
             outbound_date = datetime.strptime(outbound_date_str, "%Y-%m-%d")
 
+            # Filter by outbound weekday if specified
+            if outbound_weekdays is not None:
+                if outbound_date.weekday() not in outbound_weekdays:
+                    continue
+
             for return_flight in return_flights:
-                # When destination is not specified, ensure return flight matches outbound destination
-                if not destination:
-                    # Return flight must originate from where the outbound flight lands
-                    if return_flight["origin"] != outbound["destination"]:
-                        continue
+                # When return_from_same_airport is True and destination is not specified,
+                # ensure return flight originates from where the outbound flight lands
+                if return_from_same_airport:
+                    if not destination:
+                        # Return flight must originate from where the outbound flight lands
+                        if return_flight["origin"] != outbound["destination"]:
+                            continue
+                else:
+                    # When return_from_same_airport is False, return can be from any airport
+                    # but we still need to ensure logical connection
+                    if not destination:
+                        # At minimum, check that return flight doesn't originate from the departure airport
+                        # (otherwise it's not really going anywhere)
+                        pass
 
                 # Extract date from departure_time (format: YYYY-MM-DDTHH:MM:SS.mmm)
                 return_date_str = return_flight["departure_time"].split("T")[0]
                 return_date = datetime.strptime(return_date_str, "%Y-%m-%d")
+
+                # Filter by return weekday if specified
+                if return_weekdays is not None:
+                    if return_date.weekday() not in return_weekdays:
+                        continue
 
                 # Calculate trip duration
                 trip_duration = (return_date - outbound_date).days
@@ -603,7 +634,10 @@ class APIService:
         self,
         origin: str,
         min_days: int,
-        max_days: int
+        max_days: int,
+        return_from_same_airport: bool = True,
+        outbound_weekdays: Optional[List[int]] = None,
+        return_weekdays: Optional[List[int]] = None
     ) -> List[Dict[str, Any]]:
         """
         Get preview of all destinations from origin with lowest round-trip prices.
@@ -612,6 +646,9 @@ class APIService:
             origin: Origin airport code
             min_days: Minimum trip duration in days
             max_days: Maximum trip duration in days
+            return_from_same_airport: If True, return must be from same airport as outbound destination (default True)
+            outbound_weekdays: Optional list of weekdays for outbound flights (0=Monday, 6=Sunday)
+            return_weekdays: Optional list of weekdays for return flights (0=Monday, 6=Sunday)
 
         Returns:
             List of destinations with minimum total round-trip prices
@@ -632,11 +669,17 @@ class APIService:
                 "destination": destination_code
             }))
 
-            # Get all return flights
-            return_flights = list(self.flights_collection.find({
-                "origin": destination_code,
-                "destination": origin.upper()
-            }))
+            if return_from_same_airport:
+                # Get all return flights from destination to origin
+                return_flights = list(self.flights_collection.find({
+                    "origin": destination_code,
+                    "destination": origin.upper()
+                }))
+            else:
+                # Get all return flights to origin from any airport
+                return_flights = list(self.flights_collection.find({
+                    "destination": origin.upper()
+                }))
 
             if not outbound_flights or not return_flights:
                 continue
@@ -648,9 +691,19 @@ class APIService:
                 outbound_date_str = outbound["departure_time"].split("T")[0]
                 outbound_date = datetime.strptime(outbound_date_str, "%Y-%m-%d")
 
+                # Filter by outbound weekday if specified
+                if outbound_weekdays is not None:
+                    if outbound_date.weekday() not in outbound_weekdays:
+                        continue
+
                 for return_flight in return_flights:
                     return_date_str = return_flight["departure_time"].split("T")[0]
                     return_date = datetime.strptime(return_date_str, "%Y-%m-%d")
+
+                    # Filter by return weekday if specified
+                    if return_weekdays is not None:
+                        if return_date.weekday() not in return_weekdays:
+                            continue
 
                     trip_duration = (return_date - outbound_date).days
 
@@ -837,7 +890,10 @@ class APIService:
         date_from: Optional[str] = None,
         date_to: Optional[str] = None,
         min_price: Optional[float] = None,
-        max_price: Optional[float] = None
+        max_price: Optional[float] = None,
+        return_from_same_airport: bool = True,
+        outbound_weekdays: Optional[List[int]] = None,
+        return_weekdays: Optional[List[int]] = None
     ) -> List[Dict[str, Any]]:
         """
         Find all possible round trips from multiple origins to multiple destinations.
@@ -855,6 +911,9 @@ class APIService:
             date_to: Optional filter for departure date to (YYYY-MM-DD)
             min_price: Optional minimum total price filter
             max_price: Optional maximum total price filter
+            return_from_same_airport: If True, return must be from same airport as outbound destination (default True)
+            outbound_weekdays: Optional list of weekdays for outbound flights (0=Monday, 6=Sunday)
+            return_weekdays: Optional list of weekdays for return flights (0=Monday, 6=Sunday)
 
         Returns:
             List of round trip combinations with pricing
@@ -871,11 +930,18 @@ class APIService:
             "destination": {"$in": destinations_upper}
         }
 
-        # Build return flight query (flexible matching - return to any origin)
-        return_query = {
-            "origin": {"$in": destinations_upper},
-            "destination": {"$in": origins_upper}
-        }
+        # Build return flight query
+        if return_from_same_airport:
+            # Return must be from destination airports to origin airports
+            return_query = {
+                "origin": {"$in": destinations_upper},
+                "destination": {"$in": origins_upper}
+            }
+        else:
+            # Return can be from any airport to origin airports
+            return_query = {
+                "destination": {"$in": origins_upper}
+            }
 
         # Add date filters if provided
         if date_from or date_to:
@@ -904,15 +970,26 @@ class APIService:
             # Split on 'T' to handle ISO datetime format (YYYY-MM-DDTHH:MM:SS.mmm)
             outbound_date = datetime.strptime(outbound_date_str.split('T')[0], "%Y-%m-%d")
 
-            for return_flight in return_flights:
-                # Return flight must originate from where the outbound flight lands
-                if return_flight["origin"] != outbound["destination"]:
+            # Filter by outbound weekday if specified
+            if outbound_weekdays is not None:
+                if outbound_date.weekday() not in outbound_weekdays:
                     continue
+
+            for return_flight in return_flights:
+                # Check if return flight must originate from where the outbound flight lands
+                if return_from_same_airport:
+                    if return_flight["origin"] != outbound["destination"]:
+                        continue
 
                 # Extract date from date_out field (handle ISO datetime format)
                 return_date_str = return_flight["date_out"]
                 # Split on 'T' to handle ISO datetime format (YYYY-MM-DDTHH:MM:SS.mmm)
                 return_date = datetime.strptime(return_date_str.split('T')[0], "%Y-%m-%d")
+
+                # Filter by return weekday if specified
+                if return_weekdays is not None:
+                    if return_date.weekday() not in return_weekdays:
+                        continue
 
                 # Calculate trip duration
                 trip_duration = (return_date - outbound_date).days

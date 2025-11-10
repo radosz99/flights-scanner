@@ -29,6 +29,9 @@
       v-model:min-days="searchParams.minDays"
       v-model:max-days="searchParams.maxDays"
       v-model:limit="searchParams.limit"
+      v-model:return-from-same-airport="searchParams.returnFromSameAirport"
+      v-model:outbound-weekdays="searchParams.outboundWeekdays"
+      v-model:return-weekdays="searchParams.returnWeekdays"
       :origins="origins"
       :available-destinations="availableDestinations"
       :can-search="canSearch"
@@ -150,7 +153,10 @@ const searchParams = ref({
   minDays: 3,
   maxDays: 7,
   passengers: 1,
-  limit: 100
+  limit: 100,
+  returnFromSameAirport: true,
+  outboundWeekdays: [],
+  returnWeekdays: []
 })
 
 const results = ref(null)
@@ -213,13 +219,22 @@ const loadDestinationsPreview = async () => {
   }
 
   try {
-    const response = await $fetch(`${apiBaseUrl}/flights/round-trips/preview`, {
-      params: {
-        origin: searchParams.value.origin,
-        min_days: searchParams.value.minDays,
-        max_days: searchParams.value.maxDays
-      }
-    })
+    const params = {
+      origin: searchParams.value.origin,
+      min_days: searchParams.value.minDays,
+      max_days: searchParams.value.maxDays,
+      return_from_same_airport: searchParams.value.returnFromSameAirport
+    }
+
+    // Add weekday filters if they are selected
+    if (searchParams.value.outboundWeekdays.length > 0) {
+      params.outbound_weekdays = searchParams.value.outboundWeekdays.join(',')
+    }
+    if (searchParams.value.returnWeekdays.length > 0) {
+      params.return_weekdays = searchParams.value.returnWeekdays.join(',')
+    }
+
+    const response = await $fetch(`${apiBaseUrl}/flights/round-trips/preview`, { params })
     destinationsPreview.value = response.destinations || []
   } catch (e) {
     console.error('Failed to load destinations preview:', e)
@@ -300,11 +315,20 @@ const searchTrips = async () => {
       min_days: searchParams.value.minDays,
       max_days: searchParams.value.maxDays,
       passengers: searchParams.value.passengers,
-      limit: searchParams.value.limit
+      limit: searchParams.value.limit,
+      return_from_same_airport: searchParams.value.returnFromSameAirport
     }
 
     if (searchParams.value.destination) {
       params.destination = searchParams.value.destination
+    }
+
+    // Add weekday filters if they are selected
+    if (searchParams.value.outboundWeekdays.length > 0) {
+      params.outbound_weekdays = searchParams.value.outboundWeekdays.join(',')
+    }
+    if (searchParams.value.returnWeekdays.length > 0) {
+      params.return_weekdays = searchParams.value.returnWeekdays.join(',')
     }
 
     results.value = await $fetch(`${apiBaseUrl}/flights/round-trips`, { params })
@@ -351,7 +375,10 @@ const clearSearch = () => {
     minDays: 3,
     maxDays: 7,
     passengers: 1,
-    limit: 100
+    limit: 100,
+    returnFromSameAirport: true,
+    outboundWeekdays: [],
+    returnWeekdays: []
   }
   availableDestinations.value = []
   results.value = null

@@ -92,6 +92,21 @@
           </p>
         </div>
 
+        <!-- Return from Same Airport Checkbox -->
+        <div class="form-group checkbox-group">
+          <label class="checkbox-label dark:text-gray-200">
+            <input
+              v-model="searchParams.returnFromSameAirport"
+              type="checkbox"
+              class="checkbox"
+            />
+            <span>Return from same airport</span>
+          </label>
+          <p class="help-text dark:text-gray-400">
+            Uncheck to allow returns from different airports (e.g., fly to BCN, return from ALC)
+          </p>
+        </div>
+
         <!-- Date Range From -->
         <div class="form-group">
           <label class="dark:text-gray-200">Departure Date From</label>
@@ -170,6 +185,38 @@
             max="500"
             class="dark:bg-gray-600 dark:text-gray-100 dark:border-gray-500"
           />
+        </div>
+
+        <!-- Outbound Weekdays -->
+        <div class="form-group">
+          <label class="dark:text-gray-200">Outbound Flight Days</label>
+          <MultiSelectDropdown
+            :options="weekdayOptions"
+            :selected-values="searchParams.outboundWeekdays"
+            @update:selected-values="searchParams.outboundWeekdays = $event"
+            placeholder="Any day"
+            :searchable="false"
+            :show-selected-items="false"
+          />
+          <p class="help-text dark:text-gray-400">
+            Select specific days of the week for outbound flights
+          </p>
+        </div>
+
+        <!-- Return Weekdays -->
+        <div class="form-group">
+          <label class="dark:text-gray-200">Return Flight Days</label>
+          <MultiSelectDropdown
+            :options="weekdayOptions"
+            :selected-values="searchParams.returnWeekdays"
+            @update:selected-values="searchParams.returnWeekdays = $event"
+            placeholder="Any day"
+            :searchable="false"
+            :show-selected-items="false"
+          />
+          <p class="help-text dark:text-gray-400">
+            Select specific days of the week for return flights
+          </p>
         </div>
       </div>
 
@@ -341,13 +388,16 @@ const searchParams = ref({
   origins: [],
   destinations: [],
   twoWayRoutes: true,
+  returnFromSameAirport: true,
   dateFrom: '',
   dateTo: '',
   minDays: 3,
   maxDays: 7,
   minPrice: null,
   maxPrice: null,
-  limit: 100
+  limit: 100,
+  outboundWeekdays: [],
+  returnWeekdays: []
 })
 
 const results = ref(null)
@@ -392,6 +442,17 @@ const allAirportsOptions = computed(() => {
     label: `${airport.code} - ${airport.name}`
   }))
 })
+
+// Weekday options (0=Monday, 6=Sunday)
+const weekdayOptions = [
+  { value: 0, label: 'Monday' },
+  { value: 1, label: 'Tuesday' },
+  { value: 2, label: 'Wednesday' },
+  { value: 3, label: 'Thursday' },
+  { value: 4, label: 'Friday' },
+  { value: 5, label: 'Saturday' },
+  { value: 6, label: 'Sunday' }
+]
 
 // Methods
 const selectAirportsByCountries = (countries) => {
@@ -501,7 +562,8 @@ const searchTwoWayTrips = async () => {
       min_days: searchParams.value.minDays,
       max_days: searchParams.value.maxDays,
       passengers: 1, // Default to 1 passenger for price display
-      limit: searchParams.value.limit
+      limit: searchParams.value.limit,
+      return_from_same_airport: searchParams.value.returnFromSameAirport
     }
 
     // Add optional filters
@@ -509,6 +571,14 @@ const searchTwoWayTrips = async () => {
     if (searchParams.value.dateTo) params.date_to = searchParams.value.dateTo
     if (searchParams.value.minPrice !== null) params.min_price = searchParams.value.minPrice
     if (searchParams.value.maxPrice !== null) params.max_price = searchParams.value.maxPrice
+
+    // Add weekday filters if they are selected
+    if (searchParams.value.outboundWeekdays.length > 0) {
+      params.outbound_weekdays = searchParams.value.outboundWeekdays.join(',')
+    }
+    if (searchParams.value.returnWeekdays.length > 0) {
+      params.return_weekdays = searchParams.value.returnWeekdays.join(',')
+    }
 
     const response = await $fetch(`${apiBaseUrl}/flights/round-trips-batch`, { params })
 
@@ -570,13 +640,16 @@ const clearFilters = () => {
     origins: [],
     destinations: [],
     twoWayRoutes: true,
+    returnFromSameAirport: true,
     dateFrom: '',
     dateTo: '',
     minDays: 3,
     maxDays: 7,
     minPrice: null,
     maxPrice: null,
-    limit: 100
+    limit: 100,
+    outboundWeekdays: [],
+    returnWeekdays: []
   }
   destinationMode.value = 'airports'
   selectedCountries.value = []

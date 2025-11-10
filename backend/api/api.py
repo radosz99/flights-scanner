@@ -175,7 +175,10 @@ async def get_round_trips(
     min_days: int = Query(..., ge=1, description="Minimum trip duration in days"),
     max_days: int = Query(..., ge=1, description="Maximum trip duration in days"),
     passengers: int = Query(2, ge=1, le=10, description="Number of passengers"),
-    limit: int = Query(100, ge=1, le=500, description="Maximum number of results")
+    limit: int = Query(100, ge=1, le=500, description="Maximum number of results"),
+    return_from_same_airport: bool = Query(True, description="If true, return must be from same airport as destination"),
+    outbound_weekdays: Optional[str] = Query(None, description="Comma-separated weekday numbers for outbound flights (0=Monday, 6=Sunday)"),
+    return_weekdays: Optional[str] = Query(None, description="Comma-separated weekday numbers for return flights (0=Monday, 6=Sunday)")
 ):
     """
     Find all possible round trips (two-way) within specified trip length range.
@@ -184,6 +187,11 @@ async def get_round_trips(
     with trip duration between min_days and max_days, sorted by total price.
 
     If destination is not provided, shows round trips to all available destinations.
+
+    New features:
+    - return_from_same_airport: Control whether return must be from same airport (e.g., KRK->BCN, then ALC->KRK is allowed if false)
+    - outbound_weekdays: Filter outbound flights by weekdays (e.g., "0,1,2,3,4" for weekdays only)
+    - return_weekdays: Filter return flights by weekdays (e.g., "5,6" for weekends only)
     """
     if min_days > max_days:
         raise HTTPException(
@@ -191,12 +199,30 @@ async def get_round_trips(
             detail="min_days must be less than or equal to max_days"
         )
 
+    # Parse weekday parameters
+    outbound_weekdays_list = None
+    if outbound_weekdays:
+        try:
+            outbound_weekdays_list = [int(d.strip()) for d in outbound_weekdays.split(",") if d.strip()]
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid outbound_weekdays format. Use comma-separated numbers 0-6.")
+
+    return_weekdays_list = None
+    if return_weekdays:
+        try:
+            return_weekdays_list = [int(d.strip()) for d in return_weekdays.split(",") if d.strip()]
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid return_weekdays format. Use comma-separated numbers 0-6.")
+
     round_trips = api_service.find_round_trips(
         origin=origin,
         destination=destination,
         min_days=min_days,
         max_days=max_days,
-        passengers=passengers
+        passengers=passengers,
+        return_from_same_airport=return_from_same_airport,
+        outbound_weekdays=outbound_weekdays_list,
+        return_weekdays=return_weekdays_list
     )
 
     if not round_trips:
@@ -225,12 +251,20 @@ async def get_round_trips(
 async def get_round_trips_preview(
     origin: str = Query(..., description="Origin airport code (e.g., WRO)"),
     min_days: int = Query(3, ge=1, description="Minimum trip duration in days"),
-    max_days: int = Query(7, ge=1, description="Maximum trip duration in days")
+    max_days: int = Query(7, ge=1, description="Maximum trip duration in days"),
+    return_from_same_airport: bool = Query(True, description="If true, return must be from same airport as destination"),
+    outbound_weekdays: Optional[str] = Query(None, description="Comma-separated weekday numbers for outbound flights (0=Monday, 6=Sunday)"),
+    return_weekdays: Optional[str] = Query(None, description="Comma-separated weekday numbers for return flights (0=Monday, 6=Sunday)")
 ):
     """
     Get preview of all available destinations from origin with lowest round-trip prices.
 
     Returns a list of destinations with minimum round-trip prices for the given duration range.
+
+    New features:
+    - return_from_same_airport: Control whether return must be from same airport
+    - outbound_weekdays: Filter outbound flights by weekdays (e.g., "0,1,2,3,4" for weekdays only)
+    - return_weekdays: Filter return flights by weekdays (e.g., "5,6" for weekends only)
     """
     if min_days > max_days:
         raise HTTPException(
@@ -238,10 +272,28 @@ async def get_round_trips_preview(
             detail="min_days must be less than or equal to max_days"
         )
 
+    # Parse weekday parameters
+    outbound_weekdays_list = None
+    if outbound_weekdays:
+        try:
+            outbound_weekdays_list = [int(d.strip()) for d in outbound_weekdays.split(",") if d.strip()]
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid outbound_weekdays format. Use comma-separated numbers 0-6.")
+
+    return_weekdays_list = None
+    if return_weekdays:
+        try:
+            return_weekdays_list = [int(d.strip()) for d in return_weekdays.split(",") if d.strip()]
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid return_weekdays format. Use comma-separated numbers 0-6.")
+
     preview_data = api_service.get_round_trips_preview(
         origin=origin,
         min_days=min_days,
-        max_days=max_days
+        max_days=max_days,
+        return_from_same_airport=return_from_same_airport,
+        outbound_weekdays=outbound_weekdays_list,
+        return_weekdays=return_weekdays_list
     )
 
     return {
@@ -263,7 +315,10 @@ async def get_round_trips_batch(
     date_to: Optional[str] = Query(None, description="Filter flights departing until this date (YYYY-MM-DD)"),
     min_price: Optional[float] = Query(None, description="Minimum total price filter"),
     max_price: Optional[float] = Query(None, description="Maximum total price filter"),
-    limit: int = Query(100, ge=1, le=1000, description="Maximum number of results")
+    limit: int = Query(100, ge=1, le=1000, description="Maximum number of results"),
+    return_from_same_airport: bool = Query(True, description="If true, return must be from same airport as destination"),
+    outbound_weekdays: Optional[str] = Query(None, description="Comma-separated weekday numbers for outbound flights (0=Monday, 6=Sunday)"),
+    return_weekdays: Optional[str] = Query(None, description="Comma-separated weekday numbers for return flights (0=Monday, 6=Sunday)")
 ):
     """
     Find all possible round trips from multiple origins to multiple destinations (BATCH).
@@ -283,6 +338,9 @@ async def get_round_trips_batch(
         min_price: Optional minimum total price filter
         max_price: Optional maximum total price filter
         limit: Maximum number of results to return
+        return_from_same_airport: Control whether return must be from same airport
+        outbound_weekdays: Filter outbound flights by weekdays (e.g., "0,1,2,3,4")
+        return_weekdays: Filter return flights by weekdays (e.g., "5,6")
 
     Returns:
         Batch search results with all matching round trips sorted by price
@@ -303,6 +361,21 @@ async def get_round_trips_batch(
             detail="Both origins and destinations must contain at least one airport code"
         )
 
+    # Parse weekday parameters
+    outbound_weekdays_list = None
+    if outbound_weekdays:
+        try:
+            outbound_weekdays_list = [int(d.strip()) for d in outbound_weekdays.split(",") if d.strip()]
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid outbound_weekdays format. Use comma-separated numbers 0-6.")
+
+    return_weekdays_list = None
+    if return_weekdays:
+        try:
+            return_weekdays_list = [int(d.strip()) for d in return_weekdays.split(",") if d.strip()]
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid return_weekdays format. Use comma-separated numbers 0-6.")
+
     # Call the batch search service method
     round_trips = api_service.find_round_trips_batch(
         origins=origins_list,
@@ -313,7 +386,10 @@ async def get_round_trips_batch(
         date_from=date_from,
         date_to=date_to,
         min_price=min_price,
-        max_price=max_price
+        max_price=max_price,
+        return_from_same_airport=return_from_same_airport,
+        outbound_weekdays=outbound_weekdays_list,
+        return_weekdays=return_weekdays_list
     )
 
     if not round_trips:
