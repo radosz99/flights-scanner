@@ -1,15 +1,25 @@
 <template>
-  <div v-if="results && results.trips.length > 0" class="mt-8">
+  <div class="mt-8">
     <div class="mb-6 pb-4 border-b-2 border-gray-200 dark:border-gray-700">
       <h2 class="text-2xl font-semibold text-gray-800 dark:text-gray-100">
-        Found {{ results.total_combinations }} Round Trips
+        <template v-if="results && results.trips.length > 0">
+          Found {{ results.total_combinations }} Round Trips
+        </template>
+        <template v-else>
+          All Available Two-Way Routes
+        </template>
       </h2>
       <p class="text-gray-600 dark:text-gray-400 mt-2">
-        Showing {{ results.showing }} results for
-        <strong class="text-gray-900 dark:text-gray-200">
-          {{ results.origin }} → {{ results.destination === 'ALL' ? 'All Destinations' : results.destination }}
-        </strong>
-        ({{ results.min_days }}-{{ results.max_days }} days)
+        <template v-if="results && results.trips.length > 0">
+          Showing {{ results.showing }} results for
+          <strong class="text-gray-900 dark:text-gray-200">
+            {{ results.origin }} → {{ results.destination === 'ALL' ? 'All Destinations' : results.destination }}
+          </strong>
+          ({{ results.min_days }}-{{ results.max_days }} days)
+        </template>
+        <template v-else>
+          Showing all available two-way routes from Polish airports with cheapest prices
+        </template>
       </p>
     </div>
 
@@ -120,7 +130,8 @@ import { formatPrice, formatDate, formatTime } from '~/utils/formatters'
 import L from 'leaflet'
 
 const props = defineProps({
-  results: Object
+  results: Object,
+  allRoutes: Array
 })
 
 const config = useRuntimeConfig()
@@ -200,6 +211,102 @@ const loadAirportCoordinates = async () => {
     console.error('Failed to load airport coordinates:', e)
   } finally {
     loading.value = false
+  }
+}
+
+const plotAllRoutes = () => {
+  if (!process.client || !map.value || !props.allRoutes || !props.allRoutes.length) {
+    return
+  }
+
+  // Clear existing route layers
+  routeLayers.value.forEach(layer => map.value.removeLayer(layer))
+  routeLayers.value = []
+
+  const bounds = []
+  const prices = props.allRoutes.map(r => r.cheapest_price).filter(p => p !== undefined)
+  const minPrice = Math.min(...prices)
+  const maxPrice = Math.max(...prices)
+
+  // Plot each route
+  props.allRoutes.forEach(route => {
+    // Check if we have coordinates from the backend
+    const originCoords = route.origin_coordinates
+    const destCoords = route.destination_coordinates
+
+    if (!originCoords || !destCoords) {
+      console.warn(`Missing coordinates for ${route.origin} or ${route.destination}`)
+      return
+    }
+
+    const originLatLng = [originCoords.latitude, originCoords.longitude]
+    const destLatLng = [destCoords.latitude, destCoords.longitude]
+
+    bounds.push(originLatLng, destLatLng)
+
+    // Create a curved line between airports
+    const curve = createCurvedLine(originLatLng, destLatLng)
+
+    // Determine color based on price
+    const priceRatio = (route.cheapest_price - minPrice) / (maxPrice - minPrice)
+    const color = getPriceColor(priceRatio)
+
+    // Draw the route line
+    const polyline = L.polyline(curve, {
+      color: color,
+      weight: 3,
+      opacity: 0.6,
+      className: 'route-line'
+    }).addTo(map.value)
+
+    // Add popup to the line
+    polyline.bindPopup(`
+      <div style="min-width: 200px;">
+        <strong style="font-size: 14px;">${route.origin} → ${route.destination}</strong><br>
+        <span style="font-size: 12px; color: #666;">${route.origin_name} → ${route.destination_name}</span><br>
+        <span style="color: #16a34a; font-weight: bold; font-size: 16px;">${route.cheapest_price.toFixed(2)} ${route.currency}</span><br>
+        <span style="font-size: 12px; color: #666;">Cheapest round-trip price</span>
+      </div>
+    `)
+
+    routeLayers.value.push(polyline)
+
+    // Add markers for origin and destination
+    const originMarker = L.circleMarker(originLatLng, {
+      radius: 5,
+      fillColor: '#3b82f6',
+      color: '#fff',
+      weight: 2,
+      opacity: 1,
+      fillOpacity: 0.8
+    }).addTo(map.value)
+
+    originMarker.bindPopup(`
+      <strong>${route.origin}</strong><br>
+      ${route.origin_name}
+    `)
+
+    const destMarker = L.circleMarker(destLatLng, {
+      radius: 5,
+      fillColor: '#ef4444',
+      color: '#fff',
+      weight: 2,
+      opacity: 1,
+      fillOpacity: 0.8
+    }).addTo(map.value)
+
+    destMarker.bindPopup(`
+      <strong>${route.destination}</strong><br>
+      ${route.destination_name}<br>
+      <span style="color: #16a34a; font-weight: bold;">${route.cheapest_price.toFixed(2)} ${route.currency}</span>
+    `)
+
+    routeLayers.value.push(originMarker, destMarker)
+  })
+
+  // Fit map to show all routes
+  if (bounds.length > 0) {
+    map.value.fitBounds(bounds, { padding: [50, 50] })
   }
 }
 
@@ -369,8 +476,12 @@ onMounted(async () => {
 
   await initMap()
   await loadAirportCoordinates()
+
+  // Plot specific results or all routes
   if (props.results && props.results.trips.length > 0) {
     plotRoutes()
+  } else if (props.allRoutes && props.allRoutes.length > 0) {
+    plotAllRoutes()
   }
 })
 
@@ -378,14 +489,35 @@ onMounted(async () => {
 watch(() => props.results, async (newResults) => {
   if (!process.client) return
 
+  selectedTrip.value = null
+
+  // Ensure map is initialized
+  if (!map.value) {
+    await initMap()
+    await loadAirportCoordinates()
+  }
+
   if (newResults && newResults.trips.length > 0) {
-    selectedTrip.value = null
-    // Ensure map is initialized
+    plotRoutes()
+  } else if (props.allRoutes && props.allRoutes.length > 0) {
+    plotAllRoutes()
+  }
+}, { deep: true })
+
+// Watch for allRoutes changes
+watch(() => props.allRoutes, async (newRoutes) => {
+  if (!process.client) return
+
+  // Only plot all routes if we don't have specific search results
+  if (!props.results || !props.results.trips || props.results.trips.length === 0) {
     if (!map.value) {
       await initMap()
       await loadAirportCoordinates()
     }
-    plotRoutes()
+
+    if (newRoutes && newRoutes.length > 0) {
+      plotAllRoutes()
+    }
   }
 }, { deep: true })
 </script>

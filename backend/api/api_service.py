@@ -674,18 +674,42 @@ class APIService:
 
     def get_all_two_way_routes(self, limit: int = 100) -> List[Dict[str, Any]]:
         """
-        Get all possible two-way routes from Polish airports.
+        Get all possible two-way routes from Polish airports with coordinates and cheapest prices.
 
         This returns example routes that can form round trips, useful for
-        displaying on the trip search page.
+        displaying on the trip search page and map visualization.
 
         Args:
             limit: Maximum number of route pairs to return
 
         Returns:
-            List of route pairs (origin-destination combinations)
+            List of route pairs with airport coordinates and cheapest round-trip prices
         """
-        # Get unique routes from Polish airports
+        from datetime import datetime
+
+        # Load airport coordinates from MongoDB
+        try:
+            from scrapper.database_population import load_from_mongodb
+            from config import settings
+
+            # Load Ryanair database for coordinates
+            ryanair_db = load_from_mongodb("ryanair", settings.mongo_uri)
+
+            # Create coordinate lookup dict
+            airport_coords = {}
+            if ryanair_db:
+                for airport in ryanair_db.get_all_airports():
+                    if airport.latitude is not None and airport.longitude is not None:
+                        airport_coords[airport.code] = {
+                            "latitude": airport.latitude,
+                            "longitude": airport.longitude,
+                            "name": airport.name
+                        }
+        except Exception as e:
+            logger.warning(f"Failed to load airport coordinates: {e}")
+            airport_coords = {}
+
+        # Get unique routes from Polish airports with price info
         pipeline = [
             {"$match": {"origin": {"$in": POLISH_AIRPORTS}}},
             {"$group": {
@@ -695,35 +719,57 @@ class APIService:
                 },
                 "origin_name": {"$first": "$origin_name"},
                 "destination_name": {"$first": "$destination_name"},
-                "flight_count": {"$sum": 1}
+                "min_outbound_price": {"$min": "$current_price"},
+                "flight_count": {"$sum": 1},
+                "currency": {"$first": "$currency"}
             }},
-            {"$sort": {"_id.origin": ASCENDING, "_id.destination": ASCENDING}},
-            {"$limit": limit}
+            {"$sort": {"min_outbound_price": ASCENDING}}
         ]
 
         results = list(self.flights_collection.aggregate(pipeline))
 
-        # Now check which routes have return flights
+        # Now check which routes have return flights and calculate cheapest round-trip price
         two_way_routes = []
 
         for route in results:
             origin = route["_id"]["origin"]
             destination = route["_id"]["destination"]
 
-            # Check if return route exists
-            return_route_exists = self.flights_collection.count_documents({
-                "origin": destination,
-                "destination": origin
-            }) > 0
+            # Get minimum return flight price
+            return_flight = self.flights_collection.find_one(
+                {
+                    "origin": destination,
+                    "destination": origin
+                },
+                sort=[("current_price", ASCENDING)]
+            )
 
-            if return_route_exists:
-                two_way_routes.append({
+            if return_flight:
+                # Calculate cheapest round-trip price (for 1 person)
+                cheapest_price = route["min_outbound_price"] + return_flight["current_price"]
+
+                route_data = {
                     "origin": origin,
                     "origin_name": route["origin_name"],
                     "destination": destination,
                     "destination_name": route["destination_name"],
-                    "outbound_flights": route["flight_count"]
-                })
+                    "outbound_flights": route["flight_count"],
+                    "cheapest_price": round(cheapest_price, 2),
+                    "currency": route["currency"]
+                }
+
+                # Add coordinates if available
+                if origin in airport_coords:
+                    route_data["origin_coordinates"] = airport_coords[origin]
+
+                if destination in airport_coords:
+                    route_data["destination_coordinates"] = airport_coords[destination]
+
+                two_way_routes.append(route_data)
+
+                # Stop when we reach the limit
+                if len(two_way_routes) >= limit:
+                    break
 
         return two_way_routes
 

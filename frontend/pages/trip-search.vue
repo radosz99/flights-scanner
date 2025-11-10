@@ -53,9 +53,9 @@
       @select="selectExampleRoute"
     />
 
-    <!-- View Toggle (only show when there are results) -->
+    <!-- View Toggle (only show when there are results or example routes) -->
     <div
-      v-if="results && results.trips.length > 0"
+      v-if="(results && results.trips.length > 0) || (exampleRoutes.length > 0)"
       class="mt-8 flex justify-center items-center gap-2"
     >
       <span class="text-gray-600 dark:text-gray-400 mr-2">View:</span>
@@ -92,17 +92,30 @@
     </div>
 
     <!-- Trips Table -->
-    <TripsTable v-if="viewMode === 'table'" :results="results" />
+    <TripsTable v-if="viewMode === 'table' && results && results.trips.length > 0" :results="results" />
 
     <!-- Trips Map (Client-only to avoid SSR issues with Leaflet) -->
     <ClientOnly>
-      <TripsMap v-if="viewMode === 'map'" :results="results" />
+      <TripsMap
+        v-if="viewMode === 'map' && ((results && results.trips.length > 0) || exampleRoutes.length > 0)"
+        :results="results"
+        :all-routes="exampleRoutes"
+      />
       <template #fallback>
         <div class="mt-8 p-8 bg-gray-100 dark:bg-gray-800 rounded-lg text-center">
           <p class="text-gray-600 dark:text-gray-400">Loading map...</p>
         </div>
       </template>
     </ClientOnly>
+
+    <!-- Message when on table view but no results -->
+    <div
+      v-if="viewMode === 'table' && !results && exampleRoutes.length > 0"
+      class="mt-8 p-8 bg-blue-50 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-lg text-center"
+    >
+      <p class="text-lg mb-2">Switch to Map view to see all available two-way routes!</p>
+      <p class="text-sm">Or select an origin airport and search for specific trips to see results in table view.</p>
+    </div>
 
     <!-- No Results -->
     <div
@@ -305,7 +318,7 @@ const searchTrips = async () => {
 
 const loadExampleRoutes = async () => {
   try {
-    const response = await $fetch(`${apiBaseUrl}/airports/two-way-routes`, { params: { limit: 20 } })
+    const response = await $fetch(`${apiBaseUrl}/airports/two-way-routes`, { params: { limit: 200 } })
     exampleRoutes.value = response.routes || []
   } catch (e) {
     console.error('Failed to load example routes:', e)
