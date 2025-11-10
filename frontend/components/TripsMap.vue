@@ -117,8 +117,6 @@
 <script setup>
 import { ref, onMounted, watch, nextTick } from 'vue'
 import { formatPrice, formatDate, formatTime } from '~/utils/formatters'
-import L from 'leaflet'
-import 'leaflet/dist/leaflet.css'
 
 const props = defineProps({
   results: Object
@@ -133,16 +131,40 @@ const map = ref(null)
 const airportCoordinates = ref({})
 const selectedTrip = ref(null)
 const routeLayers = ref([])
+let L = null // Will be dynamically imported
 
-// Fix Leaflet default marker icon issue with Vite
-delete L.Icon.Default.prototype._getIconUrl
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-})
+const loadLeaflet = async () => {
+  if (L) return L // Already loaded
+
+  try {
+    // Dynamically import Leaflet only on client-side
+    const leafletModule = await import('leaflet')
+    L = leafletModule.default
+
+    // Import CSS
+    await import('leaflet/dist/leaflet.css')
+
+    // Fix Leaflet default marker icon issue with Vite/Nuxt
+    delete L.Icon.Default.prototype._getIconUrl
+    L.Icon.Default.mergeOptions({
+      iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+      iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+      shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+    })
+
+    return L
+  } catch (e) {
+    console.error('Failed to load Leaflet:', e)
+    error.value = 'Failed to load map library'
+    return null
+  }
+}
 
 const initMap = async () => {
+  // Load Leaflet first
+  await loadLeaflet()
+  if (!L) return
+
   // Wait for the DOM to be ready
   await nextTick()
 

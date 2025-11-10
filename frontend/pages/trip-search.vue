@@ -94,8 +94,15 @@
     <!-- Trips Table -->
     <TripsTable v-if="viewMode === 'table'" :results="results" />
 
-    <!-- Trips Map -->
-    <TripsMap v-if="viewMode === 'map'" :results="results" />
+    <!-- Trips Map (Client-only to avoid SSR issues with Leaflet) -->
+    <ClientOnly>
+      <TripsMap v-if="viewMode === 'map'" :results="results" />
+      <template #fallback>
+        <div class="mt-8 p-8 bg-gray-100 dark:bg-gray-800 rounded-lg text-center">
+          <p class="text-gray-600 dark:text-gray-400">Loading map...</p>
+        </div>
+      </template>
+    </ClientOnly>
 
     <!-- No Results -->
     <div
@@ -155,6 +162,8 @@ onMounted(async () => {
 })
 
 // Watchers
+watch(() => searchParams.value.origin, onOriginChange)
+
 watch(() => searchParams.value.destination, (newDest, oldDest) => {
   if (newDest && newDest !== oldDest && canSearch.value) {
     searchTrips()
@@ -168,6 +177,19 @@ watch(() => [searchParams.value.minDays, searchParams.value.maxDays], () => {
 
   if (results.value && canSearch.value) {
     searchTrips()
+  }
+})
+
+// Watch min/max days for validation
+watch(() => searchParams.value.minDays, (newVal) => {
+  if (newVal > searchParams.value.maxDays) {
+    searchParams.value.maxDays = newVal
+  }
+})
+
+watch(() => searchParams.value.maxDays, (newVal) => {
+  if (newVal < searchParams.value.minDays) {
+    searchParams.value.minDays = newVal
   }
 })
 
@@ -224,30 +246,9 @@ const onOriginChange = async () => {
   }
 }
 
-// Watch origin changes
-watch(() => searchParams.value.origin, onOriginChange)
-
-// Watch min/max days for validation
-watch(() => searchParams.value.minDays, (newVal) => {
-  if (newVal > searchParams.value.maxDays) {
-    searchParams.value.maxDays = newVal
-  }
-})
-
-watch(() => searchParams.value.maxDays, (newVal) => {
-  if (newVal < searchParams.value.minDays) {
-    searchParams.value.minDays = newVal
-  }
-})
-
 const searchTrips = async () => {
   if (!canSearch.value) {
     error.value = 'Please select an origin and specify trip duration'
-    return
-  }
-
-  if (searchParams.value.minDays > searchParams.value.maxDays) {
-    error.value = 'Minimum days must be less than or equal to maximum days'
     return
   }
 
@@ -270,18 +271,12 @@ const searchTrips = async () => {
       params.destination = searchParams.value.destination
     }
 
-    const response = await $fetch(`${apiBaseUrl}/flights/round-trips`, {
-      params: params
-    })
-
-    results.value = response
+    results.value = await $fetch(`${apiBaseUrl}/flights/round-trips`, { params })
   } catch (e) {
-    if (e.statusCode === 404) {
-      error.value = `No round trips found for the selected criteria`
-      results.value = null
-    } else {
-      error.value = e.message || 'Failed to search trips'
-    }
+    error.value = e.statusCode === 404
+      ? 'No round trips found for the selected criteria'
+      : e.message || 'Failed to search trips'
+    results.value = null
   } finally {
     loading.value = false
   }
@@ -289,29 +284,17 @@ const searchTrips = async () => {
 
 const loadExampleRoutes = async () => {
   try {
-    const response = await $fetch(`${apiBaseUrl}/airports/two-way-routes`, {
-      params: { limit: 20 }
-    })
+    const response = await $fetch(`${apiBaseUrl}/airports/two-way-routes`, { params: { limit: 20 } })
     exampleRoutes.value = response.routes || []
   } catch (e) {
     console.error('Failed to load example routes:', e)
-    exampleRoutes.value = []
   }
 }
 
 const selectExampleRoute = async (route) => {
   searchParams.value.origin = route.origin
-
-  await Promise.all([
-    loadDestinationsFromOrigin(route.origin),
-    loadDestinationsPreview()
-  ])
-
+  await Promise.all([loadDestinationsFromOrigin(route.origin), loadDestinationsPreview()])
   searchParams.value.destination = route.destination
-
-  if (canSearch.value) {
-    searchTrips()
-  }
 }
 
 const loadDestinationsPreview = async () => {
@@ -328,11 +311,9 @@ const loadDestinationsPreview = async () => {
         max_days: searchParams.value.maxDays
       }
     })
-
     destinationsPreview.value = response.destinations || []
   } catch (e) {
     console.error('Failed to load destinations preview:', e)
-    destinationsPreview.value = []
   }
 }
 
