@@ -535,8 +535,10 @@ class APIService:
                     "destination": origin.upper()
                 }).sort("departure_time", ASCENDING))
             else:
-                # Get all return flights to origin from any airport
+                # Get all return flights from destination to origin
+                # (same query as above - the filtering happens in the loop based on the flag)
                 return_flights = list(self.flights_collection.find({
+                    "origin": destination.upper(),
                     "destination": origin.upper()
                 }).sort("departure_time", ASCENDING))
         else:
@@ -971,8 +973,10 @@ class APIService:
                 "destination": {"$in": origins_upper}
             }
         else:
-            # Return can be from any airport to origin airports
+            # Return can be from any destination airport to origin airports
+            # (still limited to selected destination countries)
             return_query = {
+                "origin": {"$in": destinations_upper},
                 "destination": {"$in": origins_upper}
             }
 
