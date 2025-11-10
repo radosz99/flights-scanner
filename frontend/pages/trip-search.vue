@@ -153,6 +153,64 @@ const canSearch = computed(() => {
   )
 })
 
+// Methods (defined before watchers to avoid initialization errors)
+const onOriginChange = async () => {
+  searchParams.value.destination = ''
+  results.value = null
+  searched.value = false
+
+  if (searchParams.value.origin) {
+    await Promise.all([
+      loadDestinationsFromOrigin(searchParams.value.origin),
+      loadDestinationsPreview()
+    ])
+  } else {
+    availableDestinations.value = []
+    destinationsPreview.value = []
+  }
+}
+
+const loadDestinationsFromOrigin = async (origin) => {
+  if (!origin) {
+    availableDestinations.value = []
+    return
+  }
+
+  loading.value = true
+  loadingMessage.value = 'Loading destinations...'
+  error.value = null
+
+  try {
+    const response = await $fetch(`${apiBaseUrl}/airports/origins/${origin}/destinations`)
+    availableDestinations.value = response.destinations || []
+  } catch (e) {
+    error.value = e.message || 'Failed to load destinations'
+    availableDestinations.value = []
+  } finally {
+    loading.value = false
+  }
+}
+
+const loadDestinationsPreview = async () => {
+  if (!searchParams.value.origin) {
+    destinationsPreview.value = []
+    return
+  }
+
+  try {
+    const response = await $fetch(`${apiBaseUrl}/flights/round-trips/preview`, {
+      params: {
+        origin: searchParams.value.origin,
+        min_days: searchParams.value.minDays,
+        max_days: searchParams.value.maxDays
+      }
+    })
+    destinationsPreview.value = response.destinations || []
+  } catch (e) {
+    console.error('Failed to load destinations preview:', e)
+  }
+}
+
 // Lifecycle
 onMounted(async () => {
   await Promise.all([
@@ -209,43 +267,6 @@ const loadOrigins = async () => {
   }
 }
 
-const loadDestinationsFromOrigin = async (origin) => {
-  if (!origin) {
-    availableDestinations.value = []
-    return
-  }
-
-  loading.value = true
-  loadingMessage.value = 'Loading destinations...'
-  error.value = null
-
-  try {
-    const response = await $fetch(`${apiBaseUrl}/airports/origins/${origin}/destinations`)
-    availableDestinations.value = response.destinations || []
-  } catch (e) {
-    error.value = e.message || 'Failed to load destinations'
-    availableDestinations.value = []
-  } finally {
-    loading.value = false
-  }
-}
-
-const onOriginChange = async () => {
-  searchParams.value.destination = ''
-  results.value = null
-  searched.value = false
-
-  if (searchParams.value.origin) {
-    await Promise.all([
-      loadDestinationsFromOrigin(searchParams.value.origin),
-      loadDestinationsPreview()
-    ])
-  } else {
-    availableDestinations.value = []
-    destinationsPreview.value = []
-  }
-}
-
 const searchTrips = async () => {
   if (!canSearch.value) {
     error.value = 'Please select an origin and specify trip duration'
@@ -295,26 +316,6 @@ const selectExampleRoute = async (route) => {
   searchParams.value.origin = route.origin
   await Promise.all([loadDestinationsFromOrigin(route.origin), loadDestinationsPreview()])
   searchParams.value.destination = route.destination
-}
-
-const loadDestinationsPreview = async () => {
-  if (!searchParams.value.origin) {
-    destinationsPreview.value = []
-    return
-  }
-
-  try {
-    const response = await $fetch(`${apiBaseUrl}/flights/round-trips/preview`, {
-      params: {
-        origin: searchParams.value.origin,
-        min_days: searchParams.value.minDays,
-        max_days: searchParams.value.maxDays
-      }
-    })
-    destinationsPreview.value = response.destinations || []
-  } catch (e) {
-    console.error('Failed to load destinations preview:', e)
-  }
 }
 
 const selectDestination = (dest) => {

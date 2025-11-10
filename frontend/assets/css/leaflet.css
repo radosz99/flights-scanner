@@ -1,0 +1,35 @@
+/* Leaflet CSS - imported from node_modules */
+@import 'leaflet/dist/leaflet.css';
+
+/* Custom Leaflet styles for dark mode support */
+.dark .leaflet-container {
+  background: #1f2937;
+}
+
+.dark .leaflet-popup-content-wrapper {
+  background-color: #374151;
+  color: #f3f4f6;
+}
+
+.dark .leaflet-popup-tip {
+  background-color: #374151;
+}
+
+.dark .leaflet-control-zoom a {
+  background-color: #374151;
+  color: #f3f4f6;
+  border-color: #4b5563;
+}
+
+.dark .leaflet-control-zoom a:hover {
+  background-color: #4b5563;
+}
+
+.dark .leaflet-control-attribution {
+  background-color: rgba(55, 65, 81, 0.8);
+  color: #d1d5db;
+}
+
+.dark .leaflet-control-attribution a {
+  color: #60a5fa;
+}

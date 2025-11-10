@@ -3,7 +3,8 @@ export default defineNuxtConfig({
   compatibilityDate: '2024-11-01',
   devtools: { enabled: true },
   ssr: true,
-  modules: ['@nuxtjs/tailwindcss'],
+  modules: ['@nuxtjs/tailwindcss', '@nuxtjs/leaflet'],
+  css: ['@/assets/css/leaflet.css'],
   nitro: {
     preset: 'node-server'
   },
@@ -11,16 +12,5 @@ export default defineNuxtConfig({
     public: {
       apiBaseUrl: process.env.API_BASE_URL || 'http://localhost:8900'
     }
-  },
-  vite: {
-    optimizeDeps: {
-      exclude: ['leaflet']
-    },
-    ssr: {
-      noExternal: []
-    }
-  },
-  build: {
-    transpile: []
   }
 })

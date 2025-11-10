@@ -117,6 +117,7 @@
 <script setup>
 import { ref, onMounted, watch, nextTick } from 'vue'
 import { formatPrice, formatDate, formatTime } from '~/utils/formatters'
+import L from 'leaflet'
 
 const props = defineProps({
   results: Object
@@ -131,51 +132,10 @@ const map = ref(null)
 const airportCoordinates = ref({})
 const selectedTrip = ref(null)
 const routeLayers = ref([])
-let L = null // Will be dynamically imported
-
-const loadLeaflet = async () => {
-  // Only run on client side
-  if (!process.client) return null
-  if (L) return L // Already loaded
-
-  try {
-    // Dynamically import Leaflet only on client-side
-    const leafletModule = await import('leaflet')
-    L = leafletModule.default || leafletModule
-
-    // Import CSS
-    if (process.client) {
-      await import('leaflet/dist/leaflet.css')
-    }
-
-    // Fix Leaflet default marker icon issue with Vite/Nuxt
-    if (L.Icon?.Default) {
-      delete L.Icon.Default.prototype._getIconUrl
-      L.Icon.Default.mergeOptions({
-        iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-        iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-      })
-    }
-
-    return L
-  } catch (e) {
-    console.error('Failed to load Leaflet:', e)
-    error.value = 'Failed to load map library'
-    return null
-  }
-}
 
 const initMap = async () => {
   // Only run on client side
   if (!process.client) return
-
-  // Load Leaflet first
-  await loadLeaflet()
-  if (!L) {
-    loading.value = false
-    return
-  }
 
   // Wait for the DOM to be ready
   await nextTick()
@@ -189,6 +149,16 @@ const initMap = async () => {
   }
 
   try {
+    // Fix Leaflet default marker icon issue with Vite/Nuxt
+    if (L.Icon?.Default) {
+      delete L.Icon.Default.prototype._getIconUrl
+      L.Icon.Default.mergeOptions({
+        iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+        iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+      })
+    }
+
     // Initialize map centered on Europe
     map.value = L.map('map').setView([50.0, 15.0], 5)
 
@@ -234,7 +204,7 @@ const loadAirportCoordinates = async () => {
 }
 
 const plotRoutes = () => {
-  if (!process.client || !L || !map.value || !props.results || !props.results.trips.length) {
+  if (!process.client || !map.value || !props.results || !props.results.trips.length) {
     return
   }
 
@@ -411,7 +381,7 @@ watch(() => props.results, async (newResults) => {
   if (newResults && newResults.trips.length > 0) {
     selectedTrip.value = null
     // Ensure map is initialized
-    if (!map.value || !L) {
+    if (!map.value) {
       await initMap()
       await loadAirportCoordinates()
     }
