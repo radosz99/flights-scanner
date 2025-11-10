@@ -62,21 +62,18 @@
           />
         </div>
 
-        <!-- Destination Country -->
+        <!-- Destination Countries (Multi-select) -->
         <div v-if="destinationMode === 'country'" class="form-group">
-          <label class="dark:text-gray-200">Destination Country</label>
-          <select
-            v-model="selectedCountry"
-            @change="selectAirportsByCountry"
-            class="dark:bg-gray-600 dark:text-gray-100 dark:border-gray-500"
-          >
-            <option value="">Select country...</option>
-            <option v-for="country in countries" :key="country" :value="country">
-              {{ country }}
-            </option>
-          </select>
-          <p v-if="selectedCountry" class="help-text dark:text-gray-400">
-            Selected {{ airportsByCountry[selectedCountry]?.length || 0 }} airports
+          <label class="dark:text-gray-200">Destination Countries</label>
+          <MultiSelectDropdown
+            :options="countriesOptions"
+            :selected-values="selectedCountries"
+            @update:selected-values="selectAirportsByCountries"
+            placeholder="Select countries..."
+            search-placeholder="Search countries..."
+          />
+          <p v-if="selectedCountries.length > 0" class="help-text dark:text-gray-400">
+            Selected {{ getTotalAirportsFromCountries() }} airports from {{ selectedCountries.length }} {{ selectedCountries.length === 1 ? 'country' : 'countries' }}
           </p>
         </div>
 
@@ -336,7 +333,8 @@ const searched = ref(false)
 
 const allAirports = ref([])
 const destinationMode = ref('airports')
-const selectedCountry = ref('')
+const selectedCountries = ref([])
+const countriesData = ref([])
 
 // Search Parameters
 const searchParams = ref({
@@ -365,26 +363,12 @@ const canSearch = computed(() => {
   return hasOrigins && hasDestinations && validDuration
 })
 
-// Group airports by country (inferred from airport name)
-const airportsByCountry = computed(() => {
-  const grouped = {}
-
-  allAirports.value.forEach(airport => {
-    // Try to extract country from airport name
-    // This is a simple heuristic - you might want to improve this
-    const country = extractCountry(airport.name)
-
-    if (!grouped[country]) {
-      grouped[country] = []
-    }
-    grouped[country].push(airport)
-  })
-
-  return grouped
-})
-
-const countries = computed(() => {
-  return Object.keys(airportsByCountry.value).sort()
+// Options formatted for MultiSelectDropdown component (countries)
+const countriesOptions = computed(() => {
+  return countriesData.value.map(countryData => ({
+    value: countryData.country,
+    label: `${countryData.country} (${countryData.airport_count} airports)`
+  }))
 })
 
 // Computed property for Polish airports only (for origin selection)
@@ -410,56 +394,35 @@ const allAirportsOptions = computed(() => {
 })
 
 // Methods
-const extractCountry = (airportName) => {
-  // Simple heuristic to extract country from airport name
-  // For better accuracy, you'd need a proper mapping
+const selectAirportsByCountries = (countries) => {
+  selectedCountries.value = countries
 
-  // Common patterns: "City, Country" or "Airport Name (Country)"
-  const patterns = [
-    /,\s*([A-Z][a-zA-Z\s]+)$/,  // Matches ", Country"
-    /\(([A-Z][a-zA-Z\s]+)\)$/,   // Matches "(Country)"
-  ]
-
-  for (const pattern of patterns) {
-    const match = airportName.match(pattern)
-    if (match) {
-      return match[1].trim()
-    }
-  }
-
-  // Fallback: use first word if it looks like a country
-  const words = airportName.split(/[\s,-]/)
-  if (words.length > 1) {
-    // Check for common European countries
-    const commonCountries = ['Poland', 'Germany', 'Spain', 'Italy', 'France', 'UK', 'Greece', 'Portugal']
-    for (const word of words) {
-      if (commonCountries.includes(word)) {
-        return word
-      }
-    }
-  }
-
-  // If airport name contains country codes, map them
-  if (airportName.includes('Poland') || airportName.includes('Polish')) return 'Poland'
-  if (airportName.includes('Spain') || airportName.includes('Spanish')) return 'Spain'
-  if (airportName.includes('Italy') || airportName.includes('Italian')) return 'Italy'
-  if (airportName.includes('France') || airportName.includes('French')) return 'France'
-  if (airportName.includes('Germany') || airportName.includes('German')) return 'Germany'
-  if (airportName.includes('Greece') || airportName.includes('Greek')) return 'Greece'
-  if (airportName.includes('Portugal') || airportName.includes('Portuguese')) return 'Portugal'
-  if (airportName.includes('UK') || airportName.includes('United Kingdom') || airportName.includes('England') || airportName.includes('Scotland')) return 'United Kingdom'
-
-  // Fallback
-  return 'Other'
-}
-
-const selectAirportsByCountry = () => {
-  if (!selectedCountry.value) {
+  if (countries.length === 0) {
+    searchParams.value.destinations = []
     return
   }
 
-  const airportsInCountry = airportsByCountry.value[selectedCountry.value] || []
-  searchParams.value.destinations = airportsInCountry.map(a => a.code)
+  // Find all airports from selected countries
+  const airportCodes = []
+  countries.forEach(country => {
+    const countryData = countriesData.value.find(c => c.country === country)
+    if (countryData && countryData.airports) {
+      airportCodes.push(...countryData.airports.map(a => a.code))
+    }
+  })
+
+  searchParams.value.destinations = airportCodes
+}
+
+const getTotalAirportsFromCountries = () => {
+  let total = 0
+  selectedCountries.value.forEach(country => {
+    const countryData = countriesData.value.find(c => c.country === country)
+    if (countryData) {
+      total += countryData.airport_count
+    }
+  })
+  return total
 }
 
 const loadAirports = async () => {
@@ -468,13 +431,14 @@ const loadAirports = async () => {
   error.value = null
 
   try {
-    // Load all airports (both origins and destinations)
-    const [originsResponse, destinationsResponse] = await Promise.all([
+    // Load all airports (both origins and destinations) and countries
+    const [originsResponse, destinationsResponse, countriesResponse] = await Promise.all([
       $fetch(`${apiBaseUrl}/airports/origins`),
-      $fetch(`${apiBaseUrl}/airports/destinations`)
+      $fetch(`${apiBaseUrl}/airports/destinations`),
+      $fetch(`${apiBaseUrl}/airports/countries?airline=ryanair`)
     ])
 
-    // Combine and deduplicate
+    // Combine and deduplicate airports
     const airportsMap = new Map()
 
     ;[...(originsResponse.origins || []), ...(destinationsResponse.destinations || [])].forEach(airport => {
@@ -486,6 +450,9 @@ const loadAirports = async () => {
     allAirports.value = Array.from(airportsMap.values()).sort((a, b) =>
       a.code.localeCompare(b.code)
     )
+
+    // Store countries data
+    countriesData.value = countriesResponse.countries || []
   } catch (e) {
     error.value = e.message || 'Failed to load airports'
   } finally {
@@ -612,7 +579,7 @@ const clearFilters = () => {
     limit: 100
   }
   destinationMode.value = 'airports'
-  selectedCountry.value = ''
+  selectedCountries.value = []
   results.value = null
   error.value = null
   searched.value = false

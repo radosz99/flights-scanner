@@ -386,6 +386,77 @@ async def get_destinations():
     return {"destinations": destinations}
 
 
+@app.get("/airports/countries")
+async def get_countries(
+    airline: str = Query("ryanair", description="Airline name (ryanair, wizzair)")
+):
+    """
+    Get list of all unique countries from the airports database.
+
+    This endpoint returns all countries that have airports in the airline's network,
+    useful for filtering destinations by country.
+
+    Args:
+        airline: Airline name (default: ryanair)
+
+    Returns:
+        List of unique country names with airport counts
+    """
+    try:
+        from scrapper.database_population import load_from_mongodb
+
+        airline = airline.lower()
+
+        # Validate airline
+        if airline not in ["ryanair", "wizzair"]:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid airline. Must be 'ryanair' or 'wizzair'"
+            )
+
+        # Load database
+        database = load_from_mongodb(airline, settings.mongo_uri)
+
+        if not database:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to load {airline} database from MongoDB"
+            )
+
+        # Group airports by country
+        countries = {}
+        for airport in database.get_all_airports():
+            country = airport.country or "Unknown"
+            if country not in countries:
+                countries[country] = {
+                    "country": country,
+                    "airport_count": 0,
+                    "airports": []
+                }
+            countries[country]["airport_count"] += 1
+            countries[country]["airports"].append({
+                "code": airport.code,
+                "name": airport.name
+            })
+
+        # Convert to list and sort by country name
+        countries_list = sorted(countries.values(), key=lambda x: x["country"])
+
+        return {
+            "countries": countries_list,
+            "total": len(countries_list)
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get countries: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to retrieve countries: {str(e)}"
+        )
+
+
 @app.get("/airports/routes")
 async def get_routes(origin: Optional[str] = Query(None, description="Filter routes by origin")):
     """

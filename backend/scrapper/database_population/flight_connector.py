@@ -51,6 +51,7 @@ class Airport(BaseModel):
     tile: str = Field(description="Tile where this airport was found (e.g., '0-0')")
     latitude: Optional[float] = Field(default=None, description="Geographic latitude in decimal degrees")
     longitude: Optional[float] = Field(default=None, description="Geographic longitude in decimal degrees")
+    country: Optional[str] = Field(default=None, description="Country name from airportsdata")
 
 
 class AirlineRoutes(BaseModel):
@@ -534,6 +535,7 @@ def save_to_mongodb(
                 "tile": airport.tile,
                 "latitude": airport.latitude,
                 "longitude": airport.longitude,
+                "country": airport.country,
                 "updated_at": datetime.utcnow(),
             }
 
@@ -657,6 +659,7 @@ def load_from_mongodb(
                 tile=airport_doc["tile"],
                 latitude=airport_doc.get("latitude"),
                 longitude=airport_doc.get("longitude"),
+                country=airport_doc.get("country"),
             )
             database.add_airport(airport)
 

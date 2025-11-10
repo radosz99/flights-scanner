@@ -31,7 +31,7 @@ def update_airport_coordinates(
     verbose: bool = True
 ) -> tuple[int, int, int]:
     """
-    Update all airports in the database with geographic coordinates.
+    Update all airports in the database with geographic coordinates and country information.
 
     Args:
         database: FlightConnectionsDatabase to update
@@ -50,7 +50,7 @@ def update_airport_coordinates(
 
     if verbose:
         print(f"✓ Loaded data for {len(airports_data)} airports with IATA codes")
-        print(f"\nUpdating coordinates for {len(database.airports)} airports...")
+        print(f"\nUpdating coordinates and country for {len(database.airports)} airports...")
         print("="*60)
 
     updated_count = 0
@@ -59,23 +59,24 @@ def update_airport_coordinates(
 
     for code, airport in database.airports.items():
         # Check if airport already has coordinates
-        if airport.latitude is not None and airport.longitude is not None:
+        if airport.latitude is not None and airport.longitude is not None and airport.country is not None:
             already_had_coords += 1
             if verbose:
-                print(f"  ⊙ {code}: Already has coordinates ({airport.latitude:.4f}, {airport.longitude:.4f})")
+                print(f"  ⊙ {code}: Already has coordinates and country ({airport.latitude:.4f}, {airport.longitude:.4f}, {airport.country})")
             continue
 
         # Look up airport in airportsdata
         airport_data = airports_data.get(code)
 
         if airport_data:
-            # Update coordinates
+            # Update coordinates and country
             airport.latitude = airport_data['lat']
             airport.longitude = airport_data['lon']
+            airport.country = airport_data.get('country', 'Unknown')
             updated_count += 1
 
             if verbose:
-                print(f"  ✓ {code}: {airport.name} → ({airport.latitude:.4f}, {airport.longitude:.4f})")
+                print(f"  ✓ {code}: {airport.name} → ({airport.latitude:.4f}, {airport.longitude:.4f}, {airport.country})")
         else:
             not_found_count += 1
             if verbose:
@@ -85,7 +86,7 @@ def update_airport_coordinates(
         print("\n" + "="*60)
         print("Summary:")
         print(f"  Updated: {updated_count}")
-        print(f"  Already had coordinates: {already_had_coords}")
+        print(f"  Already had coordinates and country: {already_had_coords}")
         print(f"  Not found: {not_found_count}")
         print(f"  Total: {len(database.airports)}")
         print("="*60)
