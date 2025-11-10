@@ -21,9 +21,12 @@
       <strong>Error:</strong> {{ error }}
     </div>
 
-    <!-- Search Form -->
-    <div class="search-form dark:bg-gray-800">
-      <h2 class="dark:text-gray-100 dark:border-gray-700">Search Parameters</h2>
+    <!-- Main Content: Filters + Results Side by Side on Desktop -->
+    <div class="main-content">
+      <!-- Search Form (Left Side on Desktop) -->
+      <div class="search-form-container">
+        <div class="search-form dark:bg-gray-800">
+          <h2 class="dark:text-gray-100 dark:border-gray-700">Search Parameters</h2>
 
       <div class="form-grid">
         <!-- Origin Airports (Multi-select) - Polish airports only -->
@@ -251,21 +254,23 @@
           Clear All
         </button>
       </div>
-    </div>
+        </div>
+      </div>
 
-    <!-- Results Summary -->
-    <div v-if="results" class="results-summary dark:bg-gray-800">
-      <h3 class="dark:text-gray-100">
-        Found {{ results.total }} trips
-        <span v-if="results.trips.length < results.total">
-          (showing {{ results.trips.length }})
-        </span>
-      </h3>
-    </div>
+      <!-- Results Section (Right Side on Desktop) -->
+      <div class="results-container">
+            <div v-if="results" class="results-summary dark:bg-gray-800">
+          <h3 class="dark:text-gray-100">
+            Found {{ results.total }} trips
+            <span v-if="results.trips.length < results.total">
+              (showing {{ results.trips.length }})
+            </span>
+          </h3>
+        </div>
 
-    <!-- Results Table -->
-    <div v-if="results && results.trips.length > 0" class="results-section">
-      <div class="table-container dark:bg-gray-800">
+        <!-- Results Table -->
+        <div v-if="results && results.trips.length > 0" class="results-section">
+          <div class="table-container dark:bg-gray-800">
         <table class="trips-table">
           <thead class="dark:bg-gray-700 dark:border-gray-600">
             <tr>
@@ -353,15 +358,17 @@
             </tr>
           </tbody>
         </table>
-      </div>
-    </div>
+          </div>
+        </div>
 
-    <!-- No Results -->
-    <div
-      v-if="searched && (!results || results.trips.length === 0)"
-      class="no-results dark:bg-gray-700 dark:text-gray-300"
-    >
-      <p>No trips found matching your criteria. Try adjusting your search parameters.</p>
+        <!-- No Results -->
+        <div
+          v-if="searched && (!results || results.trips.length === 0)"
+          class="no-results dark:bg-gray-700 dark:text-gray-300"
+        >
+          <p>No trips found matching your criteria. Try adjusting your search parameters.</p>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -695,10 +702,58 @@ onMounted(async () => {
 
 <style scoped>
 .container {
-  max-width: 1600px;
+  max-width: 100%;
   margin: 0 auto;
   padding: 2rem;
   font-family: system-ui, -apple-system, sans-serif;
+}
+
+/* Main content layout: side-by-side on desktop */
+.main-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+/* Desktop layout: filters left, results right */
+@media (min-width: 1024px) {
+  .main-content {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 1.5rem;
+  }
+
+  .search-form-container {
+    flex: 0 0 30%;
+    max-width: 30%;
+    position: sticky;
+    top: 2rem;
+    max-height: calc(100vh - 4rem);
+    overflow-y: auto;
+  }
+
+  .results-container {
+    flex: 1;
+    min-width: 0; /* Allow flexbox to shrink */
+  }
+}
+
+/* Scrollbar styling for sticky sidebar */
+.search-form-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.search-form-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.search-form-container::-webkit-scrollbar-thumb {
+  background: #cbd5e0;
+  border-radius: 4px;
+}
+
+.search-form-container::-webkit-scrollbar-thumb:hover {
+  background: #a0aec0;
 }
 
 h1 {
@@ -709,9 +764,15 @@ h1 {
 h2 {
   color: #34495e;
   margin-bottom: 1rem;
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   border-bottom: 2px solid #e0e0e0;
   padding-bottom: 0.5rem;
+}
+
+@media (min-width: 1024px) {
+  h2 {
+    font-size: 1.125rem;
+  }
 }
 
 h3 {
@@ -740,16 +801,15 @@ h3 {
 }
 
 .search-form {
-  margin-top: 2rem;
-  padding: 2rem;
+  padding: 1.5rem;
   background: white;
   border-radius: 10px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .form-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  display: flex;
+  flex-direction: column;
   gap: 1.5rem;
   margin-top: 1.5rem;
 }
@@ -829,8 +889,15 @@ h3 {
 
 .action-buttons {
   display: flex;
-  gap: 1rem;
+  flex-direction: column;
+  gap: 0.75rem;
   margin-top: 2rem;
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .action-buttons {
+    flex-direction: row;
+  }
 }
 
 button {
@@ -868,15 +935,15 @@ button {
 }
 
 .results-summary {
-  margin-top: 2rem;
   padding: 1rem 2rem;
   background: white;
   border-radius: 10px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin-bottom: 1rem;
 }
 
 .results-section {
-  margin-top: 2rem;
+  margin-top: 1rem;
 }
 
 .table-container {
@@ -884,6 +951,14 @@ button {
   background: white;
   border-radius: 10px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  width: 100%;
+}
+
+/* Better scrolling for table */
+@media (min-width: 1024px) {
+  .table-container {
+    max-width: 100%;
+  }
 }
 
 .trips-table {
@@ -983,12 +1058,16 @@ button {
 }
 
 .no-results {
-  margin-top: 2rem;
   padding: 2rem;
   text-align: center;
   background: #f8f9fa;
   border-radius: 10px;
   color: #6c757d;
   font-size: 1.1rem;
+}
+
+/* Ensure results container takes full width */
+.results-container {
+  width: 100%;
 }
 </style>
