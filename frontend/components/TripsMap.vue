@@ -286,14 +286,46 @@ const plotAllRoutes = () => {
       ${route.origin_name}
     `)
 
-    const destMarker = L.circleMarker(destLatLng, {
-      radius: 5,
-      fillColor: '#ef4444',
-      color: '#fff',
-      weight: 2,
-      opacity: 1,
-      fillOpacity: 0.8
-    }).addTo(map.value)
+    // Create custom marker with price label for destination
+    const priceLabel = `${route.cheapest_price.toFixed(0)} ${route.currency}`
+    const destIcon = L.divIcon({
+      className: 'custom-marker',
+      html: `
+        <div style="display: flex; flex-direction: column; align-items: center;">
+          <div style="
+            background-color: #ef4444;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 12px;
+            white-space: nowrap;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            border: 2px solid white;
+          ">${priceLabel}</div>
+          <div style="
+            width: 0;
+            height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-top: 6px solid white;
+            margin-top: -2px;
+          "></div>
+          <div style="
+            width: 0;
+            height: 0;
+            border-left: 4px solid transparent;
+            border-right: 4px solid transparent;
+            border-top: 4px solid #ef4444;
+            margin-top: -6px;
+          "></div>
+        </div>
+      `,
+      iconSize: [60, 30],
+      iconAnchor: [30, 30]
+    })
+
+    const destMarker = L.marker(destLatLng, { icon: destIcon }).addTo(map.value)
 
     destMarker.bindPopup(`
       <strong>${route.destination}</strong><br>
@@ -398,14 +430,46 @@ const plotRoutes = () => {
       ${originCoords.name}
     `)
 
-    const destMarker = L.circleMarker(destLatLng, {
-      radius: 6,
-      fillColor: '#ef4444',
-      color: '#fff',
-      weight: 2,
-      opacity: 1,
-      fillOpacity: 0.8
-    }).addTo(map.value)
+    // Create custom marker with price label for destination
+    const priceLabel = formatPrice(trip.total_price)
+    const destIcon = L.divIcon({
+      className: 'custom-marker',
+      html: `
+        <div style="display: flex; flex-direction: column; align-items: center;">
+          <div style="
+            background-color: #ef4444;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 12px;
+            white-space: nowrap;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            border: 2px solid white;
+          ">${priceLabel}</div>
+          <div style="
+            width: 0;
+            height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-top: 6px solid white;
+            margin-top: -2px;
+          "></div>
+          <div style="
+            width: 0;
+            height: 0;
+            border-left: 4px solid transparent;
+            border-right: 4px solid transparent;
+            border-top: 4px solid #ef4444;
+            margin-top: -6px;
+          "></div>
+        </div>
+      `,
+      iconSize: [60, 30],
+      iconAnchor: [30, 30]
+    })
+
+    const destMarker = L.marker(destLatLng, { icon: destIcon }).addTo(map.value)
 
     destMarker.bindPopup(`
       <strong>${destination}</strong><br>
@@ -537,5 +601,17 @@ watch(() => props.allRoutes, async (newRoutes) => {
 :deep(.route-line:hover) {
   opacity: 1 !important;
   filter: drop-shadow(0 0 4px rgba(0, 0, 0, 0.5));
+}
+
+/* Custom marker styles */
+:deep(.custom-marker) {
+  background: transparent !important;
+  border: none !important;
+  cursor: pointer;
+}
+
+:deep(.custom-marker:hover) {
+  transform: scale(1.05);
+  transition: transform 0.2s ease;
 }
 </style>
