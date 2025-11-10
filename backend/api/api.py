@@ -91,7 +91,8 @@ flights_collection = db[FLIGHTS_COLLECTION]
 scan_iterations_collection = db[SCAN_ITERATIONS_COLLECTION]
 
 # Initialize API service
-from .api_service import APIService, TooManyFlightsError
+from .api_service import APIService
+from .custom_search import TooManyFlightsError
 api_service = APIService(client, settings.MONGO_DATABASE)
 
 
