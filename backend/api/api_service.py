@@ -602,6 +602,7 @@ class APIService:
         min_price: Optional[float] = None,
         max_price: Optional[float] = None,
         return_from_same_airport: bool = True,
+        return_to_same_airport: bool = True,
         outbound_weekdays: Optional[List[int]] = None,
         return_weekdays: Optional[List[int]] = None
     ) -> List[Dict[str, Any]]:
@@ -622,6 +623,7 @@ class APIService:
             min_price: Optional minimum total price filter
             max_price: Optional maximum total price filter
             return_from_same_airport: If True, return must be from same airport as outbound destination (default True)
+            return_to_same_airport: If True, return must land at same airport as outbound origin (default True)
             outbound_weekdays: Optional list of weekdays for outbound flights (0=Monday, 6=Sunday)
             return_weekdays: Optional list of weekdays for return flights (0=Monday, 6=Sunday)
 
@@ -639,6 +641,7 @@ class APIService:
             min_price=min_price,
             max_price=max_price,
             return_from_same_airport=return_from_same_airport,
+            return_to_same_airport=return_to_same_airport,
             outbound_weekdays=outbound_weekdays,
             return_weekdays=return_weekdays
         )

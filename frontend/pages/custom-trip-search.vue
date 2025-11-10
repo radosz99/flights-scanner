@@ -103,7 +103,22 @@
             <span>Return from same airport</span>
           </label>
           <p class="help-text dark:text-gray-400">
-            Uncheck to allow returns from different airports (e.g., fly to BCN, return from ALC)
+            Uncheck to allow returns from different airports (e.g., fly to BCN, return from VLC)
+          </p>
+        </div>
+
+        <!-- Return to Same Airport Checkbox -->
+        <div class="form-group checkbox-group">
+          <label class="checkbox-label dark:text-gray-200">
+            <input
+              v-model="searchParams.returnToSameAirport"
+              type="checkbox"
+              class="checkbox"
+            />
+            <span>Return to same airport</span>
+          </label>
+          <p class="help-text dark:text-gray-400">
+            Uncheck to allow returns to different origin airports (e.g., fly from WRO, return to KRK)
           </p>
         </div>
 
@@ -383,13 +398,20 @@ const destinationMode = ref('airports')
 const selectedCountries = ref([])
 const countriesData = ref([])
 
+// Get today's date in YYYY-MM-DD format
+const getTodayDate = () => {
+  const today = new Date()
+  return today.toISOString().split('T')[0]
+}
+
 // Search Parameters
 const searchParams = ref({
   origins: [],
   destinations: [],
   twoWayRoutes: true,
   returnFromSameAirport: true,
-  dateFrom: '',
+  returnToSameAirport: true,
+  dateFrom: getTodayDate(),
   dateTo: '',
   minDays: 3,
   maxDays: 7,
@@ -563,7 +585,8 @@ const searchTwoWayTrips = async () => {
       max_days: searchParams.value.maxDays,
       passengers: 1, // Default to 1 passenger for price display
       limit: searchParams.value.limit,
-      return_from_same_airport: searchParams.value.returnFromSameAirport
+      return_from_same_airport: searchParams.value.returnFromSameAirport,
+      return_to_same_airport: searchParams.value.returnToSameAirport
     }
 
     // Add optional filters

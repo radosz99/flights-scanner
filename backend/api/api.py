@@ -321,6 +321,7 @@ async def get_round_trips_batch(
     max_price: Optional[float] = Query(None, description="Maximum total price filter"),
     limit: int = Query(100, ge=1, le=1000, description="Maximum number of results"),
     return_from_same_airport: bool = Query(True, description="If true, return must be from same airport as destination"),
+    return_to_same_airport: bool = Query(True, description="If true, return must land at same airport as origin"),
     outbound_weekdays: Optional[str] = Query(None, description="Comma-separated weekday numbers for outbound flights (0=Monday, 6=Sunday)"),
     return_weekdays: Optional[str] = Query(None, description="Comma-separated weekday numbers for return flights (0=Monday, 6=Sunday)")
 ):
@@ -342,7 +343,8 @@ async def get_round_trips_batch(
         min_price: Optional minimum total price filter
         max_price: Optional maximum total price filter
         limit: Maximum number of results to return
-        return_from_same_airport: Control whether return must be from same airport
+        return_from_same_airport: Control whether return must depart from same airport as destination
+        return_to_same_airport: Control whether return must land at same airport as origin
         outbound_weekdays: Filter outbound flights by weekdays (e.g., "0,1,2,3,4")
         return_weekdays: Filter return flights by weekdays (e.g., "5,6")
 
@@ -393,6 +395,7 @@ async def get_round_trips_batch(
             min_price=min_price,
             max_price=max_price,
             return_from_same_airport=return_from_same_airport,
+            return_to_same_airport=return_to_same_airport,
             outbound_weekdays=outbound_weekdays_list,
             return_weekdays=return_weekdays_list
         )

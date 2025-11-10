@@ -611,6 +611,7 @@ class CustomTripSearch:
         min_price: Optional[float] = None,
         max_price: Optional[float] = None,
         return_from_same_airport: bool = True,
+        return_to_same_airport: bool = True,
         outbound_weekdays: Optional[List[int]] = None,
         return_weekdays: Optional[List[int]] = None
     ) -> List[Dict[str, Any]]:
@@ -649,6 +650,16 @@ class CustomTripSearch:
 
                 Example when True: WAW→BCN outbound, BCN→WAW return
                 Example when False: WAW→BCN outbound, VLC→WAW return (both in destinations list)
+
+            return_to_same_airport (bool, optional): If True, return flight must land at the
+                same airport where outbound departed from. If False, can land at any airport
+                in the selected origins list. Defaults to True.
+
+                Example when True: WAW→BCN outbound, BCN→WAW return
+                Example when False: WAW→BCN outbound, BCN→KRK return (both in origins list)
+
+                Note: This is useful when you want to fly from one city and return to another
+                (e.g., fly from Warsaw, return to Krakow for a road trip).
 
             outbound_weekdays (Optional[List[int]], optional): Filter outbound flights by weekdays.
                 0=Monday, 6=Sunday. Defaults to None (any day).
@@ -783,6 +794,11 @@ class CustomTripSearch:
                 if return_from_same_airport:
                     if return_flight["origin"] != outbound["destination"]:
                         continue  # Return must be from where we landed
+
+                # Validate airport matching when return_to_same_airport is True
+                if return_to_same_airport:
+                    if return_flight["destination"] != outbound["origin"]:
+                        continue  # Return must land where we departed from
 
                 # Extract return date
                 return_date_str = return_flight["date_out"]
