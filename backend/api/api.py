@@ -311,14 +311,21 @@ async def get_routes(origin: Optional[str] = Query(None, description="Filter rou
 
 
 @app.get("/airports/two-way-routes")
-async def get_two_way_routes(limit: int = Query(100, ge=1, le=500, description="Maximum number of routes")):
+async def get_two_way_routes(
+    origin: Optional[str] = Query(None, description="Filter routes by origin airport code"),
+    limit: int = Query(100, ge=1, le=500, description="Maximum number of routes")
+):
     """
     Get all possible two-way routes from Polish airports.
 
     This returns routes where both outbound and return flights exist,
     useful for displaying on the trip search page.
+
+    Args:
+        origin: Optional filter to show only routes from specific origin airport
+        limit: Maximum number of routes to return
     """
-    routes = api_service.get_all_two_way_routes(limit=limit)
+    routes = api_service.get_all_two_way_routes(origin=origin, limit=limit)
     return {"routes": routes, "total": len(routes)}
 
 

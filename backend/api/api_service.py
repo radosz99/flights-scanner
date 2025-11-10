@@ -672,7 +672,7 @@ class APIService:
 
         return preview_data
 
-    def get_all_two_way_routes(self, limit: int = 100) -> List[Dict[str, Any]]:
+    def get_all_two_way_routes(self, origin: Optional[str] = None, limit: int = 100) -> List[Dict[str, Any]]:
         """
         Get all possible two-way routes from Polish airports with coordinates and cheapest prices.
 
@@ -680,6 +680,7 @@ class APIService:
         displaying on the trip search page and map visualization.
 
         Args:
+            origin: Optional filter to show only routes from specific origin airport
             limit: Maximum number of route pairs to return
 
         Returns:
@@ -709,9 +710,15 @@ class APIService:
             logger.warning(f"Failed to load airport coordinates: {e}")
             airport_coords = {}
 
+        # Build match query - filter by origin if provided, otherwise all Polish airports
+        if origin:
+            match_query = {"origin": origin.upper()}
+        else:
+            match_query = {"origin": {"$in": POLISH_AIRPORTS}}
+
         # Get unique routes from Polish airports with price info
         pipeline = [
-            {"$match": {"origin": {"$in": POLISH_AIRPORTS}}},
+            {"$match": match_query},
             {"$group": {
                 "_id": {
                     "origin": "$origin",

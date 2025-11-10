@@ -175,11 +175,13 @@ const onOriginChange = async () => {
   if (searchParams.value.origin) {
     await Promise.all([
       loadDestinationsFromOrigin(searchParams.value.origin),
-      loadDestinationsPreview()
+      loadDestinationsPreview(),
+      loadExampleRoutes()
     ])
   } else {
     availableDestinations.value = []
     destinationsPreview.value = []
+    await loadExampleRoutes()
   }
 }
 
@@ -318,7 +320,14 @@ const searchTrips = async () => {
 
 const loadExampleRoutes = async () => {
   try {
-    const response = await $fetch(`${apiBaseUrl}/airports/two-way-routes`, { params: { limit: 200 } })
+    const params = { limit: 200 }
+
+    // If origin is selected, filter routes by origin
+    if (searchParams.value.origin) {
+      params.origin = searchParams.value.origin
+    }
+
+    const response = await $fetch(`${apiBaseUrl}/airports/two-way-routes`, { params })
     exampleRoutes.value = response.routes || []
   } catch (e) {
     console.error('Failed to load example routes:', e)
