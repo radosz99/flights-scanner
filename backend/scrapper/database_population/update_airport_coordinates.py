@@ -19,7 +19,7 @@ except ImportError:
     print("Install with: pip install airportsdata")
     sys.exit(1)
 
-from flight_connector import (
+from .flight_connector import (
     load_from_mongodb,
     save_to_mongodb,
     FlightConnectionsDatabase,
