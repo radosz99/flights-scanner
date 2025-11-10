@@ -26,19 +26,19 @@
       <h2 class="dark:text-gray-100 dark:border-gray-700">Search Parameters</h2>
 
       <div class="form-grid">
-        <!-- Origin Airports (Multi-select) -->
+        <!-- Origin Airports (Multi-select) - Polish airports only -->
         <div class="form-group">
-          <label class="dark:text-gray-200">Origin Airports</label>
+          <label class="dark:text-gray-200">Origin Airports (Polish only)</label>
           <select
             v-model="searchParams.origins"
             multiple
             class="multi-select dark:bg-gray-600 dark:text-gray-100 dark:border-gray-500"
           >
-            <option v-for="airport in allAirports" :key="airport.code" :value="airport.code">
+            <option v-for="airport in polishAirports" :key="airport.code" :value="airport.code">
               {{ airport.code }} - {{ airport.name }}
             </option>
           </select>
-          <p class="help-text dark:text-gray-400">Hold Ctrl/Cmd to select multiple</p>
+          <p class="help-text dark:text-gray-400">Hold Ctrl/Cmd to select multiple Polish airports</p>
         </div>
 
         <!-- Destination Selection Mode -->
@@ -373,6 +373,14 @@ const airportsByCountry = computed(() => {
 
 const countries = computed(() => {
   return Object.keys(airportsByCountry.value).sort()
+})
+
+// Computed property for Polish airports only (for origin selection)
+const polishAirports = computed(() => {
+  return allAirports.value.filter(airport => {
+    const country = extractCountry(airport.name)
+    return country === 'Poland'
+  }).sort((a, b) => a.code.localeCompare(b.code))
 })
 
 // Methods

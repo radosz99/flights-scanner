@@ -899,18 +899,20 @@ class APIService:
         round_trips = []
 
         for outbound in outbound_flights:
-            # Extract date from date_out field
+            # Extract date from date_out field (handle ISO datetime format)
             outbound_date_str = outbound["date_out"]
-            outbound_date = datetime.strptime(outbound_date_str, "%Y-%m-%d")
+            # Split on 'T' to handle ISO datetime format (YYYY-MM-DDTHH:MM:SS.mmm)
+            outbound_date = datetime.strptime(outbound_date_str.split('T')[0], "%Y-%m-%d")
 
             for return_flight in return_flights:
                 # Return flight must originate from where the outbound flight lands
                 if return_flight["origin"] != outbound["destination"]:
                     continue
 
-                # Extract date from date_out field
+                # Extract date from date_out field (handle ISO datetime format)
                 return_date_str = return_flight["date_out"]
-                return_date = datetime.strptime(return_date_str, "%Y-%m-%d")
+                # Split on 'T' to handle ISO datetime format (YYYY-MM-DDTHH:MM:SS.mmm)
+                return_date = datetime.strptime(return_date_str.split('T')[0], "%Y-%m-%d")
 
                 # Calculate trip duration
                 trip_duration = (return_date - outbound_date).days
