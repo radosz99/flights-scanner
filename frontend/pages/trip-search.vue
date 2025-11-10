@@ -6,12 +6,15 @@
       Find the best round trip deals with flexible duration
     </p>
 
-    <!-- Loading -->
-    <div
-      v-if="loading"
-      class="mt-8 p-4 bg-yellow-50 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 rounded-md border border-yellow-200 dark:border-yellow-700 text-center text-lg"
-    >
-      {{ loadingMessage }}
+    <!-- Loading with Progress Bar -->
+    <div v-if="loading" class="mt-8">
+      <div class="p-4 bg-yellow-50 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 rounded-md border border-yellow-200 dark:border-yellow-700 text-center text-lg">
+        <div class="mb-3">{{ loadingMessage }}</div>
+        <!-- Animated Progress Bar -->
+        <div class="w-full bg-yellow-200 dark:bg-yellow-700 rounded-full h-2.5 overflow-hidden">
+          <div class="bg-yellow-600 dark:bg-yellow-400 h-2.5 rounded-full animate-progress"></div>
+        </div>
+      </div>
     </div>
 
     <!-- Error -->
@@ -94,16 +97,20 @@
       </div>
     </div>
 
-    <!-- Trips Table -->
-    <TripsTable v-if="viewMode === 'table' && results && results.trips.length > 0" :results="results" />
+    <!-- Trips Table with blur effect when loading -->
+    <div :class="{ 'blur-sm opacity-60 pointer-events-none': loading && results }">
+      <TripsTable v-if="viewMode === 'table' && results && results.trips.length > 0" :results="results" />
+    </div>
 
-    <!-- Trips Map (Client-only to avoid SSR issues with Leaflet) -->
+    <!-- Trips Map (Client-only to avoid SSR issues with Leaflet) with blur effect when loading -->
     <ClientOnly>
-      <TripsMap
-        v-if="viewMode === 'map' && ((results && results.trips.length > 0) || exampleRoutes.length > 0)"
-        :results="results"
-        :all-routes="exampleRoutes"
-      />
+      <div :class="{ 'blur-sm opacity-60 pointer-events-none': loading && results }">
+        <TripsMap
+          v-if="viewMode === 'map' && ((results && results.trips.length > 0) || exampleRoutes.length > 0)"
+          :results="results"
+          :all-routes="exampleRoutes"
+        />
+      </div>
       <template #fallback>
         <div class="mt-8 p-8 bg-gray-100 dark:bg-gray-800 rounded-lg text-center">
           <p class="text-gray-600 dark:text-gray-400">Loading map...</p>
@@ -306,7 +313,7 @@ const searchTrips = async () => {
   loading.value = true
   loadingMessage.value = 'Searching for trips...'
   error.value = null
-  results.value = null
+  // Don't clear results.value here - keep old results visible but blurred
   searched.value = true
 
   try {
@@ -331,11 +338,21 @@ const searchTrips = async () => {
       params.return_weekdays = searchParams.value.returnWeekdays.join(',')
     }
 
-    results.value = await $fetch(`${apiBaseUrl}/flights/round-trips`, { params })
+    const newResults = await $fetch(`${apiBaseUrl}/flights/round-trips`, { params })
+    // Only update results after successful fetch
+    results.value = newResults
   } catch (e) {
-    error.value = e.statusCode === 404
-      ? 'No round trips found for the selected criteria'
-      : e.message || 'Failed to search trips'
+    // Handle different error types
+    if (e.statusCode === 400) {
+      // Extract the detailed error message from the backend
+      const errorDetail = e.data?.detail || e.message || 'Request parameters exceed processing limits'
+      error.value = errorDetail
+    } else if (e.statusCode === 404) {
+      error.value = 'No round trips found for the selected criteria'
+    } else {
+      error.value = e.message || 'Failed to search trips'
+    }
+    // Clear results on error
     results.value = null
   } finally {
     loading.value = false
@@ -386,3 +403,21 @@ const clearSearch = () => {
   searched.value = false
 }
 </script>
+
+<style scoped>
+@keyframes progress {
+  0% {
+    width: 0%;
+  }
+  50% {
+    width: 70%;
+  }
+  100% {
+    width: 100%;
+  }
+}
+
+.animate-progress {
+  animation: progress 2s ease-in-out infinite;
+}
+</style>

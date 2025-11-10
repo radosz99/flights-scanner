@@ -91,7 +91,7 @@ flights_collection = db[FLIGHTS_COLLECTION]
 scan_iterations_collection = db[SCAN_ITERATIONS_COLLECTION]
 
 # Initialize API service
-from .api_service import APIService
+from .api_service import APIService, TooManyFlightsError
 api_service = APIService(client, settings.MONGO_DATABASE)
 
 
@@ -214,16 +214,19 @@ async def get_round_trips(
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid return_weekdays format. Use comma-separated numbers 0-6.")
 
-    round_trips = api_service.find_round_trips(
-        origin=origin,
-        destination=destination,
-        min_days=min_days,
-        max_days=max_days,
-        passengers=passengers,
-        return_from_same_airport=return_from_same_airport,
-        outbound_weekdays=outbound_weekdays_list,
-        return_weekdays=return_weekdays_list
-    )
+    try:
+        round_trips = api_service.find_round_trips(
+            origin=origin,
+            destination=destination,
+            min_days=min_days,
+            max_days=max_days,
+            passengers=passengers,
+            return_from_same_airport=return_from_same_airport,
+            outbound_weekdays=outbound_weekdays_list,
+            return_weekdays=return_weekdays_list
+        )
+    except TooManyFlightsError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
     if not round_trips:
         dest_msg = destination.upper() if destination else "any destination"
@@ -377,20 +380,23 @@ async def get_round_trips_batch(
             raise HTTPException(status_code=400, detail="Invalid return_weekdays format. Use comma-separated numbers 0-6.")
 
     # Call the batch search service method
-    round_trips = api_service.find_round_trips_batch(
-        origins=origins_list,
-        destinations=destinations_list,
-        min_days=min_days,
-        max_days=max_days,
-        passengers=passengers,
-        date_from=date_from,
-        date_to=date_to,
-        min_price=min_price,
-        max_price=max_price,
-        return_from_same_airport=return_from_same_airport,
-        outbound_weekdays=outbound_weekdays_list,
-        return_weekdays=return_weekdays_list
-    )
+    try:
+        round_trips = api_service.find_round_trips_batch(
+            origins=origins_list,
+            destinations=destinations_list,
+            min_days=min_days,
+            max_days=max_days,
+            passengers=passengers,
+            date_from=date_from,
+            date_to=date_to,
+            min_price=min_price,
+            max_price=max_price,
+            return_from_same_airport=return_from_same_airport,
+            outbound_weekdays=outbound_weekdays_list,
+            return_weekdays=return_weekdays_list
+        )
+    except TooManyFlightsError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
     if not round_trips:
         raise HTTPException(

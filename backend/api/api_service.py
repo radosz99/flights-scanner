@@ -19,6 +19,11 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from constants import POLISH_AIRPORTS
 
 
+class TooManyFlightsError(Exception):
+    """Raised when there are too many flights to process efficiently."""
+    pass
+
+
 class APIService:
     """Service class containing business logic for API operations."""
 
@@ -545,6 +550,34 @@ class APIService:
                 "destination": origin.upper()
             }).sort("departure_time", ASCENDING))
 
+        # Check if there are too many flights to process efficiently
+        MAX_FLIGHTS_PER_DIRECTION = 5000
+        MAX_TOTAL_COMBINATIONS = 50_000_000
+
+        logger.info(f"Found {len(outbound_flights)} outbound flights and {len(return_flights)} return flights")
+
+        if len(outbound_flights) > MAX_FLIGHTS_PER_DIRECTION:
+            raise TooManyFlightsError(
+                f"Too many outbound flights ({len(outbound_flights)}). "
+                f"Please narrow your search criteria (e.g., shorter date range, specific destination, weekday filters). "
+                f"Maximum allowed: {MAX_FLIGHTS_PER_DIRECTION}"
+            )
+
+        if len(return_flights) > MAX_FLIGHTS_PER_DIRECTION:
+            raise TooManyFlightsError(
+                f"Too many return flights ({len(return_flights)}). "
+                f"Please narrow your search criteria (e.g., shorter date range, specific destination, weekday filters). "
+                f"Maximum allowed: {MAX_FLIGHTS_PER_DIRECTION}"
+            )
+
+        potential_combinations = len(outbound_flights) * len(return_flights)
+        if potential_combinations > MAX_TOTAL_COMBINATIONS:
+            raise TooManyFlightsError(
+                f"Too many potential combinations ({potential_combinations:,} = {len(outbound_flights)} × {len(return_flights)}). "
+                f"Please narrow your search criteria (e.g., shorter date range, specific destination, weekday filters). "
+                f"Maximum allowed: {MAX_TOTAL_COMBINATIONS:,}"
+            )
+
         # Find valid round trip combinations
         round_trips = []
 
@@ -960,6 +993,33 @@ class APIService:
         return_flights = list(self.flights_collection.find(return_query).sort("departure_time", ASCENDING))
 
         logger.info(f"Found {len(outbound_flights)} outbound flights and {len(return_flights)} return flights")
+
+        # Check if there are too many flights to process efficiently
+        # Limit individual flight queries to 5000 each, and total combinations to 50 million
+        MAX_FLIGHTS_PER_DIRECTION = 5000
+        MAX_TOTAL_COMBINATIONS = 50_000_000
+
+        if len(outbound_flights) > MAX_FLIGHTS_PER_DIRECTION:
+            raise TooManyFlightsError(
+                f"Too many outbound flights ({len(outbound_flights)}). "
+                f"Please narrow your search criteria (e.g., shorter date range, specific airports, weekday filters). "
+                f"Maximum allowed: {MAX_FLIGHTS_PER_DIRECTION}"
+            )
+
+        if len(return_flights) > MAX_FLIGHTS_PER_DIRECTION:
+            raise TooManyFlightsError(
+                f"Too many return flights ({len(return_flights)}). "
+                f"Please narrow your search criteria (e.g., shorter date range, specific airports, weekday filters). "
+                f"Maximum allowed: {MAX_FLIGHTS_PER_DIRECTION}"
+            )
+
+        potential_combinations = len(outbound_flights) * len(return_flights)
+        if potential_combinations > MAX_TOTAL_COMBINATIONS:
+            raise TooManyFlightsError(
+                f"Too many potential combinations ({potential_combinations:,} = {len(outbound_flights)} × {len(return_flights)}). "
+                f"Please narrow your search criteria (e.g., shorter date range, specific destination, weekday filters). "
+                f"Maximum allowed: {MAX_TOTAL_COMBINATIONS:,}"
+            )
 
         # Find valid round trip combinations
         round_trips = []
