@@ -125,7 +125,7 @@ const props = defineProps({
 const config = useRuntimeConfig()
 const apiBaseUrl = config.public.apiBaseUrl
 
-const loading = ref(false)
+const loading = ref(true)
 const error = ref(null)
 const map = ref(null)
 const airportCoordinates = ref({})
@@ -134,23 +134,29 @@ const routeLayers = ref([])
 let L = null // Will be dynamically imported
 
 const loadLeaflet = async () => {
+  // Only run on client side
+  if (!process.client) return null
   if (L) return L // Already loaded
 
   try {
     // Dynamically import Leaflet only on client-side
     const leafletModule = await import('leaflet')
-    L = leafletModule.default
+    L = leafletModule.default || leafletModule
 
     // Import CSS
-    await import('leaflet/dist/leaflet.css')
+    if (process.client) {
+      await import('leaflet/dist/leaflet.css')
+    }
 
     // Fix Leaflet default marker icon issue with Vite/Nuxt
-    delete L.Icon.Default.prototype._getIconUrl
-    L.Icon.Default.mergeOptions({
-      iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-      iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-      shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-    })
+    if (L.Icon?.Default) {
+      delete L.Icon.Default.prototype._getIconUrl
+      L.Icon.Default.mergeOptions({
+        iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+        iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+      })
+    }
 
     return L
   } catch (e) {
@@ -161,9 +167,15 @@ const loadLeaflet = async () => {
 }
 
 const initMap = async () => {
+  // Only run on client side
+  if (!process.client) return
+
   // Load Leaflet first
   await loadLeaflet()
-  if (!L) return
+  if (!L) {
+    loading.value = false
+    return
+  }
 
   // Wait for the DOM to be ready
   await nextTick()
@@ -172,17 +184,23 @@ const initMap = async () => {
   const mapElement = document.getElementById('map')
   if (!mapElement) {
     console.error('Map element not found')
+    loading.value = false
     return
   }
 
-  // Initialize map centered on Europe
-  map.value = L.map('map').setView([50.0, 15.0], 5)
+  try {
+    // Initialize map centered on Europe
+    map.value = L.map('map').setView([50.0, 15.0], 5)
 
-  // Add OpenStreetMap tiles
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap contributors',
-    maxZoom: 19
-  }).addTo(map.value)
+    // Add OpenStreetMap tiles
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors',
+      maxZoom: 19
+    }).addTo(map.value)
+  } catch (e) {
+    console.error('Failed to initialize map:', e)
+    error.value = 'Failed to initialize map'
+  }
 }
 
 const loadAirportCoordinates = async () => {
@@ -216,7 +234,7 @@ const loadAirportCoordinates = async () => {
 }
 
 const plotRoutes = () => {
-  if (!map.value || !props.results || !props.results.trips.length) {
+  if (!process.client || !L || !map.value || !props.results || !props.results.trips.length) {
     return
   }
 
@@ -372,8 +390,13 @@ const getPriceColor = (ratio) => {
   return '#ef4444' // red
 }
 
-// Initialize map on mount
+// Initialize map on mount (client-side only)
 onMounted(async () => {
+  if (!process.client) {
+    loading.value = false
+    return
+  }
+
   await initMap()
   await loadAirportCoordinates()
   if (props.results && props.results.trips.length > 0) {
@@ -383,10 +406,12 @@ onMounted(async () => {
 
 // Watch for results changes
 watch(() => props.results, async (newResults) => {
+  if (!process.client) return
+
   if (newResults && newResults.trips.length > 0) {
     selectedTrip.value = null
     // Ensure map is initialized
-    if (!map.value) {
+    if (!map.value || !L) {
       await initMap()
       await loadAirportCoordinates()
     }

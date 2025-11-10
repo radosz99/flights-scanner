@@ -11,5 +11,16 @@ export default defineNuxtConfig({
     public: {
       apiBaseUrl: process.env.API_BASE_URL || 'http://localhost:8900'
     }
+  },
+  vite: {
+    optimizeDeps: {
+      exclude: ['leaflet']
+    },
+    ssr: {
+      noExternal: []
+    }
+  },
+  build: {
+    transpile: []
   }
 })
