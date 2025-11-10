@@ -329,7 +329,10 @@
 
               <!-- Duration -->
               <td class="dark:text-gray-200 dark:bg-gray-800 text-center">
-                <strong>{{ trip.trip_duration_days }}</strong> days
+                <div class="duration-info">
+                  <div><strong>{{ trip.trip_duration_days }}</strong> days</div>
+                  <div class="stay-duration dark:text-gray-400">{{ trip.stay_duration }}</div>
+                </div>
               </td>
 
               <!-- Total Price -->
@@ -945,6 +948,18 @@ button {
   flex-direction: column;
   gap: 0.4rem;
   font-size: 0.9rem;
+}
+
+.duration-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.stay-duration {
+  font-size: 0.8rem;
+  color: #6c757d;
+  font-weight: normal;
 }
 
 .price-cell {
