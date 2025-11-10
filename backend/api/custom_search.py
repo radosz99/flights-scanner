@@ -99,6 +99,7 @@ Batch Search Result (find_round_trips_batch):
             ... same structure as outbound ...
         },
         "trip_duration_days": int,
+        "stay_duration": str (format: "Xd Yh Zm"),
         "total_price": float,
         "price_per_person": float,
         "passengers": int,
@@ -673,6 +674,7 @@ class CustomTripSearch:
                 - outbound: Dict with outbound flight details (includes origin/destination info)
                 - return: Dict with return flight details (includes origin/destination info)
                 - trip_duration_days: Number of days between flights
+                - stay_duration: Total stay time from arrival to departure (format: "Xd Yh Zm")
                 - total_price: Total cost for all passengers
                 - price_per_person: Cost per passenger
                 - passengers: Number of passengers
@@ -823,6 +825,19 @@ class CustomTripSearch:
                     if max_price is not None and total_price > max_price:
                         continue
 
+                    # Calculate stay duration (from arrival at destination to departure back)
+                    # Parse ISO format timestamps: YYYY-MM-DDTHH:MM:SS.mmm or YYYY-MM-DDTHH:MM:SS
+                    outbound_arrival = datetime.fromisoformat(outbound["arrival_time"].replace("Z", "+00:00"))
+                    return_departure = datetime.fromisoformat(return_flight["departure_time"].replace("Z", "+00:00"))
+                    stay_duration_delta = return_departure - outbound_arrival
+
+                    # Format as days, hours, minutes
+                    stay_days = stay_duration_delta.days
+                    stay_seconds = stay_duration_delta.seconds
+                    stay_hours = stay_seconds // 3600
+                    stay_minutes = (stay_seconds % 3600) // 60
+                    stay_duration_formatted = f"{stay_days}d {stay_hours}h {stay_minutes}m"
+
                     # Build result structure
                     trip_data = {
                         "outbound": {
@@ -850,6 +865,7 @@ class CustomTripSearch:
                             "current_price": return_flight["current_price"]
                         },
                         "trip_duration_days": trip_duration,
+                        "stay_duration": stay_duration_formatted,
                         "total_price": round(total_price, 2),
                         "price_per_person": round(total_price / passengers, 2) if passengers > 0 else round(total_price, 2),
                         "passengers": passengers,
