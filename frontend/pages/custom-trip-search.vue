@@ -662,7 +662,7 @@ const searchTwoWayTrips = async () => {
       min_days: searchParams.value.minDays,
       max_days: searchParams.value.maxDays,
       passengers: 1, // Default to 1 passenger for price display
-      limit: 10000, // Get all results for client-side pagination
+      limit: 1000, // Backend maximum limit
       return_from_same_airport: searchParams.value.returnFromSameAirport,
       return_to_same_airport: searchParams.value.returnToSameAirport
     }
@@ -698,7 +698,7 @@ const searchOneWayTrips = async () => {
       origins: searchParams.value.origins.join(','),
       destinations: searchParams.value.destinations.join(','),
       passengers: 1, // Default to 1 passenger for price display
-      limit: 10000 // Get all results for client-side pagination
+      limit: 1000 // Backend maximum limit
     }
 
     // Add optional filters
