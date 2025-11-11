@@ -273,14 +273,18 @@ const props = defineProps({
   loading: {
     type: Boolean,
     default: false
+  },
+  destinationMode: {
+    type: String,
+    default: 'airports'
+  },
+  selectedCountries: {
+    type: Array,
+    default: () => []
   }
 })
 
-const emit = defineEmits(['update:filters', 'search', 'clear'])
-
-// Local state
-const destinationMode = ref('airports')
-const selectedCountries = ref([])
+const emit = defineEmits(['update:filters', 'update:destination-mode', 'update:selected-countries', 'search', 'clear'])
 
 // Weekday options (0=Monday, 6=Sunday)
 const weekdayOptions = [
@@ -299,14 +303,14 @@ const updateFilter = (key, value) => {
 }
 
 const updateDestinationMode = (mode) => {
-  destinationMode.value = mode
+  emit('update:destination-mode', mode)
   if (mode === 'airports') {
-    selectedCountries.value = []
+    emit('update:selected-countries', [])
   }
 }
 
 const selectAirportsByCountries = (countries) => {
-  selectedCountries.value = countries
+  emit('update:selected-countries', countries)
 
   if (countries.length === 0) {
     updateFilter('destinations', [])
@@ -327,7 +331,7 @@ const selectAirportsByCountries = (countries) => {
 
 const getTotalAirportsFromCountries = () => {
   let total = 0
-  selectedCountries.value.forEach(country => {
+  props.selectedCountries.forEach(country => {
     const countryData = props.countriesData.find(c => c.country === country)
     if (countryData) {
       total += countryData.airport_count

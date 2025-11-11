@@ -25,7 +25,11 @@
           :countries-data="countriesData"
           :can-search="canSearch"
           :loading="loading"
+          :destination-mode="destinationMode"
+          :selected-countries="selectedCountries"
           @update:filters="updateFilters"
+          @update:destination-mode="destinationMode = $event"
+          @update:selected-countries="selectedCountries = $event"
           @search="searchTrips"
           @clear="clearFilters"
         />
@@ -99,6 +103,10 @@ const searched = ref(false)
 
 const allAirports = ref([])
 const countriesData = ref([])
+
+// Destination mode state
+const destinationMode = ref('airports')
+const selectedCountries = ref([])
 
 // Pagination
 const currentPage = ref(1)
@@ -187,8 +195,25 @@ const parseUrlParams = () => {
     searchParams.value.origins = query.origins.split(',').filter(Boolean)
   }
 
-  // Parse destinations
-  if (query.destinations) {
+  // Parse destination mode and destinations
+  if (query.destinationCountries) {
+    // Country mode - parse countries and convert to airports
+    destinationMode.value = 'country'
+    selectedCountries.value = query.destinationCountries.split(',').filter(Boolean)
+
+    // Convert countries to airport codes
+    const airportCodes = []
+    selectedCountries.value.forEach(country => {
+      const countryData = countriesData.value.find(c => c.country === country)
+      if (countryData && countryData.airports) {
+        airportCodes.push(...countryData.airports.map(a => a.code))
+      }
+    })
+    searchParams.value.destinations = airportCodes
+  } else if (query.destinations) {
+    // Airport mode - use airport codes directly
+    destinationMode.value = 'airports'
+    selectedCountries.value = []
     searchParams.value.destinations = query.destinations.split(',').filter(Boolean)
   }
 
@@ -241,8 +266,12 @@ const updateUrlParams = () => {
     query.origins = searchParams.value.origins.join(',')
   }
 
-  // Add destinations
-  if (searchParams.value.destinations.length > 0) {
+  // Add destinations based on mode
+  if (destinationMode.value === 'country' && selectedCountries.value.length > 0) {
+    // Country mode - save country names
+    query.destinationCountries = selectedCountries.value.join(',')
+  } else if (destinationMode.value === 'airports' && searchParams.value.destinations.length > 0) {
+    // Airport mode - save airport codes
     query.destinations = searchParams.value.destinations.join(',')
   }
 
@@ -282,8 +311,8 @@ const updateUrlParams = () => {
   router.replace({ query })
 }
 
-// Watch for changes to searchParams and update URL
-watch(searchParams, () => {
+// Watch for changes to searchParams, destinationMode, and selectedCountries, then update URL
+watch([searchParams, destinationMode, selectedCountries], () => {
   updateUrlParams()
 }, { deep: true })
 
@@ -449,6 +478,8 @@ const clearFilters = () => {
     outboundWeekdays: [],
     returnWeekdays: []
   }
+  destinationMode.value = 'airports'
+  selectedCountries.value = []
   results.value = null
   error.value = null
   searched.value = false
