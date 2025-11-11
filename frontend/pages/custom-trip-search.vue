@@ -173,7 +173,9 @@ const results = ref(null)
 // Computed
 const canSearch = computed(() => {
   const hasOrigins = searchParams.value.origins.length > 0
-  const hasDestinations = searchParams.value.destinations.length > 0
+  // Allow empty destinations for "anywhere" search, but only with exactly one origin
+  const hasDestinations = searchParams.value.destinations.length > 0 ||
+                          (searchParams.value.destinations.length === 0 && searchParams.value.origins.length === 1)
 
   // For two-way routes, validate trip duration
   if (searchParams.value.twoWayRoutes) {
