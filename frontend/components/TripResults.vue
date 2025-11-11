@@ -45,7 +45,12 @@
             <tbody class="bg-white dark:bg-gray-800">
               <template v-for="(trip, index) in paginatedTrips" :key="index">
                 <!-- Outbound / One-way Flight Row -->
-                <tr class="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                <tr
+                  class="border-b border-gray-200 dark:border-gray-700 transition-colors group"
+                  :class="{ 'bg-gray-50 dark:bg-gray-700': hoveredTripIndex === index }"
+                  @mouseenter="hoveredTripIndex = index"
+                  @mouseleave="hoveredTripIndex = null"
+                >
                   <td :rowspan="twoWayRoutes && trip.return ? 2 : 1" class="p-3 text-center align-middle font-bold text-gray-800 dark:text-gray-200 border-r-2 border-gray-300 dark:border-gray-600">
                     <div class="text-lg">{{ trip.outbound.destination }}</div>
                     <div class="text-xs font-normal text-gray-600 dark:text-gray-400">{{ trip.outbound.destination_name }}</div>
@@ -102,7 +107,13 @@
                 </tr>
 
                 <!-- Return Flight Row (only for two-way routes) -->
-                <tr v-if="twoWayRoutes && trip.return" class="border-b-4 border-gray-400 dark:border-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                <tr
+                  v-if="twoWayRoutes && trip.return"
+                  class="border-b-4 border-gray-400 dark:border-gray-500 transition-colors"
+                  :class="{ 'bg-gray-50 dark:bg-gray-700': hoveredTripIndex === index }"
+                  @mouseenter="hoveredTripIndex = index"
+                  @mouseleave="hoveredTripIndex = null"
+                >
                   <td class="p-3 text-gray-800 dark:text-gray-200">
                     <div class="flex flex-col gap-1">
                       <div class="flex items-center gap-2">
@@ -199,8 +210,11 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { formatPrice, formatDate, formatTime } from '~/utils/formatters'
+
+// Hover state for highlighting trip rows
+const hoveredTripIndex = ref(null)
 
 const props = defineProps({
   results: {

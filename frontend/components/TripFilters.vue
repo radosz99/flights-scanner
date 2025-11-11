@@ -25,7 +25,7 @@
       <div class="flex flex-col gap-4 pt-4">
         <!-- Origin Airports (Multi-select) - Polish airports only -->
         <div class="flex flex-col">
-          <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200 text-sm">Origin Airports</label>
+          <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200 text-sm">From</label>
           <MultiSelectDropdown
             :options="polishAirportsOptions"
             :selected-values="filters.origins"
@@ -37,8 +37,8 @@
 
         <!-- Destination Selection Mode -->
         <div class="flex flex-col">
-          <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200 text-sm">Destination Mode</label>
-          <div class="inline-flex rounded-md shadow-sm" role="group">
+          <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200 text-sm">To</label>
+          <div class="inline-flex rounded-md shadow-sm mb-2" role="group">
             <button
               type="button"
               @click="updateDestinationMode('airports')"
@@ -64,84 +64,102 @@
               Countries
             </button>
           </div>
-        </div>
 
-        <!-- Destination Airports (Multi-select) -->
-        <div v-if="destinationMode === 'airports'" class="flex flex-col">
-          <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200 text-sm">Destination Airports</label>
-          <MultiSelectDropdown
-            :options="allAirportsOptions"
-            :selected-values="filters.destinations"
-            @update:selected-values="updateFilter('destinations', $event)"
-            placeholder="Select destination airports..."
-            search-placeholder="Search airports..."
-          />
-        </div>
-
-        <!-- Destination Countries (Multi-select) -->
-        <div v-if="destinationMode === 'country'" class="flex flex-col">
-          <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200 text-sm">Destination Countries</label>
-          <MultiSelectDropdown
-            :options="countriesOptions"
-            :selected-values="selectedCountries"
-            @update:selected-values="selectAirportsByCountries"
-            placeholder="Select countries..."
-            search-placeholder="Search countries..."
-          />
-          <p v-if="selectedCountries.length > 0" class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-            {{ getTotalAirportsFromCountries() }} airports from {{ selectedCountries.length }} {{ selectedCountries.length === 1 ? 'country' : 'countries' }}
-          </p>
-        </div>
-
-        <!-- Two-Way Routes Checkbox -->
-        <div class="flex items-center justify-center">
-          <label class="flex items-center gap-2 cursor-pointer font-semibold text-gray-700 dark:text-gray-200 text-sm">
-            <input
-              :checked="filters.twoWayRoutes"
-              @change="updateFilter('twoWayRoutes', $event.target.checked)"
-              type="checkbox"
-              class="w-5 h-5 cursor-pointer"
+          <!-- Destination Airports (Multi-select) -->
+          <div v-if="destinationMode === 'airports'">
+            <MultiSelectDropdown
+              :options="allAirportsOptions"
+              :selected-values="filters.destinations"
+              @update:selected-values="updateFilter('destinations', $event)"
+              placeholder="Select destination airports..."
+              search-placeholder="Search airports..."
             />
-            <span>Two-way routes (flexible matching)</span>
-            <span class="inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/30 rounded-full cursor-help transition-all hover:bg-blue-100 dark:hover:bg-blue-900/50 hover:scale-110"
-                  title="When checked, return flight can be to any selected origin airport">ℹ</span>
-          </label>
+          </div>
+
+          <!-- Destination Countries (Multi-select) -->
+          <div v-if="destinationMode === 'country'">
+            <MultiSelectDropdown
+              :options="countriesOptions"
+              :selected-values="selectedCountries"
+              @update:selected-values="selectAirportsByCountries"
+              placeholder="Select countries..."
+              search-placeholder="Search countries..."
+            />
+            <p v-if="selectedCountries.length > 0" class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              {{ getTotalAirportsFromCountries() }} airports from {{ selectedCountries.length }} {{ selectedCountries.length === 1 ? 'country' : 'countries' }}
+            </p>
+          </div>
+        </div>
+
+        <!-- Trip Type Toggle -->
+        <div class="flex flex-col">
+          <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200 text-sm">Trip Type</label>
+          <div class="inline-flex rounded-md shadow-sm" role="group">
+            <button
+              type="button"
+              @click="updateFilter('twoWayRoutes', false)"
+              :class="[
+                'flex-1 px-4 py-2.5 text-sm font-medium border-2 rounded-l-md transition-all duration-200',
+                !filters.twoWayRoutes
+                  ? 'bg-blue-600 text-white border-blue-600 dark:bg-blue-600 dark:border-blue-600'
+                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600 dark:hover:bg-gray-600'
+              ]"
+            >
+              One-way
+            </button>
+            <button
+              type="button"
+              @click="updateFilter('twoWayRoutes', true)"
+              :class="[
+                'flex-1 px-4 py-2.5 text-sm font-medium border-2 border-l-0 rounded-r-md transition-all duration-200',
+                filters.twoWayRoutes
+                  ? 'bg-blue-600 text-white border-blue-600 dark:bg-blue-600 dark:border-blue-600'
+                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600 dark:hover:bg-gray-600'
+              ]"
+            >
+              Round-trip
+            </button>
+          </div>
         </div>
 
         <!-- Return from Same Airport Checkbox (only for two-way routes) -->
-        <div v-if="filters.twoWayRoutes" class="flex items-center justify-center">
-          <label class="flex items-center gap-2 cursor-pointer font-semibold text-gray-700 dark:text-gray-200 text-sm">
+        <div v-if="filters.twoWayRoutes" class="flex items-start">
+          <label class="flex items-start gap-2 cursor-pointer text-gray-700 dark:text-gray-200 text-sm">
             <input
               :checked="filters.returnFromSameAirport"
               @change="updateFilter('returnFromSameAirport', $event.target.checked)"
               type="checkbox"
-              class="w-5 h-5 cursor-pointer"
+              class="w-4 h-4 mt-0.5 cursor-pointer"
             />
-            <span>Return from same airport</span>
-            <span class="inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/30 rounded-full cursor-help transition-all hover:bg-blue-100 dark:hover:bg-blue-900/50 hover:scale-110"
-                  title="Uncheck to allow returns from different airports (e.g., fly to BCN, return from VLC)">ℹ</span>
+            <span class="flex items-center gap-1">
+              <span>Return from same airport</span>
+              <span class="inline-flex items-center justify-center w-4 h-4 text-xs font-bold text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/30 rounded-full cursor-help transition-all hover:bg-blue-100 dark:hover:bg-blue-900/50 hover:scale-110"
+                    title="Uncheck to allow returns from different airports (e.g., fly to BCN, return from VLC)">ℹ</span>
+            </span>
           </label>
         </div>
 
         <!-- Return to Same Airport Checkbox (only for two-way routes) -->
-        <div v-if="filters.twoWayRoutes" class="flex items-center justify-center">
-          <label class="flex items-center gap-2 cursor-pointer font-semibold text-gray-700 dark:text-gray-200 text-sm">
+        <div v-if="filters.twoWayRoutes" class="flex items-start">
+          <label class="flex items-start gap-2 cursor-pointer text-gray-700 dark:text-gray-200 text-sm">
             <input
               :checked="filters.returnToSameAirport"
               @change="updateFilter('returnToSameAirport', $event.target.checked)"
               type="checkbox"
-              class="w-5 h-5 cursor-pointer"
+              class="w-4 h-4 mt-0.5 cursor-pointer"
             />
-            <span>Return to same airport</span>
-            <span class="inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/30 rounded-full cursor-help transition-all hover:bg-blue-100 dark:hover:bg-blue-900/50 hover:scale-110"
-                  title="Uncheck to allow returns to different origin airports (e.g., fly from WRO, return to KRK)">ℹ</span>
+            <span class="flex items-center gap-1">
+              <span>Return to same airport</span>
+              <span class="inline-flex items-center justify-center w-4 h-4 text-xs font-bold text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/30 rounded-full cursor-help transition-all hover:bg-blue-100 dark:hover:bg-blue-900/50 hover:scale-110"
+                    title="Uncheck to allow returns to different origin airports (e.g., fly from WRO, return to KRK)">ℹ</span>
+            </span>
           </label>
         </div>
 
-        <!-- Date Range (From and To on same line) -->
+        <!-- Date Range (Start Date and End Date on same line) -->
         <div class="flex gap-2">
           <div class="flex flex-col flex-1">
-            <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200 text-sm">From</label>
+            <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200 text-sm">Start Date</label>
             <input
               :value="filters.dateFrom"
               @input="updateFilter('dateFrom', $event.target.value)"
@@ -150,7 +168,7 @@
             />
           </div>
           <div class="flex flex-col flex-1">
-            <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200 text-sm">To</label>
+            <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200 text-sm">End Date</label>
             <input
               :value="filters.dateTo"
               @input="updateFilter('dateTo', $event.target.value)"
