@@ -62,13 +62,13 @@
             @click="selectAll"
             class="text-xs text-orange-600 hover:text-orange-700 font-medium dark:text-orange-400 dark:hover:text-orange-300"
           >
-            Select all
+            Zaznacz wszystko
           </button>
           <button
             @click="clearSelection"
             class="text-xs text-gray-500 hover:text-gray-700 font-medium dark:text-gray-400 dark:hover:text-gray-300"
           >
-            Clear all
+            Wyczyść wszystko
           </button>
         </div>
       </div>
@@ -111,7 +111,7 @@
 
         <!-- No Results -->
         <div v-else-if="searchQuery" class="px-3 py-4 text-center">
-          <p class="text-sm text-gray-500 dark:text-gray-400">No options found</p>
+          <p class="text-sm text-gray-500 dark:text-gray-400">Nie znaleziono opcji</p>
         </div>
       </div>
     </div>
@@ -165,7 +165,7 @@ const props = defineProps({
   },
   searchPlaceholder: {
     type: String,
-    default: 'Search...'
+    default: 'Szukaj...'
   },
   searchable: {
     type: Boolean,
@@ -216,7 +216,7 @@ const displayText = computed(() => {
   if (props.selectedValues.length === 1) {
     return getOptionLabel(props.selectedValues[0])
   }
-  return `${props.selectedValues.length} selected`
+  return `Wybrano: ${props.selectedValues.length}`
 })
 
 const filteredOptions = computed(() => {
