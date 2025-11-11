@@ -18,7 +18,7 @@ class TooManyFlightsError(Exception):
 
 class CustomTripSearch:
     MAX_FLIGHTS_PER_DIRECTION = 10000
-    MAX_TOTAL_COMBINATIONS = 50_000_000
+    MAX_TOTAL_COMBINATIONS = 100_000_000
 
     def __init__(self, flights_collection: Collection):
         self.flights_collection = flights_collection
