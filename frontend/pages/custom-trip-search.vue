@@ -1,5 +1,5 @@
 <template>
-  <div class="container dark:bg-gray-900 min-h-screen">
+  <div class="max-w-full mx-auto p-8 min-h-screen dark:bg-gray-900">
     <h1 class="text-gray-800 dark:text-gray-100 text-4xl font-bold mb-4">Custom Trip Search</h1>
     <p class="text-gray-600 dark:text-gray-300 text-lg mb-8">
       Search for one-way or round-trip flights with flexible origin and destination matching. Use batch search to efficiently find flights across multiple airports.
@@ -9,7 +9,6 @@
     <div v-if="loading" class="mt-8">
       <div class="p-4 bg-yellow-50 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 rounded-md border border-yellow-200 dark:border-yellow-700 text-center text-lg">
         <div class="mb-3">{{ loadingMessage }}</div>
-        <!-- Animated Progress Bar -->
         <div class="w-full bg-yellow-200 dark:bg-yellow-700 rounded-full h-2.5 overflow-hidden">
           <div class="bg-yellow-600 dark:bg-yellow-400 h-2.5 rounded-full animate-progress"></div>
         </div>
@@ -19,349 +18,392 @@
     <!-- Error -->
     <div
       v-if="error"
-      class="error dark:bg-red-900 dark:text-red-200 dark:border-red-700"
+      class="mt-8 p-4 bg-red-50 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-md border border-red-200 dark:border-red-700"
     >
       <strong>Error:</strong> {{ error }}
     </div>
 
     <!-- Main Content: Filters + Results Side by Side on Desktop -->
-    <div class="main-content">
+    <div class="flex flex-col lg:flex-row lg:items-start gap-6 mt-8">
       <!-- Search Form (Left Side on Desktop) -->
-      <div class="search-form-container">
-        <div class="search-form dark:bg-gray-800">
-          <h2 class="dark:text-gray-100 dark:border-gray-700">Search Parameters</h2>
+      <div class="lg:w-[30%] lg:sticky lg:top-8 lg:max-h-[calc(100vh-4rem)] lg:overflow-y-auto">
+        <div class="p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md">
+          <h2 class="text-gray-800 dark:text-gray-100 text-lg font-semibold mb-4 pb-3 border-b-2 border-gray-200 dark:border-gray-700">
+            Search Parameters
+          </h2>
 
           <!-- Action Buttons -->
-          <div class="action-buttons">
+          <div class="flex flex-col gap-3 mb-4 pb-4 border-b border-gray-200 dark:border-gray-700">
             <button
               @click="searchTrips"
               :disabled="!canSearch || loading"
-              class="btn-primary dark:bg-blue-600 dark:hover:bg-blue-700"
+              class="w-full py-3 px-6 bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white font-medium rounded-md transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed hover:shadow-lg hover:-translate-y-0.5"
             >
               Search Trips
             </button>
             <button
               @click="clearFilters"
-              class="btn-secondary dark:bg-gray-600 dark:hover:bg-gray-700"
+              class="w-full py-3 px-6 bg-gray-600 hover:bg-gray-700 dark:bg-gray-600 dark:hover:bg-gray-700 text-white font-medium rounded-md transition-all duration-200"
             >
               Clear All
             </button>
           </div>
 
-      <div class="form-grid">
-        <!-- Origin Airports (Multi-select) - Polish airports only -->
-        <div class="form-group">
-          <label class="dark:text-gray-200">Origin Airports (Polish only)</label>
-          <MultiSelectDropdown
-            :options="polishAirportsOptions"
-            :selected-values="searchParams.origins"
-            @update:selected-values="searchParams.origins = $event"
-            placeholder="Select Polish airports..."
-            search-placeholder="Search airports..."
-          />
-        </div>
+          <div class="flex flex-col gap-4">
+            <!-- Origin Airports (Multi-select) - Polish airports only -->
+            <div class="flex flex-col">
+              <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200 text-sm">Origin Airports (Polish only)</label>
+              <MultiSelectDropdown
+                :options="polishAirportsOptions"
+                :selected-values="searchParams.origins"
+                @update:selected-values="searchParams.origins = $event"
+                placeholder="Select Polish airports..."
+                search-placeholder="Search airports..."
+              />
+            </div>
 
-        <!-- Destination Selection Mode -->
-        <div class="form-group">
-          <label class="dark:text-gray-200">Destination Mode</label>
-          <select
-            v-model="destinationMode"
-            class="dark:bg-gray-600 dark:text-gray-100 dark:border-gray-500"
-          >
-            <option value="airports">Select Airports</option>
-            <option value="country">Select by Country</option>
-          </select>
-        </div>
+            <!-- Destination Selection Mode -->
+            <div class="flex flex-col">
+              <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200 text-sm">Destination Mode</label>
+              <select
+                v-model="destinationMode"
+                class="p-2.5 border-2 border-gray-300 dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600 rounded-md text-base focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+              >
+                <option value="airports">Select Airports</option>
+                <option value="country">Select by Country</option>
+              </select>
+            </div>
 
-        <!-- Destination Airports (Multi-select) -->
-        <div v-if="destinationMode === 'airports'" class="form-group">
-          <label class="dark:text-gray-200">Destination Airports</label>
-          <MultiSelectDropdown
-            :options="allAirportsOptions"
-            :selected-values="searchParams.destinations"
-            @update:selected-values="searchParams.destinations = $event"
-            placeholder="Select destination airports..."
-            search-placeholder="Search airports..."
-          />
-        </div>
+            <!-- Destination Airports (Multi-select) -->
+            <div v-if="destinationMode === 'airports'" class="flex flex-col">
+              <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200 text-sm">Destination Airports</label>
+              <MultiSelectDropdown
+                :options="allAirportsOptions"
+                :selected-values="searchParams.destinations"
+                @update:selected-values="searchParams.destinations = $event"
+                placeholder="Select destination airports..."
+                search-placeholder="Search airports..."
+              />
+            </div>
 
-        <!-- Destination Countries (Multi-select) -->
-        <div v-if="destinationMode === 'country'" class="form-group">
-          <label class="dark:text-gray-200">Destination Countries</label>
-          <MultiSelectDropdown
-            :options="countriesOptions"
-            :selected-values="selectedCountries"
-            @update:selected-values="selectAirportsByCountries"
-            placeholder="Select countries..."
-            search-placeholder="Search countries..."
-          />
-          <p v-if="selectedCountries.length > 0" class="selected-info dark:text-gray-400">
-            {{ getTotalAirportsFromCountries() }} airports from {{ selectedCountries.length }} {{ selectedCountries.length === 1 ? 'country' : 'countries' }}
-          </p>
-        </div>
+            <!-- Destination Countries (Multi-select) -->
+            <div v-if="destinationMode === 'country'" class="flex flex-col">
+              <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200 text-sm">Destination Countries</label>
+              <MultiSelectDropdown
+                :options="countriesOptions"
+                :selected-values="selectedCountries"
+                @update:selected-values="selectAirportsByCountries"
+                placeholder="Select countries..."
+                search-placeholder="Search countries..."
+              />
+              <p v-if="selectedCountries.length > 0" class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                {{ getTotalAirportsFromCountries() }} airports from {{ selectedCountries.length }} {{ selectedCountries.length === 1 ? 'country' : 'countries' }}
+              </p>
+            </div>
 
-        <!-- Two-Way Routes Checkbox -->
-        <div class="form-group checkbox-group">
-          <label class="checkbox-label dark:text-gray-200">
-            <input
-              v-model="searchParams.twoWayRoutes"
-              type="checkbox"
-              class="checkbox"
-            />
-            <span>Two-way routes (flexible matching)</span>
-            <span class="info-icon" title="When checked, return flight can be to any selected origin airport">ℹ</span>
-          </label>
-        </div>
+            <!-- Two-Way Routes Checkbox -->
+            <div class="flex items-center justify-center">
+              <label class="flex items-center gap-2 cursor-pointer font-semibold text-gray-700 dark:text-gray-200 text-sm">
+                <input
+                  v-model="searchParams.twoWayRoutes"
+                  type="checkbox"
+                  class="w-5 h-5 cursor-pointer"
+                />
+                <span>Two-way routes (flexible matching)</span>
+                <span class="inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/30 rounded-full cursor-help transition-all hover:bg-blue-100 dark:hover:bg-blue-900/50 hover:scale-110"
+                      title="When checked, return flight can be to any selected origin airport">ℹ</span>
+              </label>
+            </div>
 
-        <!-- Return from Same Airport Checkbox (only for two-way routes) -->
-        <div v-if="searchParams.twoWayRoutes" class="form-group checkbox-group">
-          <label class="checkbox-label dark:text-gray-200">
-            <input
-              v-model="searchParams.returnFromSameAirport"
-              type="checkbox"
-              class="checkbox"
-            />
-            <span>Return from same airport</span>
-            <span class="info-icon" title="Uncheck to allow returns from different airports (e.g., fly to BCN, return from VLC)">ℹ</span>
-          </label>
-        </div>
+            <!-- Return from Same Airport Checkbox (only for two-way routes) -->
+            <div v-if="searchParams.twoWayRoutes" class="flex items-center justify-center">
+              <label class="flex items-center gap-2 cursor-pointer font-semibold text-gray-700 dark:text-gray-200 text-sm">
+                <input
+                  v-model="searchParams.returnFromSameAirport"
+                  type="checkbox"
+                  class="w-5 h-5 cursor-pointer"
+                />
+                <span>Return from same airport</span>
+                <span class="inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/30 rounded-full cursor-help transition-all hover:bg-blue-100 dark:hover:bg-blue-900/50 hover:scale-110"
+                      title="Uncheck to allow returns from different airports (e.g., fly to BCN, return from VLC)">ℹ</span>
+              </label>
+            </div>
 
-        <!-- Return to Same Airport Checkbox (only for two-way routes) -->
-        <div v-if="searchParams.twoWayRoutes" class="form-group checkbox-group">
-          <label class="checkbox-label dark:text-gray-200">
-            <input
-              v-model="searchParams.returnToSameAirport"
-              type="checkbox"
-              class="checkbox"
-            />
-            <span>Return to same airport</span>
-            <span class="info-icon" title="Uncheck to allow returns to different origin airports (e.g., fly from WRO, return to KRK)">ℹ</span>
-          </label>
-        </div>
+            <!-- Return to Same Airport Checkbox (only for two-way routes) -->
+            <div v-if="searchParams.twoWayRoutes" class="flex items-center justify-center">
+              <label class="flex items-center gap-2 cursor-pointer font-semibold text-gray-700 dark:text-gray-200 text-sm">
+                <input
+                  v-model="searchParams.returnToSameAirport"
+                  type="checkbox"
+                  class="w-5 h-5 cursor-pointer"
+                />
+                <span>Return to same airport</span>
+                <span class="inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/30 rounded-full cursor-help transition-all hover:bg-blue-100 dark:hover:bg-blue-900/50 hover:scale-110"
+                      title="Uncheck to allow returns to different origin airports (e.g., fly from WRO, return to KRK)">ℹ</span>
+              </label>
+            </div>
 
-        <!-- Date Range From -->
-        <div class="form-group">
-          <label class="dark:text-gray-200">Departure Date From</label>
-          <input
-            v-model="searchParams.dateFrom"
-            type="date"
-            class="dark:bg-gray-600 dark:text-gray-100 dark:border-gray-500"
-          />
-        </div>
+            <!-- Date Range (From and To on same line) -->
+            <div class="flex gap-2">
+              <div class="flex flex-col flex-1">
+                <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200 text-sm">From</label>
+                <input
+                  v-model="searchParams.dateFrom"
+                  type="date"
+                  class="p-2 border-2 border-gray-300 dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600 rounded-md text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                />
+              </div>
+              <div class="flex flex-col flex-1">
+                <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200 text-sm">To</label>
+                <input
+                  v-model="searchParams.dateTo"
+                  type="date"
+                  class="p-2 border-2 border-gray-300 dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600 rounded-md text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                />
+              </div>
+            </div>
 
-        <!-- Date Range To -->
-        <div class="form-group">
-          <label class="dark:text-gray-200">Departure Date To</label>
-          <input
-            v-model="searchParams.dateTo"
-            type="date"
-            class="dark:bg-gray-600 dark:text-gray-100 dark:border-gray-500"
-          />
-        </div>
+            <!-- Min/Max Days (on same line, only for two-way routes) -->
+            <div v-if="searchParams.twoWayRoutes" class="flex gap-2">
+              <div class="flex flex-col flex-1">
+                <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200 text-sm">Min Days</label>
+                <input
+                  v-model.number="searchParams.minDays"
+                  type="number"
+                  min="1"
+                  max="365"
+                  class="p-2 border-2 border-gray-300 dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600 rounded-md text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                />
+              </div>
+              <div class="flex flex-col flex-1">
+                <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200 text-sm">Max Days</label>
+                <input
+                  v-model.number="searchParams.maxDays"
+                  type="number"
+                  min="1"
+                  max="365"
+                  class="p-2 border-2 border-gray-300 dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600 rounded-md text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                />
+              </div>
+            </div>
 
-        <!-- Min Days (only for two-way routes) -->
-        <div v-if="searchParams.twoWayRoutes" class="form-group">
-          <label class="dark:text-gray-200">Minimum Trip Days</label>
-          <input
-            v-model.number="searchParams.minDays"
-            type="number"
-            min="1"
-            max="365"
-            class="dark:bg-gray-600 dark:text-gray-100 dark:border-gray-500"
-          />
-        </div>
+            <!-- Outbound and Return Weekdays (on same line for two-way, single for one-way) -->
+            <div v-if="searchParams.twoWayRoutes" class="flex gap-2">
+              <div class="flex flex-col flex-1">
+                <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200 text-sm flex items-center gap-1">
+                  Outbound Days
+                  <span class="inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/30 rounded-full cursor-help transition-all hover:bg-blue-100 dark:hover:bg-blue-900/50 hover:scale-110"
+                        title="Select specific days of the week for outbound flights">ℹ</span>
+                </label>
+                <MultiSelectDropdown
+                  :options="weekdayOptions"
+                  :selected-values="searchParams.outboundWeekdays"
+                  @update:selected-values="searchParams.outboundWeekdays = $event"
+                  placeholder="Any day"
+                  :searchable="false"
+                  :show-selected-items="false"
+                />
+              </div>
+              <div class="flex flex-col flex-1">
+                <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200 text-sm flex items-center gap-1">
+                  Return Days
+                  <span class="inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/30 rounded-full cursor-help transition-all hover:bg-blue-100 dark:hover:bg-blue-900/50 hover:scale-110"
+                        title="Select specific days of the week for return flights">ℹ</span>
+                </label>
+                <MultiSelectDropdown
+                  :options="weekdayOptions"
+                  :selected-values="searchParams.returnWeekdays"
+                  @update:selected-values="searchParams.returnWeekdays = $event"
+                  placeholder="Any day"
+                  :searchable="false"
+                  :show-selected-items="false"
+                />
+              </div>
+            </div>
 
-        <!-- Max Days (only for two-way routes) -->
-        <div v-if="searchParams.twoWayRoutes" class="form-group">
-          <label class="dark:text-gray-200">Maximum Trip Days</label>
-          <input
-            v-model.number="searchParams.maxDays"
-            type="number"
-            min="1"
-            max="365"
-            class="dark:bg-gray-600 dark:text-gray-100 dark:border-gray-500"
-          />
-        </div>
-
-        <!-- Min Price -->
-        <div class="form-group">
-          <label class="dark:text-gray-200">Min Total Price (PLN)</label>
-          <input
-            v-model.number="searchParams.minPrice"
-            type="number"
-            min="0"
-            placeholder="No minimum"
-            class="dark:bg-gray-600 dark:text-gray-100 dark:border-gray-500"
-          />
-        </div>
-
-        <!-- Max Price -->
-        <div class="form-group">
-          <label class="dark:text-gray-200">Max Total Price (PLN)</label>
-          <input
-            v-model.number="searchParams.maxPrice"
-            type="number"
-            min="0"
-            placeholder="No maximum"
-            class="dark:bg-gray-600 dark:text-gray-100 dark:border-gray-500"
-          />
-        </div>
-
-        <!-- Max Results -->
-        <div class="form-group">
-          <label class="dark:text-gray-200">Max Results</label>
-          <input
-            v-model.number="searchParams.limit"
-            type="number"
-            min="10"
-            max="500"
-            class="dark:bg-gray-600 dark:text-gray-100 dark:border-gray-500"
-          />
-        </div>
-
-        <!-- Outbound Weekdays -->
-        <div class="form-group">
-          <label class="dark:text-gray-200">
-            {{ searchParams.twoWayRoutes ? 'Outbound Flight Days' : 'Flight Days' }}
-            <span class="info-icon" :title="'Select specific days of the week for ' + (searchParams.twoWayRoutes ? 'outbound' : '') + ' flights'">ℹ</span>
-          </label>
-          <MultiSelectDropdown
-            :options="weekdayOptions"
-            :selected-values="searchParams.outboundWeekdays"
-            @update:selected-values="searchParams.outboundWeekdays = $event"
-            placeholder="Any day"
-            :searchable="false"
-            :show-selected-items="false"
-          />
-        </div>
-
-        <!-- Return Weekdays (only for two-way routes) -->
-        <div v-if="searchParams.twoWayRoutes" class="form-group">
-          <label class="dark:text-gray-200">
-            Return Flight Days
-            <span class="info-icon" title="Select specific days of the week for return flights">ℹ</span>
-          </label>
-          <MultiSelectDropdown
-            :options="weekdayOptions"
-            :selected-values="searchParams.returnWeekdays"
-            @update:selected-values="searchParams.returnWeekdays = $event"
-            placeholder="Any day"
-            :searchable="false"
-            :show-selected-items="false"
-          />
-        </div>
-      </div>
+            <!-- One-way Flight Days (single column) -->
+            <div v-if="!searchParams.twoWayRoutes" class="flex flex-col">
+              <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200 text-sm flex items-center gap-1">
+                Flight Days
+                <span class="inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/30 rounded-full cursor-help transition-all hover:bg-blue-100 dark:hover:bg-blue-900/50 hover:scale-110"
+                      title="Select specific days of the week for flights">ℹ</span>
+              </label>
+              <MultiSelectDropdown
+                :options="weekdayOptions"
+                :selected-values="searchParams.outboundWeekdays"
+                @update:selected-values="searchParams.outboundWeekdays = $event"
+                placeholder="Any day"
+                :searchable="false"
+                :show-selected-items="false"
+              />
+            </div>
+          </div>
         </div>
       </div>
 
       <!-- Results Section (Right Side on Desktop) -->
-      <div class="results-container" :class="{ 'blur-sm opacity-60 pointer-events-none': loading && results }">
-            <div v-if="results" class="results-summary dark:bg-gray-800">
-          <h3 class="dark:text-gray-100">
+      <div class="lg:flex-1 lg:min-w-0" :class="{ 'blur-sm opacity-60 pointer-events-none': loading && results }">
+        <!-- Initial State Message -->
+        <div v-if="!searched" class="p-8 bg-blue-50 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 rounded-lg border-2 border-blue-200 dark:border-blue-700 text-center">
+          <div class="text-2xl mb-3">🔍</div>
+          <h3 class="text-xl font-semibold mb-2">Ready to Search</h3>
+          <p class="text-base">Please select your origin, destination, and other filters, then click "Search Trips" to find available flights.</p>
+        </div>
+
+        <!-- Results Summary -->
+        <div v-if="results" class="p-4 bg-white dark:bg-gray-800 rounded-lg shadow-md mb-4">
+          <h3 class="text-gray-800 dark:text-gray-100 text-lg font-semibold m-0">
             Found {{ results.total }} trips
-            <span v-if="results.trips.length < results.total">
-              (showing {{ results.trips.length }})
+            <span v-if="paginatedTrips.length < results.total">
+              (showing {{ pageStart + 1 }}-{{ pageEnd }} of {{ results.total }})
             </span>
           </h3>
         </div>
 
         <!-- Results Table -->
-        <div v-if="results && results.trips.length > 0" class="results-section">
-          <div class="table-container dark:bg-gray-800">
-        <table class="trips-table">
-          <thead class="dark:bg-gray-700 dark:border-gray-600">
-            <tr>
-              <th class="dark:text-gray-200">{{ searchParams.twoWayRoutes ? 'Outbound' : 'Flight' }}</th>
-              <th v-if="searchParams.twoWayRoutes" class="dark:text-gray-200">Return</th>
-              <th class="dark:text-gray-200">{{ searchParams.twoWayRoutes ? 'Dates' : 'Date' }}</th>
-              <th v-if="searchParams.twoWayRoutes" class="dark:text-gray-200">Duration</th>
-              <th class="dark:text-gray-200">Total Price</th>
-              <th class="dark:text-gray-200">Details</th>
-            </tr>
-          </thead>
-          <tbody class="dark:bg-gray-800">
-            <tr
-              v-for="(trip, index) in results.trips"
-              :key="index"
-              class="dark:border-gray-700 dark:hover:bg-gray-700"
+        <div v-if="results && results.trips.length > 0" class="mt-4">
+          <div class="overflow-x-auto bg-white dark:bg-gray-800 rounded-lg shadow-md w-full">
+            <table class="w-full border-collapse text-sm">
+              <thead class="bg-gray-50 dark:bg-gray-700 border-b-2 border-gray-200 dark:border-gray-600">
+                <tr>
+                  <th class="p-4 text-left font-semibold text-gray-700 dark:text-gray-200 whitespace-nowrap">
+                    {{ searchParams.twoWayRoutes ? 'Outbound' : 'Flight' }}
+                  </th>
+                  <th v-if="searchParams.twoWayRoutes" class="p-4 text-left font-semibold text-gray-700 dark:text-gray-200 whitespace-nowrap">
+                    Return
+                  </th>
+                  <th class="p-4 text-left font-semibold text-gray-700 dark:text-gray-200 whitespace-nowrap">
+                    {{ searchParams.twoWayRoutes ? 'Dates' : 'Date' }}
+                  </th>
+                  <th v-if="searchParams.twoWayRoutes" class="p-4 text-left font-semibold text-gray-700 dark:text-gray-200 whitespace-nowrap">
+                    Duration
+                  </th>
+                  <th class="p-4 text-left font-semibold text-gray-700 dark:text-gray-200 whitespace-nowrap">
+                    Total Price
+                  </th>
+                  <th class="p-4 text-left font-semibold text-gray-700 dark:text-gray-200 whitespace-nowrap">
+                    Details
+                  </th>
+                </tr>
+              </thead>
+              <tbody class="bg-white dark:bg-gray-800">
+                <tr
+                  v-for="(trip, index) in paginatedTrips"
+                  :key="index"
+                  class="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  <!-- Outbound / One-way Flight -->
+                  <td class="p-4 align-top text-gray-800 dark:text-gray-200">
+                    <div class="flex flex-col gap-2">
+                      <div class="text-base font-semibold">
+                        <strong>{{ trip.outbound.origin }}</strong> → <strong>{{ trip.outbound.destination }}</strong>
+                      </div>
+                      <div class="text-xs text-gray-600 dark:text-gray-400">
+                        {{ trip.outbound.origin_name }} → {{ trip.outbound.destination_name }}
+                      </div>
+                      <div class="text-xs text-gray-600 dark:text-gray-400">
+                        {{ formatTime(trip.outbound.departure_time) }} - {{ formatTime(trip.outbound.arrival_time) }}
+                      </div>
+                      <div class="text-sm text-green-600 dark:text-green-400 font-semibold">
+                        {{ formatPrice(searchParams.twoWayRoutes ? trip.outbound.current_price : trip.outbound.price_per_person) }}
+                      </div>
+                    </div>
+                  </td>
+
+                  <!-- Return (only for two-way routes) -->
+                  <td v-if="searchParams.twoWayRoutes && trip.return" class="p-4 align-top text-gray-800 dark:text-gray-200">
+                    <div class="flex flex-col gap-2">
+                      <div class="text-base font-semibold">
+                        <strong>{{ trip.return.origin }}</strong> → <strong>{{ trip.return.destination }}</strong>
+                      </div>
+                      <div class="text-xs text-gray-600 dark:text-gray-400">
+                        {{ trip.return.origin_name }} → {{ trip.return.destination_name }}
+                      </div>
+                      <div class="text-xs text-gray-600 dark:text-gray-400">
+                        {{ formatTime(trip.return.departure_time) }} - {{ formatTime(trip.return.arrival_time) }}
+                      </div>
+                      <div class="text-sm text-green-600 dark:text-green-400 font-semibold">
+                        {{ formatPrice(trip.return.current_price) }}
+                      </div>
+                    </div>
+                  </td>
+
+                  <!-- Dates -->
+                  <td class="p-4 align-top text-gray-800 dark:text-gray-200">
+                    <div class="flex flex-col gap-2 text-sm">
+                      <div>{{ searchParams.twoWayRoutes ? 'Out: ' : '' }}{{ formatDate(trip.outbound.date_out) }}</div>
+                      <div v-if="searchParams.twoWayRoutes && trip.return">Return: {{ formatDate(trip.return.date_out) }}</div>
+                    </div>
+                  </td>
+
+                  <!-- Duration (only for two-way routes) -->
+                  <td v-if="searchParams.twoWayRoutes" class="p-4 align-top text-gray-800 dark:text-gray-200 text-center">
+                    <div class="flex flex-col gap-1">
+                      <div><strong>{{ trip.trip_duration_days }}</strong> days</div>
+                      <div class="text-xs text-gray-600 dark:text-gray-400">{{ trip.stay_duration }}</div>
+                    </div>
+                  </td>
+
+                  <!-- Total Price -->
+                  <td class="p-4 align-top text-center">
+                    <strong class="text-lg text-green-600 dark:text-green-400">{{ formatPrice(trip.total_price) }}</strong>
+                  </td>
+
+                  <!-- Details -->
+                  <td class="p-4 align-top text-gray-800 dark:text-gray-200">
+                    <div class="text-xs">
+                      <div class="flex flex-col gap-1 mb-2">
+                        <span class="text-gray-600 dark:text-gray-400">{{ searchParams.twoWayRoutes ? 'Flight durations:' : 'Duration:' }}</span>
+                        <span v-if="searchParams.twoWayRoutes && trip.return">{{ trip.outbound.duration }} / {{ trip.return.duration }}</span>
+                        <span v-else>{{ trip.outbound.duration }}</span>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Pagination -->
+          <div v-if="totalPages > 1" class="flex items-center justify-center gap-2 mt-6">
+            <button
+              @click="currentPage = 1"
+              :disabled="currentPage === 1"
+              class="px-3 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
             >
-              <!-- Outbound / One-way Flight -->
-              <td class="dark:text-gray-200 dark:bg-gray-800">
-                <div class="flight-info">
-                  <div class="route">
-                    <strong>{{ trip.outbound.origin }}</strong> → <strong>{{ trip.outbound.destination }}</strong>
-                  </div>
-                  <div class="route-names dark:text-gray-400">
-                    {{ trip.outbound.origin_name }} → {{ trip.outbound.destination_name }}
-                  </div>
-                  <div class="time-info dark:text-gray-400">
-                    {{ formatTime(trip.outbound.departure_time) }} - {{ formatTime(trip.outbound.arrival_time) }}
-                  </div>
-                  <div class="price dark:text-green-400">
-                    {{ formatPrice(searchParams.twoWayRoutes ? trip.outbound.current_price : trip.outbound.price_per_person) }}
-                  </div>
-                </div>
-              </td>
-
-              <!-- Return (only for two-way routes) -->
-              <td v-if="searchParams.twoWayRoutes && trip.return" class="dark:text-gray-200 dark:bg-gray-800">
-                <div class="flight-info">
-                  <div class="route">
-                    <strong>{{ trip.return.origin }}</strong> → <strong>{{ trip.return.destination }}</strong>
-                  </div>
-                  <div class="route-names dark:text-gray-400">
-                    {{ trip.return.origin_name }} → {{ trip.return.destination_name }}
-                  </div>
-                  <div class="time-info dark:text-gray-400">
-                    {{ formatTime(trip.return.departure_time) }} - {{ formatTime(trip.return.arrival_time) }}
-                  </div>
-                  <div class="price dark:text-green-400">
-                    {{ formatPrice(trip.return.current_price) }}
-                  </div>
-                </div>
-              </td>
-
-              <!-- Dates -->
-              <td class="dark:text-gray-200 dark:bg-gray-800">
-                <div class="date-info">
-                  <div>{{ searchParams.twoWayRoutes ? 'Out: ' : '' }}{{ formatDate(trip.outbound.date_out) }}</div>
-                  <div v-if="searchParams.twoWayRoutes && trip.return">Return: {{ formatDate(trip.return.date_out) }}</div>
-                </div>
-              </td>
-
-              <!-- Duration (only for two-way routes) -->
-              <td v-if="searchParams.twoWayRoutes" class="dark:text-gray-200 dark:bg-gray-800 text-center">
-                <div class="duration-info">
-                  <div><strong>{{ trip.trip_duration_days }}</strong> days</div>
-                  <div class="stay-duration dark:text-gray-400">{{ trip.stay_duration }}</div>
-                </div>
-              </td>
-
-              <!-- Total Price -->
-              <td class="price-cell dark:bg-gray-800">
-                <strong class="dark:text-green-400">{{ formatPrice(trip.total_price) }}</strong>
-              </td>
-
-              <!-- Details -->
-              <td class="dark:text-gray-200 dark:bg-gray-800">
-                <div class="details-info">
-                  <div class="detail-row">
-                    <span class="dark:text-gray-400">{{ searchParams.twoWayRoutes ? 'Flight durations:' : 'Duration:' }}</span>
-                    <span v-if="searchParams.twoWayRoutes && trip.return">{{ trip.outbound.duration }} / {{ trip.return.duration }}</span>
-                    <span v-else>{{ trip.outbound.duration }}</span>
-                  </div>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+              ««
+            </button>
+            <button
+              @click="currentPage--"
+              :disabled="currentPage === 1"
+              class="px-3 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+            >
+              «
+            </button>
+            <span class="px-4 py-2 text-gray-700 dark:text-gray-200">
+              Page {{ currentPage }} of {{ totalPages }}
+            </span>
+            <button
+              @click="currentPage++"
+              :disabled="currentPage === totalPages"
+              class="px-3 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+            >
+              »
+            </button>
+            <button
+              @click="currentPage = totalPages"
+              :disabled="currentPage === totalPages"
+              class="px-3 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+            >
+              »»
+            </button>
           </div>
         </div>
 
         <!-- No Results -->
         <div
           v-if="!loading && searched && (!results || results.trips.length === 0)"
-          class="no-results dark:bg-gray-700 dark:text-gray-300"
+          class="p-8 text-center bg-gray-50 dark:bg-gray-700 rounded-lg text-gray-600 dark:text-gray-300 text-lg"
         >
           <p>No trips found matching your criteria. Try adjusting your search parameters.</p>
         </div>
@@ -406,6 +448,10 @@ const destinationMode = ref('airports')
 const selectedCountries = ref([])
 const countriesData = ref([])
 
+// Pagination
+const currentPage = ref(1)
+const itemsPerPage = 50
+
 // Get today's date in YYYY-MM-DD format
 const getTodayDate = () => {
   const today = new Date()
@@ -423,9 +469,6 @@ const searchParams = ref({
   dateTo: '',
   minDays: 3,
   maxDays: 7,
-  minPrice: null,
-  maxPrice: null,
-  limit: 100,
   outboundWeekdays: [],
   returnWeekdays: []
 })
@@ -447,6 +490,26 @@ const canSearch = computed(() => {
 
   // For one-way routes, just need origins and destinations
   return hasOrigins && hasDestinations
+})
+
+// Pagination computed properties
+const totalPages = computed(() => {
+  if (!results.value || !results.value.trips) return 0
+  return Math.ceil(results.value.trips.length / itemsPerPage)
+})
+
+const pageStart = computed(() => {
+  return (currentPage.value - 1) * itemsPerPage
+})
+
+const pageEnd = computed(() => {
+  const end = currentPage.value * itemsPerPage
+  return Math.min(end, results.value?.trips.length || 0)
+})
+
+const paginatedTrips = computed(() => {
+  if (!results.value || !results.value.trips) return []
+  return results.value.trips.slice(pageStart.value, pageEnd.value)
 })
 
 // Options formatted for MultiSelectDropdown component (countries)
@@ -568,6 +631,7 @@ const searchTrips = async () => {
   error.value = null
   results.value = null
   searched.value = true
+  currentPage.value = 1 // Reset to first page on new search
 
   try {
     if (searchParams.value.twoWayRoutes) {
@@ -598,7 +662,7 @@ const searchTwoWayTrips = async () => {
       min_days: searchParams.value.minDays,
       max_days: searchParams.value.maxDays,
       passengers: 1, // Default to 1 passenger for price display
-      limit: searchParams.value.limit,
+      limit: 10000, // Get all results for client-side pagination
       return_from_same_airport: searchParams.value.returnFromSameAirport,
       return_to_same_airport: searchParams.value.returnToSameAirport
     }
@@ -606,8 +670,6 @@ const searchTwoWayTrips = async () => {
     // Add optional filters
     if (searchParams.value.dateFrom) params.date_from = searchParams.value.dateFrom
     if (searchParams.value.dateTo) params.date_to = searchParams.value.dateTo
-    if (searchParams.value.minPrice !== null) params.min_price = searchParams.value.minPrice
-    if (searchParams.value.maxPrice !== null) params.max_price = searchParams.value.maxPrice
 
     // Add weekday filters if they are selected
     if (searchParams.value.outboundWeekdays.length > 0) {
@@ -636,14 +698,12 @@ const searchOneWayTrips = async () => {
       origins: searchParams.value.origins.join(','),
       destinations: searchParams.value.destinations.join(','),
       passengers: 1, // Default to 1 passenger for price display
-      limit: searchParams.value.limit
+      limit: 10000 // Get all results for client-side pagination
     }
 
     // Add optional filters
     if (searchParams.value.dateFrom) params.date_from = searchParams.value.dateFrom
     if (searchParams.value.dateTo) params.date_to = searchParams.value.dateTo
-    if (searchParams.value.minPrice !== null) params.min_price = searchParams.value.minPrice
-    if (searchParams.value.maxPrice !== null) params.max_price = searchParams.value.maxPrice
 
     // Add weekday filter if selected
     if (searchParams.value.outboundWeekdays.length > 0) {
@@ -674,13 +734,11 @@ const clearFilters = () => {
     destinations: [],
     twoWayRoutes: true,
     returnFromSameAirport: true,
-    dateFrom: '',
+    returnToSameAirport: true,
+    dateFrom: getTodayDate(),
     dateTo: '',
     minDays: 3,
     maxDays: 7,
-    minPrice: null,
-    maxPrice: null,
-    limit: 100,
     outboundWeekdays: [],
     returnWeekdays: []
   }
@@ -689,6 +747,7 @@ const clearFilters = () => {
   results.value = null
   error.value = null
   searched.value = false
+  currentPage.value = 1
 }
 
 // Lifecycle
@@ -698,405 +757,7 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.container {
-  max-width: 100%;
-  margin: 0 auto;
-  padding: 2rem;
-  font-family: system-ui, -apple-system, sans-serif;
-}
-
-/* Main content layout: side-by-side on desktop */
-.main-content {
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
-}
-
-/* Desktop layout: filters left, results right */
-@media (min-width: 1024px) {
-  .main-content {
-    flex-direction: row;
-    align-items: flex-start;
-    gap: 1.5rem;
-  }
-
-  .search-form-container {
-    flex: 0 0 30%;
-    max-width: 30%;
-    position: sticky;
-    top: 2rem;
-    max-height: calc(100vh - 4rem);
-    overflow-y: auto;
-  }
-
-  .results-container {
-    flex: 1;
-    min-width: 0; /* Allow flexbox to shrink */
-  }
-}
-
-/* Scrollbar styling for sticky sidebar */
-.search-form-container::-webkit-scrollbar {
-  width: 8px;
-}
-
-.search-form-container::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.search-form-container::-webkit-scrollbar-thumb {
-  background: #cbd5e0;
-  border-radius: 4px;
-}
-
-.search-form-container::-webkit-scrollbar-thumb:hover {
-  background: #a0aec0;
-}
-
-h1 {
-  color: #2c3e50;
-  margin-bottom: 0.5rem;
-}
-
-h2 {
-  color: #34495e;
-  margin-bottom: 1rem;
-  font-size: 1.25rem;
-  border-bottom: 2px solid #e0e0e0;
-  padding-bottom: 0.5rem;
-}
-
-@media (min-width: 1024px) {
-  h2 {
-    font-size: 1.125rem;
-  }
-}
-
-h3 {
-  color: #34495e;
-  margin: 0;
-  font-size: 1.2rem;
-}
-
-.error {
-  margin-top: 2rem;
-  padding: 1rem;
-  background: #f8d7da;
-  color: #721c24;
-  border-radius: 5px;
-  border: 1px solid #f5c6cb;
-}
-
-.search-form {
-  padding: 1.5rem;
-  background: white;
-  border-radius: 10px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.form-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  margin-top: 1rem;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-}
-
-.form-group label {
-  font-weight: 600;
-  margin-bottom: 0.5rem;
-  color: #495057;
-  font-size: 0.95rem;
-}
-
-.form-group input,
-.form-group select {
-  padding: 0.6rem;
-  border: 2px solid #ced4da;
-  border-radius: 5px;
-  font-size: 1rem;
-  transition: border-color 0.2s;
-}
-
-.form-group input:focus,
-.form-group select:focus {
-  outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
-}
-
-.multi-select {
-  min-height: 150px;
-  cursor: pointer;
-}
-
-.multi-select option {
-  padding: 0.5rem;
-  border-radius: 3px;
-  margin: 2px 0;
-  cursor: pointer;
-}
-
-.multi-select option:hover {
-  background: #e7f3ff;
-}
-
-.multi-select option:checked {
-  background: #007bff;
-  color: white;
-}
-
-.checkbox-group {
-  justify-content: center;
-}
-
-.checkbox-label {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  cursor: pointer;
-  font-weight: 600;
-}
-
-.checkbox {
-  width: 20px;
-  height: 20px;
-  cursor: pointer;
-}
-
-.selected-info {
-  margin-top: 0.25rem;
-  font-size: 0.8rem;
-  color: #6c757d;
-}
-
-.info-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  margin-left: 0.5rem;
-  font-size: 0.85rem;
-  font-weight: bold;
-  color: #007bff;
-  background: rgba(0, 123, 255, 0.1);
-  border-radius: 50%;
-  cursor: help;
-  transition: all 0.2s;
-  flex-shrink: 0;
-}
-
-.info-icon:hover {
-  background: rgba(0, 123, 255, 0.2);
-  transform: scale(1.1);
-}
-
-.dark .info-icon {
-  color: #60a5fa;
-  background: rgba(96, 165, 250, 0.15);
-}
-
-.dark .info-icon:hover {
-  background: rgba(96, 165, 250, 0.25);
-}
-
-.action-buttons {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  margin-top: 1.25rem;
-  margin-bottom: 0.75rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid #e0e0e0;
-}
-
-.dark .action-buttons {
-  border-bottom-color: #4a5568;
-}
-
-@media (min-width: 768px) and (max-width: 1023px) {
-  .action-buttons {
-    flex-direction: row;
-  }
-}
-
-button {
-  color: white;
-  border: none;
-  padding: 0.75rem 1.5rem;
-  border-radius: 5px;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-weight: 500;
-}
-
-.btn-primary {
-  background: #007bff;
-}
-
-.btn-primary:hover:not(:disabled) {
-  background: #0056b3;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
-}
-
-.btn-primary:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.btn-secondary {
-  background: #6c757d;
-}
-
-.btn-secondary:hover {
-  background: #545b62;
-}
-
-.results-summary {
-  padding: 1rem 2rem;
-  background: white;
-  border-radius: 10px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  margin-bottom: 1rem;
-}
-
-.results-section {
-  margin-top: 1rem;
-}
-
-.table-container {
-  overflow-x: auto;
-  background: white;
-  border-radius: 10px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  width: 100%;
-}
-
-/* Better scrolling for table */
-@media (min-width: 1024px) {
-  .table-container {
-    max-width: 100%;
-  }
-}
-
-.trips-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.9rem;
-}
-
-.trips-table thead {
-  background: #f8f9fa;
-  border-bottom: 2px solid #dee2e6;
-}
-
-.trips-table th {
-  padding: 1rem;
-  text-align: left;
-  font-weight: 600;
-  color: #495057;
-  white-space: nowrap;
-}
-
-.trips-table tbody tr {
-  border-bottom: 1px solid #dee2e6;
-  transition: background-color 0.2s;
-}
-
-.trips-table tbody tr:hover {
-  background: #f8f9fa;
-}
-
-.trips-table td {
-  padding: 1rem;
-  vertical-align: top;
-}
-
-.flight-info {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-}
-
-.route {
-  font-size: 1rem;
-  font-weight: 600;
-}
-
-.route-names {
-  font-size: 0.8rem;
-  color: #6c757d;
-}
-
-.time-info {
-  font-size: 0.85rem;
-  color: #6c757d;
-}
-
-.price {
-  font-size: 0.95rem;
-  color: #28a745;
-  font-weight: 600;
-}
-
-.date-info {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-  font-size: 0.9rem;
-}
-
-.duration-info {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-}
-
-.stay-duration {
-  font-size: 0.8rem;
-  color: #6c757d;
-  font-weight: normal;
-}
-
-.price-cell {
-  font-size: 1.2rem;
-  color: #28a745;
-  text-align: center;
-}
-
-.details-info {
-  font-size: 0.85rem;
-}
-
-.detail-row {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-  margin-bottom: 0.5rem;
-}
-
-.no-results {
-  padding: 2rem;
-  text-align: center;
-  background: #f8f9fa;
-  border-radius: 10px;
-  color: #6c757d;
-  font-size: 1.1rem;
-}
-
-/* Ensure results container takes full width */
-.results-container {
-  width: 100%;
-}
-
-/* Progress bar animation */
+/* Only animation keyframes needed for progress bar */
 @keyframes progress {
   0% {
     width: 0%;
