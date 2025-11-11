@@ -18,9 +18,6 @@
         <NuxtLink to="/trip-search" class="nav-link">
           Trip Search
         </NuxtLink>
-        <NuxtLink to="/custom-trip-search" class="nav-link">
-          Custom Search
-        </NuxtLink>
         <button @click="$emit('toggle-dark-mode')" class="dark-mode-toggle" :aria-label="isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'">
           <span v-if="isDarkMode">☀️</span>
           <span v-else>🌙</span>
