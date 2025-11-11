@@ -16,7 +16,7 @@ MONGO_USERNAME=
 MONGO_PASSWORD=
 
 # Ryanair scraping configuration
-RYANAIR_REQUEST_DELAY=0.5
+RYANAIR_REQUEST_DELAY=1.0
 RYANAIR_COOKIE_WAIT_TIME=30
 RYANAIR_COOKIE_CHECK_INTERVAL=0.5
 """
@@ -44,7 +44,7 @@ class Settings(BaseSettings):
     RYANAIR_COOKIE_URL: str = "https://www.ryanair.com/hr/en/trip/flights/select?adults=1&teens=0&children=0&infants=0&dateOut=2026-03-06&dateIn=2026-03-08&isConnectedFlight=false&discount=0&promoCode=&isReturn=true&originIata=WRO&destinationIata=ALC&tpAdults=1&tpTeens=0&tpChildren=0&tpInfants=0&tpStartDate=2026-03-06&tpEndDate=2026-03-08&tpDiscount=0&tpPromoCode=&tpOriginIata=WRO&tpDestinationIata=ALC"
 
     # Ryanair scraping configuration
-    RYANAIR_REQUEST_DELAY: float = 0.5  # Delay between Ryanair API requests (seconds)
+    RYANAIR_REQUEST_DELAY: float = 1.0  # Delay between Ryanair API requests (seconds)
     RYANAIR_COOKIE_WAIT_TIME: int = 30  # Max time to wait for cookie extraction (seconds)
     RYANAIR_COOKIE_CHECK_INTERVAL: float = 0.5  # Interval for checking cookie extraction progress (seconds)
 

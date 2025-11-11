@@ -54,12 +54,13 @@ SCAN_ITERATIONS_COLLECTION = "scan_iterations"
 class FlightStorage:
     """Handles MongoDB storage and price tracking for individual flights."""
 
-    def __init__(self, mongo_uri: str, database_name: str, collection_name: str):
+    def __init__(self, mongo_uri: str, database_name: str, collection_name: str, create_indexes: bool = False):
         """Initialize MongoDB connection."""
         self.client = MongoClient(mongo_uri)
         self.db = self.client[database_name]
         self.collection = self.db[collection_name]
-        self._create_indexes()
+        if create_indexes:
+            self._create_indexes()
 
     def _create_indexes(self):
         """Create indexes for efficient querying and unique constraints."""
@@ -77,7 +78,11 @@ class FlightStorage:
         self.collection.create_index("last_seen")
         self.collection.create_index("current_price")
 
-        logger.info(f"Created indexes on collection: {self.collection.name}")
+        logger.success(f"✓ Created indexes on collection: {self.collection.name}")
+
+    def create_indexes(self):
+        """Public method to create indexes (called once before scanning)."""
+        self._create_indexes()
 
     def _generate_flight_id(self, origin: str, destination: str, flight_number: str,
                            date_out: str, departure_time: str) -> str:
@@ -174,18 +179,19 @@ class FlightStorage:
 class ScanIterationManager:
     """Manages scan iterations and enforces scan interval rules."""
 
-    def __init__(self, mongo_uri: str, database_name: str, collection_name: str):
+    def __init__(self, mongo_uri: str, database_name: str, collection_name: str, create_indexes: bool = False):
         """Initialize MongoDB connection for scan iterations."""
         self.client = MongoClient(mongo_uri)
         self.db = self.client[database_name]
         self.collection = self.db[collection_name]
-        self._create_indexes()
+        if create_indexes:
+            self._create_indexes()
 
     def _create_indexes(self):
         """Create indexes for efficient querying."""
         self.collection.create_index("start_time", unique=False)
         self.collection.create_index("status", unique=False)
-        logger.info(f"Created indexes on collection: {self.collection.name}")
+        logger.success(f"✓ Created indexes on collection: {self.collection.name}")
 
     def can_start_scan(self, scan_interval_hours: int) -> tuple[bool, Optional[str]]:
         """
@@ -336,7 +342,7 @@ class ScanIterationManager:
         }
 
 
-def extract_flight_data(trip, flight_date, flight, currency: str) -> Optional[Dict[str, Any]]:
+def extract_flight_data(trip, flight_date, flight, currency: str, storage: FlightStorage) -> Optional[Dict[str, Any]]:
     """
     Extract and flatten flight data from Trip/FlightDate/Flight structure.
 
@@ -345,6 +351,7 @@ def extract_flight_data(trip, flight_date, flight, currency: str) -> Optional[Di
         flight_date: FlightDate object containing date info
         flight: Individual Flight object
         currency: Currency code
+        storage: FlightStorage instance for generating flight IDs
 
     Returns:
         Dictionary with flattened flight data ready for MongoDB storage
@@ -363,8 +370,7 @@ def extract_flight_data(trip, flight_date, flight, currency: str) -> Optional[Di
         departure_time = flight.time[0] if len(flight.time) > 0 else ""
         arrival_time = flight.time[1] if len(flight.time) > 1 else ""
 
-        # Generate unique flight ID
-        storage = FlightStorage(settings.mongo_uri, settings.MONGO_DATABASE, FLIGHTS_COLLECTION)
+        # Generate unique flight ID using passed storage instance
         flight_id = storage._generate_flight_id(
             trip.origin,
             trip.destination,
@@ -439,7 +445,8 @@ def scan_flights(
     departure_airports: List[str],
     date_out_str: str,
     date_in_str: str,
-    cookie: str
+    cookie: str,
+    storage: FlightStorage
 ) -> Dict[str, int]:
     """
     Scan flights from specified airports and save to MongoDB.
@@ -449,12 +456,12 @@ def scan_flights(
         date_out_str: Outbound date (YYYY-MM-DD)
         date_in_str: Return date (YYYY-MM-DD)
         cookie: Valid Ryanair cookie
+        storage: FlightStorage instance for saving flights
 
     Returns:
         Dictionary with scan statistics
     """
     scan_timestamp = datetime.now()
-    storage = FlightStorage(settings.mongo_uri, settings.MONGO_DATABASE, FLIGHTS_COLLECTION)
 
     # Load Ryanair database for route information
     database = load_from_mongodb("ryanair", settings.mongo_uri)
@@ -471,7 +478,7 @@ def scan_flights(
     }
 
     # Scan each departure airport
-    for airport_code in departure_airports:
+    for airport_idx, airport_code in enumerate(departure_airports, 1):
         airport = database.get_airport_by_code(airport_code)
         if not airport:
             logger.error(f"Airport {airport_code} not found in database")
@@ -506,9 +513,9 @@ def scan_flights(
                 for trip in flights.trips:
                     for flight_date in trip.dates:
                         for flight in flight_date.flights:
-                            # Extract flight data
+                            # Extract flight data - pass storage instance
                             flight_data = extract_flight_data(
-                                trip, flight_date, flight, flights.currency
+                                trip, flight_date, flight, flights.currency, storage
                             )
 
                             if flight_data:
@@ -521,6 +528,10 @@ def scan_flights(
             except Exception as e:
                 logger.error(f"✗ {airport_code} → {dest_code}: {str(e)[:100]}")
                 stats["failed_queries"] += 1
+
+        # Log progress after each airport
+        remaining_airports = len(departure_airports) - airport_idx
+        logger.info(f"✈️  Completed {airport.name} ({airport_code}). Airports remaining: {remaining_airports}/{len(departure_airports)}")
 
     return stats
 
@@ -564,11 +575,16 @@ def main():
     logger.info(f"Scan until date: {SCAN_UNTIL_DATE}")
     logger.info("=" * 80)
 
+    # Create indexes once before starting scan
+    logger.info("Creating database indexes...")
+    storage = FlightStorage(settings.mongo_uri, settings.MONGO_DATABASE, FLIGHTS_COLLECTION, create_indexes=True)
+
     # Check if enough time has passed since last scan
     scan_manager = ScanIterationManager(
         settings.mongo_uri,
         settings.MONGO_DATABASE,
-        SCAN_ITERATIONS_COLLECTION
+        SCAN_ITERATIONS_COLLECTION,
+        create_indexes=True
     )
 
     can_start, reason = scan_manager.can_start_scan(SCAN_INTERVAL_HOURS)
@@ -625,7 +641,7 @@ def main():
             logger.info("=" * 80)
 
             range_start = datetime.now()
-            stats = scan_flights(DEPARTURE_AIRPORTS, date_out_str, date_in_str, cookie)
+            stats = scan_flights(DEPARTURE_AIRPORTS, date_out_str, date_in_str, cookie, storage)
             range_duration = (datetime.now() - range_start).total_seconds()
 
             # Update totals
@@ -654,8 +670,7 @@ def main():
         if total_stats['failed_queries'] > 0:
             logger.warning(f"Failed queries: {total_stats['failed_queries']}")
 
-        # Get storage statistics
-        storage = FlightStorage(settings.mongo_uri, settings.MONGO_DATABASE, FLIGHTS_COLLECTION)
+        # Get storage statistics (reuse existing storage instance)
         db_stats = storage.get_flight_stats()
 
         logger.info("=" * 80)
