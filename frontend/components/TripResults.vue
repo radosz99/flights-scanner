@@ -15,8 +15,8 @@
       <!-- Initial State Message -->
       <div v-if="!searched" class="p-8 bg-blue-50 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 rounded-lg border-2 border-blue-200 dark:border-blue-700 text-center">
         <div class="text-2xl mb-3">🔍</div>
-        <h3 class="text-xl font-semibold mb-2">Ready to Search</h3>
-        <p class="text-base">Please select your origin, destination, and other filters, then click "Search Trips" to find available flights.</p>
+        <h3 class="text-xl font-semibold mb-2">Gotowy do Wyszukiwania</h3>
+        <p class="text-base">Wybierz lotnisko wylotu, lotnisko docelowe i inne filtry, a następnie kliknij "Szukaj Lotów", aby znaleźć dostępne loty.</p>
       </div>
 
       <!-- Results Table -->
@@ -26,19 +26,19 @@
             <thead class="bg-gray-50 dark:bg-gray-700 border-b-2 border-gray-200 dark:border-gray-600">
               <tr>
                 <th class="p-3 text-left font-semibold text-gray-700 dark:text-gray-200 whitespace-nowrap">
-                  Destination
+                  Cel Podróży
                 </th>
                 <th class="p-3 text-center font-semibold text-gray-700 dark:text-gray-200 whitespace-nowrap">
-                  Date Range
+                  Zakres Dat
                 </th>
                 <th class="p-3 text-left font-semibold text-gray-700 dark:text-gray-200 whitespace-nowrap">
-                  Flight Info
+                  Informacje o Locie
                 </th>
                 <th class="p-3 text-center font-semibold text-gray-700 dark:text-gray-200 whitespace-nowrap">
-                  Total Price
+                  Cena Całkowita
                 </th>
                 <th v-if="twoWayRoutes" class="p-3 text-center font-semibold text-gray-700 dark:text-gray-200 whitespace-nowrap">
-                  Duration
+                  Czas Trwania
                 </th>
               </tr>
             </thead>
@@ -104,7 +104,7 @@
                         </span>
                       </div>
                       <div v-if="trip.outbound.last_seen" class="ml-7 text-xs text-gray-500 dark:text-gray-400">
-                        Last updated: {{ formatDateTime(trip.outbound.last_seen) }}
+                        Ostatnia aktualizacja: {{ formatDateTime(trip.outbound.last_seen) }}
                       </div>
                     </div>
                   </td>
@@ -163,7 +163,7 @@
                         </span>
                       </div>
                       <div v-if="trip.return.last_seen" class="ml-7 text-xs text-gray-500 dark:text-gray-400">
-                        Last updated: {{ formatDateTime(trip.return.last_seen) }}
+                        Ostatnia aktualizacja: {{ formatDateTime(trip.return.last_seen) }}
                       </div>
                     </div>
                   </td>
@@ -195,7 +195,7 @@
             «
           </button>
           <span class="px-4 py-2 text-gray-700 dark:text-gray-200">
-            Page {{ currentPage }} of {{ totalPages }}
+            Strona {{ currentPage }} z {{ totalPages }}
           </span>
           <button
             @click="$emit('update:current-page', currentPage + 1)"
@@ -219,7 +219,7 @@
         v-if="!loading && searched && (!results || results.trips.length === 0)"
         class="p-8 text-center bg-gray-50 dark:bg-gray-700 rounded-lg text-gray-600 dark:text-gray-300 text-lg"
       >
-        <p>No trips found matching your criteria. Try adjusting your search parameters.</p>
+        <p>Nie znaleziono lotów spełniających Twoje kryteria. Spróbuj dostosować parametry wyszukiwania.</p>
       </div>
     </div>
   </div>

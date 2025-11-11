@@ -1,9 +1,9 @@
 <template>
   <div class="max-w-[1400px] mx-auto p-8 font-sans dark:bg-gray-900">
     <!-- Header -->
-    <h1 class="text-gray-800 dark:text-gray-100 mb-2 text-4xl font-bold">Flight Price Chart</h1>
+    <h1 class="text-gray-800 dark:text-gray-100 mb-2 text-4xl font-bold">Wykres Cen Lotów</h1>
     <p class="text-gray-600 dark:text-gray-400 text-lg mb-8">
-      View price trends for your selected route over the full date range
+      Zobacz trendy cenowe dla wybranej trasy w pełnym zakresie dat
     </p>
 
     <!-- Loading -->
@@ -19,7 +19,7 @@
       v-if="error"
       class="mt-8 p-4 bg-red-50 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-md border border-red-200 dark:border-red-700"
     >
-      <strong>Error:</strong> {{ error }}
+      <strong>Błąd:</strong> {{ error }}
     </div>
 
     <!-- Route Selector -->
@@ -44,7 +44,7 @@
       v-if="!loading && selectedOrigin && selectedDestination && (!chartData || !chartData.data || chartData.data.length === 0)"
       class="mt-8 p-8 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-center text-lg"
     >
-      No price data available for the selected route. Try selecting a different route.
+      Brak danych cenowych dla wybranej trasy. Spróbuj wybrać inną trasę.
     </div>
   </div>
 </template>

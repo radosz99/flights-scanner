@@ -2,14 +2,14 @@
   <div v-if="results && results.trips.length > 0" class="mt-8">
     <div class="mb-6 pb-4 border-b-2 border-gray-200 dark:border-gray-700">
       <h2 class="text-2xl font-semibold text-gray-800 dark:text-gray-100">
-        Found {{ results.total_combinations }} Round Trips
+        Znaleziono {{ results.total_combinations }} Lotów w Obie Strony
       </h2>
       <p class="text-gray-600 dark:text-gray-400 mt-2">
-        Showing {{ results.showing }} results for
+        Pokazywanie {{ results.showing }} wyników dla
         <strong class="text-gray-900 dark:text-gray-200">
-          {{ results.origin }} → {{ results.destination === 'ALL' ? 'All Destinations' : results.destination }}
+          {{ results.origin }} → {{ results.destination === 'ALL' ? 'Wszystkie Cele' : results.destination }}
         </strong>
-        ({{ results.min_days }}-{{ results.max_days }} days)
+        ({{ results.min_days }}-{{ results.max_days }} dni)
       </p>
     </div>
 
@@ -18,25 +18,25 @@
         <thead class="bg-gray-100 dark:bg-gray-700 border-b-2 border-gray-300 dark:border-gray-600">
           <tr>
             <th v-if="results.destination === 'ALL'" class="px-3 py-4 text-left font-semibold text-gray-700 dark:text-gray-200 whitespace-nowrap sticky top-0 bg-gray-100 dark:bg-gray-700 z-10">
-              Destination
+              Cel Podróży
             </th>
             <th class="px-3 py-4 text-left font-semibold text-gray-700 dark:text-gray-200 whitespace-nowrap sticky top-0 bg-gray-100 dark:bg-gray-700 z-10">
-              Duration
+              Czas Trwania
             </th>
             <th class="px-3 py-4 text-left font-semibold text-gray-700 dark:text-gray-200 whitespace-nowrap sticky top-0 bg-gray-100 dark:bg-gray-700 z-10">
-              Outbound
+              Lot Tam
             </th>
             <th class="px-3 py-4 text-left font-semibold text-gray-700 dark:text-gray-200 whitespace-nowrap sticky top-0 bg-gray-100 dark:bg-gray-700 z-10">
-              Outbound Times
+              Godziny Lotu Tam
             </th>
             <th class="px-3 py-4 text-left font-semibold text-gray-700 dark:text-gray-200 whitespace-nowrap sticky top-0 bg-gray-100 dark:bg-gray-700 z-10">
-              Return
+              Lot Powrotny
             </th>
             <th class="px-3 py-4 text-left font-semibold text-gray-700 dark:text-gray-200 whitespace-nowrap sticky top-0 bg-gray-100 dark:bg-gray-700 z-10">
-              Return Times
+              Godziny Lotu Powrotnego
             </th>
             <th class="px-3 py-4 text-left font-semibold text-gray-700 dark:text-gray-200 whitespace-nowrap sticky top-0 bg-gray-100 dark:bg-gray-700 z-10">
-              Total Price
+              Cena Całkowita
             </th>
           </tr>
         </thead>
@@ -60,7 +60,7 @@
 
             <!-- Duration -->
             <td class="px-3 py-3 whitespace-nowrap bg-white dark:bg-gray-800">
-              <strong class="text-gray-900 dark:text-gray-100">{{ trip.trip_duration_days }} days</strong>
+              <strong class="text-gray-900 dark:text-gray-100">{{ trip.trip_duration_days }} dni</strong>
             </td>
 
             <!-- Outbound Date -->
@@ -74,7 +74,7 @@
                   <span>{{ trip.outbound_flight.duration }}</span>
                 </div>
                 <div v-if="trip.outbound_flight.last_seen" class="text-xs text-gray-500 dark:text-gray-400">
-                  Updated: {{ formatDateTime(trip.outbound_flight.last_seen) }}
+                  Zaktualizowano: {{ formatDateTime(trip.outbound_flight.last_seen) }}
                 </div>
               </div>
             </td>
@@ -99,7 +99,7 @@
                   <span>{{ trip.return_flight.duration }}</span>
                 </div>
                 <div v-if="trip.return_flight.last_seen" class="text-xs text-gray-500 dark:text-gray-400">
-                  Updated: {{ formatDateTime(trip.return_flight.last_seen) }}
+                  Zaktualizowano: {{ formatDateTime(trip.return_flight.last_seen) }}
                 </div>
               </div>
             </td>

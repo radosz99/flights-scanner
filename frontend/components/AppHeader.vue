@@ -4,21 +4,21 @@
       <div class="logo">
         <NuxtLink to="/">
           <span class="logo-icon">✈️</span>
-          <span class="logo-text">Flights Scanner</span>
+          <span class="logo-text">Skaner Lotów</span>
         </NuxtLink>
       </div>
 
       <nav class="nav-menu">
         <NuxtLink to="/" class="nav-link">
-          Home
+          Strona Główna
         </NuxtLink>
         <NuxtLink to="/price-chart" class="nav-link">
-          Price Chart
+          Wykres Cen
         </NuxtLink>
         <NuxtLink to="/trip-search" class="nav-link">
-          Trip Search
+          Wyszukiwarka Tras
         </NuxtLink>
-        <button @click="$emit('toggle-dark-mode')" class="dark-mode-toggle" :aria-label="isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'">
+        <button @click="$emit('toggle-dark-mode')" class="dark-mode-toggle" :aria-label="isDarkMode ? 'Przełącz na tryb jasny' : 'Przełącz na tryb ciemny'">
           <span v-if="isDarkMode">☀️</span>
           <span v-else>🌙</span>
         </button>

@@ -1,8 +1,8 @@
 <template>
   <div class="max-w-full mx-auto p-8 min-h-screen dark:bg-gray-900">
-    <h1 class="text-gray-800 dark:text-gray-100 text-4xl font-bold mb-4">Flight Search</h1>
+    <h1 class="text-gray-800 dark:text-gray-100 text-4xl font-bold mb-4">Wyszukiwarka Lotów</h1>
     <p class="text-gray-600 dark:text-gray-300 text-lg mb-8">
-      Search for one-way or round-trip flights with flexible origin and destination matching. Use batch search to efficiently find flights across multiple airports.
+      Szukaj lotów w jedną stronę lub w obie strony z elastycznym dopasowaniem tras. Użyj wyszukiwania wsadowego, aby efektywnie znaleźć loty na wielu lotniskach.
     </p>
 
     <!-- Error -->
@@ -10,7 +10,7 @@
       v-if="error"
       class="mt-8 p-4 bg-red-50 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-md border border-red-200 dark:border-red-700"
     >
-      <strong>Error:</strong> {{ error }}
+      <strong>Błąd:</strong> {{ error }}
     </div>
 
     <!-- Main Content: Filters + Results Side by Side on Desktop -->
@@ -44,24 +44,24 @@
         >
           <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 max-w-md mx-4">
             <h3 class="text-xl font-bold text-gray-800 dark:text-gray-100 mb-3">
-              Filters have been changed
+              Filtry zostały zmienione
             </h3>
             <p class="text-gray-600 dark:text-gray-300 mb-4 text-sm">
-              Your filters have been modified. Click "Search Trips" to see updated results or revert to previous filters.
+              Twoje filtry zostały zmodyfikowane. Kliknij "Szukaj Lotów", aby zobaczyć zaktualizowane wyniki lub przywróć poprzednie filtry.
             </p>
             <div class="flex gap-3">
               <button
                 @click="revertFilters"
                 class="flex-1 px-4 py-2 bg-gray-600 hover:bg-gray-700 dark:bg-gray-600 dark:hover:bg-gray-700 text-white font-medium rounded-md transition-colors"
               >
-                Revert Changes
+                Cofnij Zmiany
               </button>
               <button
                 @click="searchTrips"
                 :disabled="!canSearch"
                 class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white font-medium rounded-md transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                Search Now
+                Szukaj Teraz
               </button>
             </div>
           </div>
@@ -85,7 +85,7 @@
       v-if="showScrollTop"
       @click="scrollToTop"
       class="fixed bottom-8 right-8 p-4 bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white rounded-full shadow-lg transition-all duration-300 hover:scale-110 z-50"
-      title="Scroll to top"
+      title="Przewiń do góry"
     >
       <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" />
@@ -127,7 +127,7 @@ const POLISH_AIRPORT_CODES = [
 
 // State
 const loading = ref(false)
-const loadingMessage = ref('Loading...')
+const loadingMessage = ref('Ładowanie...')
 const error = ref(null)
 const searched = ref(false)
 
@@ -374,7 +374,7 @@ const updateFilters = (newFilters) => {
 
 const loadAirports = async () => {
   loading.value = true
-  loadingMessage.value = 'Loading airports...'
+  loadingMessage.value = 'Ładowanie lotnisk...'
   error.value = null
 
   try {
@@ -401,7 +401,7 @@ const loadAirports = async () => {
     // Store countries data
     countriesData.value = countriesResponse.countries || []
   } catch (e) {
-    error.value = e.message || 'Failed to load airports'
+    error.value = e.message || 'Nie udało się załadować lotnisk'
   } finally {
     loading.value = false
   }
@@ -409,12 +409,12 @@ const loadAirports = async () => {
 
 const searchTrips = async () => {
   if (!canSearch.value) {
-    error.value = 'Please select origin(s), destination(s), and specify trip duration'
+    error.value = 'Proszę wybrać lotnisko(a) wylotu, lotnisko(a) docelowe i określić czas trwania podróży'
     return
   }
 
   loading.value = true
-  loadingMessage.value = 'Searching for trips...'
+  loadingMessage.value = 'Wyszukiwanie lotów...'
   error.value = null
   results.value = null
   searched.value = true
@@ -438,8 +438,8 @@ const searchTrips = async () => {
     updateUrlParams()
   } catch (e) {
     error.value = e.statusCode === 404
-      ? 'No trips found for the selected criteria'
-      : e.message || 'Failed to search trips'
+      ? 'Nie znaleziono lotów dla wybranych kryteriów'
+      : e.message || 'Nie udało się wyszukać lotów'
     results.value = null
   } finally {
     loading.value = false

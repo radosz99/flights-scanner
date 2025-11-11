@@ -1,9 +1,9 @@
 <template>
   <div class="max-w-[1400px] mx-auto p-8 font-sans dark:bg-gray-900">
     <!-- Header -->
-    <h1 class="text-gray-800 dark:text-gray-100 mb-2 text-4xl font-bold">Round Trip Search</h1>
+    <h1 class="text-gray-800 dark:text-gray-100 mb-2 text-4xl font-bold">Wyszukiwanie Lotów w Obie Strony</h1>
     <p class="text-gray-600 dark:text-gray-400 text-lg mb-8">
-      Find the best round trip deals with flexible duration
+      Znajdź najlepsze oferty lotów w obie strony z elastycznym czasem trwania
     </p>
 
     <!-- Loading with Progress Bar -->
@@ -22,7 +22,7 @@
       v-if="error"
       class="mt-8 p-4 bg-red-50 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-md border border-red-200 dark:border-red-700"
     >
-      <strong>Error:</strong> {{ error }}
+      <strong>Błąd:</strong> {{ error }}
     </div>
 
     <!-- Search Form -->
@@ -64,7 +64,7 @@
       v-if="(results && results.trips.length > 0) || (exampleRoutes.length > 0)"
       class="mt-8 flex justify-center items-center gap-2"
     >
-      <span class="text-gray-600 dark:text-gray-400 mr-2">View:</span>
+      <span class="text-gray-600 dark:text-gray-400 mr-2">Widok:</span>
       <div class="inline-flex rounded-lg shadow-sm" role="group">
         <button
           @click="viewMode = 'table'"
@@ -113,7 +113,7 @@
       </div>
       <template #fallback>
         <div class="mt-8 p-8 bg-gray-100 dark:bg-gray-800 rounded-lg text-center">
-          <p class="text-gray-600 dark:text-gray-400">Loading map...</p>
+          <p class="text-gray-600 dark:text-gray-400">Ładowanie mapy...</p>
         </div>
       </template>
     </ClientOnly>
@@ -123,8 +123,8 @@
       v-if="viewMode === 'table' && !results && exampleRoutes.length > 0"
       class="mt-8 p-8 bg-blue-50 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-lg text-center"
     >
-      <p class="text-lg mb-2">Switch to Map view to see all available two-way routes!</p>
-      <p class="text-sm">Or select an origin airport and search for specific trips to see results in table view.</p>
+      <p class="text-lg mb-2">Przełącz na widok mapy, aby zobaczyć wszystkie dostępne trasy!</p>
+      <p class="text-sm">Lub wybierz lotnisko wylotu i wyszukaj konkretne loty, aby zobaczyć wyniki w widoku tabeli.</p>
     </div>
 
     <!-- No Results -->
@@ -132,7 +132,7 @@
       v-if="!loading && searched && (!results || results.trips.length === 0)"
       class="mt-8 p-8 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-center text-lg"
     >
-      <p>No round trips found matching your criteria. Try adjusting your search parameters.</p>
+      <p>Nie znaleziono lotów w obie strony dla wybranych kryteriów. Spróbuj dostosować parametry wyszukiwania.</p>
     </div>
   </div>
 </template>
@@ -205,14 +205,14 @@ const loadDestinationsFromOrigin = async (origin) => {
   }
 
   loading.value = true
-  loadingMessage.value = 'Loading destinations...'
+  loadingMessage.value = 'Ładowanie lotnisk docelowych...'
   error.value = null
 
   try {
     const response = await $fetch(`${apiBaseUrl}/airports/origins/${origin}/destinations`)
     availableDestinations.value = response.destinations || []
   } catch (e) {
-    error.value = e.message || 'Failed to load destinations'
+    error.value = e.message || 'Nie udało się załadować lotnisk docelowych'
     availableDestinations.value = []
   } finally {
     loading.value = false
@@ -291,14 +291,14 @@ watch(() => searchParams.value.maxDays, (newVal) => {
 // Methods
 const loadOrigins = async () => {
   loading.value = true
-  loadingMessage.value = 'Loading airports...'
+  loadingMessage.value = 'Ładowanie lotnisk...'
   error.value = null
 
   try {
     const response = await $fetch(`${apiBaseUrl}/airports/polish-origins`)
     origins.value = response.origins || []
   } catch (e) {
-    error.value = e.message || 'Failed to load airports'
+    error.value = e.message || 'Nie udało się załadować lotnisk'
   } finally {
     loading.value = false
   }
@@ -306,12 +306,12 @@ const loadOrigins = async () => {
 
 const searchTrips = async () => {
   if (!canSearch.value) {
-    error.value = 'Please select an origin and specify trip duration'
+    error.value = 'Proszę wybrać lotnisko wylotu i określić czas trwania podróży'
     return
   }
 
   loading.value = true
-  loadingMessage.value = 'Searching for trips...'
+  loadingMessage.value = 'Wyszukiwanie lotów...'
   error.value = null
   // Don't clear results.value here - keep old results visible but blurred
   searched.value = true
@@ -348,9 +348,9 @@ const searchTrips = async () => {
       const errorDetail = e.data?.detail || e.message || 'Request parameters exceed processing limits'
       error.value = errorDetail
     } else if (e.statusCode === 404) {
-      error.value = 'No round trips found for the selected criteria'
+      error.value = 'Nie znaleziono lotów w obie strony dla wybranych kryteriów'
     } else {
-      error.value = e.message || 'Failed to search trips'
+      error.value = e.message || 'Nie udało się wyszukać lotów'
     }
     // Clear results on error
     results.value = null
