@@ -106,9 +106,9 @@
                   ? 'bg-purple-600 text-white border-purple-600 dark:bg-purple-600 dark:border-purple-600'
                   : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600 dark:hover:bg-gray-600'
               ]"
-              title="Search all destinations from selected origin"
+              title="Szukaj wszystkich miejsc docelowych z wybranego lotniska"
             >
-              🌍 Anywhere
+              🌍 Gdziekolwiek
             </button>
           </div>
 
@@ -118,8 +118,8 @@
               :options="allAirportsOptions"
               :selected-values="filters.destinations"
               @update:selected-values="updateFilter('destinations', $event)"
-              placeholder="Select destination airports..."
-              search-placeholder="Search airports..."
+              placeholder="Wybierz lotniska docelowe..."
+              search-placeholder="Szukaj lotnisk..."
             />
           </div>
 
@@ -129,24 +129,24 @@
               :options="countriesOptions"
               :selected-values="selectedCountries"
               @update:selected-values="selectAirportsByCountries"
-              placeholder="Select countries..."
-              search-placeholder="Search countries..."
+              placeholder="Wybierz kraje..."
+              search-placeholder="Szukaj krajów..."
             />
             <p v-if="selectedCountries.length > 0" class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              {{ getTotalAirportsFromCountries() }} airports from {{ selectedCountries.length }} {{ selectedCountries.length === 1 ? 'country' : 'countries' }}
+              {{ getTotalAirportsFromCountries() }} lotnisk z {{ selectedCountries.length }} {{ selectedCountries.length === 1 ? 'kraju' : 'krajów' }}
             </p>
           </div>
 
           <!-- Anywhere Mode Info -->
           <div v-if="destinationMode === 'anywhere'">
             <p class="text-sm text-gray-600 dark:text-gray-300 text-center py-2">
-              Searching all destinations from selected origin
+              Wyszukiwanie wszystkich miejsc docelowych z wybranego lotniska
             </p>
           </div>
 
           <!-- Warning when anywhere is hidden -->
           <p v-if="filters.origins.length > 1" class="mt-1 text-xs text-gray-500 dark:text-gray-400 text-center">
-            "Anywhere" mode requires exactly one origin airport
+            Tryb "Gdziekolwiek" wymaga dokładnie jednego lotniska wylotu
           </p>
         </div>
 
@@ -160,9 +160,9 @@
               class="w-4 h-4 mt-0.5 cursor-pointer"
             />
             <span class="flex items-center gap-1">
-              <span>Return from same airport</span>
+              <span>Powrót z tego samego lotniska</span>
               <span class="inline-flex items-center justify-center w-4 h-4 text-xs font-bold text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/30 rounded-full cursor-help transition-all hover:bg-blue-100 dark:hover:bg-blue-900/50 hover:scale-110"
-                    title="Uncheck to allow returns from different airports (e.g., fly to BCN, return from VLC)">ℹ</span>
+                    title="Odznacz, aby zezwolić na powroty z innych lotnisk (np. przelecieć do BCN, wrócić z VLC)">ℹ</span>
             </span>
           </label>
         </div>
@@ -177,9 +177,9 @@
               class="w-4 h-4 mt-0.5 cursor-pointer"
             />
             <span class="flex items-center gap-1">
-              <span>Return to same airport</span>
+              <span>Powrót na to samo lotnisko</span>
               <span class="inline-flex items-center justify-center w-4 h-4 text-xs font-bold text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/30 rounded-full cursor-help transition-all hover:bg-blue-100 dark:hover:bg-blue-900/50 hover:scale-110"
-                    title="Uncheck to allow returns to different origin airports (e.g., fly from WRO, return to KRK)">ℹ</span>
+                    title="Odznacz, aby zezwolić na powroty na inne lotniska wylotu (np. lecieć z WRO, wrócić do KRK)">ℹ</span>
             </span>
           </label>
         </div>
@@ -187,7 +187,7 @@
         <!-- Date Range (Start Date and End Date on same line) -->
         <div class="flex gap-2">
           <div class="flex flex-col flex-1">
-            <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200 text-sm">Start Date</label>
+            <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200 text-sm">Data Początkowa</label>
             <input
               :value="filters.dateFrom"
               @input="updateFilter('dateFrom', $event.target.value)"
@@ -196,7 +196,7 @@
             />
           </div>
           <div class="flex flex-col flex-1">
-            <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200 text-sm">End Date</label>
+            <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200 text-sm">Data Końcowa</label>
             <input
               :value="filters.dateTo"
               @input="updateFilter('dateTo', $event.target.value)"
@@ -209,7 +209,7 @@
         <!-- Min/Max Days (on same line, only for two-way routes) -->
         <div v-if="filters.twoWayRoutes" class="flex gap-2">
           <div class="flex flex-col flex-1">
-            <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200 text-sm">Min Days</label>
+            <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200 text-sm">Min. Dni</label>
             <input
               :value="filters.minDays"
               @input="updateFilter('minDays', parseInt($event.target.value))"
@@ -220,7 +220,7 @@
             />
           </div>
           <div class="flex flex-col flex-1">
-            <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200 text-sm">Max Days</label>
+            <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200 text-sm">Maks. Dni</label>
             <input
               :value="filters.maxDays"
               @input="updateFilter('maxDays', parseInt($event.target.value))"
@@ -236,30 +236,30 @@
         <div v-if="filters.twoWayRoutes" class="flex gap-2">
           <div class="flex flex-col flex-1">
             <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200 text-sm flex items-center gap-1">
-              Outbound Days
+              Dni Tygodnia (Tam)
               <span class="inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/30 rounded-full cursor-help transition-all hover:bg-blue-100 dark:hover:bg-blue-900/50 hover:scale-110"
-                    title="Select specific days of the week for outbound flights">ℹ</span>
+                    title="Wybierz konkretne dni tygodnia dla lotów tam">ℹ</span>
             </label>
             <MultiSelectDropdown
               :options="weekdayOptions"
               :selected-values="filters.outboundWeekdays"
               @update:selected-values="updateFilter('outboundWeekdays', $event)"
-              placeholder="Any day"
+              placeholder="Dowolny dzień"
               :searchable="false"
               :show-selected-items="false"
             />
           </div>
           <div class="flex flex-col flex-1">
             <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200 text-sm flex items-center gap-1">
-              Return Days
+              Dni Tygodnia (Powrót)
               <span class="inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/30 rounded-full cursor-help transition-all hover:bg-blue-100 dark:hover:bg-blue-900/50 hover:scale-110"
-                    title="Select specific days of the week for return flights">ℹ</span>
+                    title="Wybierz konkretne dni tygodnia dla lotów powrotnych">ℹ</span>
             </label>
             <MultiSelectDropdown
               :options="weekdayOptions"
               :selected-values="filters.returnWeekdays"
               @update:selected-values="updateFilter('returnWeekdays', $event)"
-              placeholder="Any day"
+              placeholder="Dowolny dzień"
               :searchable="false"
               :show-selected-items="false"
             />
@@ -269,9 +269,9 @@
         <!-- One-way Flight Days (single column) -->
         <div v-if="!filters.twoWayRoutes" class="flex flex-col">
           <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200 text-sm flex items-center gap-1">
-            Flight Days
+            Dni Tygodnia
             <span class="inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/30 rounded-full cursor-help transition-all hover:bg-blue-100 dark:hover:bg-blue-900/50 hover:scale-110"
-                  title="Select specific days of the week for flights">ℹ</span>
+                  title="Wybierz konkretne dni tygodnia dla lotów">ℹ</span>
           </label>
           <MultiSelectDropdown
             :options="weekdayOptions"
@@ -334,13 +334,13 @@ const emit = defineEmits(['update:filters', 'update:destination-mode', 'update:s
 
 // Weekday options (0=Monday, 6=Sunday)
 const weekdayOptions = [
-  { value: 0, label: 'Monday' },
-  { value: 1, label: 'Tuesday' },
-  { value: 2, label: 'Wednesday' },
-  { value: 3, label: 'Thursday' },
-  { value: 4, label: 'Friday' },
-  { value: 5, label: 'Saturday' },
-  { value: 6, label: 'Sunday' }
+  { value: 0, label: 'Poniedziałek' },
+  { value: 1, label: 'Wtorek' },
+  { value: 2, label: 'Środa' },
+  { value: 3, label: 'Czwartek' },
+  { value: 4, label: 'Piątek' },
+  { value: 5, label: 'Sobota' },
+  { value: 6, label: 'Niedziela' }
 ]
 
 // Methods
