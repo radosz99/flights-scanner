@@ -3,34 +3,34 @@
     <div class="mb-6 pb-4 border-b-2 border-gray-200 dark:border-gray-700">
       <h2 class="text-2xl font-semibold text-gray-800 dark:text-gray-100">
         <template v-if="results && results.trips.length > 0">
-          Found {{ results.total_combinations }} Round Trips
+          Znaleziono {{ results.total_combinations }} Lotów w Obie Strony
         </template>
         <template v-else>
-          All Available Two-Way Routes
+          Wszystkie Dostępne Trasy w Obie Strony
         </template>
       </h2>
       <p class="text-gray-600 dark:text-gray-400 mt-2">
         <template v-if="results && results.trips.length > 0">
-          Showing {{ results.showing }} results for
+          Pokazywanie {{ results.showing }} wyników dla
           <strong class="text-gray-900 dark:text-gray-200">
-            {{ results.origin }} → {{ results.destination === 'ALL' ? 'All Destinations' : results.destination }}
+            {{ results.origin }} → {{ results.destination === 'ALL' ? 'Wszystkie Cele' : results.destination }}
           </strong>
-          ({{ results.min_days }}-{{ results.max_days }} days)
+          ({{ results.min_days }}-{{ results.max_days }} dni)
         </template>
         <template v-else>
-          Showing all available two-way routes from Polish airports with cheapest prices
+          Pokazywanie wszystkich dostępnych tras w obie strony z polskich lotnisk z najniższymi cenami
         </template>
       </p>
     </div>
 
     <!-- Loading state -->
     <div v-if="loading" class="bg-gray-100 dark:bg-gray-800 rounded-xl shadow-md p-8 text-center">
-      <p class="text-gray-600 dark:text-gray-400">Loading map data...</p>
+      <p class="text-gray-600 dark:text-gray-400">Ładowanie danych mapy...</p>
     </div>
 
     <!-- Error state -->
     <div v-if="error" class="bg-red-50 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-xl shadow-md p-4">
-      <strong>Error:</strong> {{ error }}
+      <strong>Błąd:</strong> {{ error }}
     </div>
 
     <!-- Map container -->
@@ -45,13 +45,13 @@
         <div class="flex justify-between items-start">
           <div class="flex-1">
             <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-3">
-              Trip Details
+              Szczegóły Podróży
             </h3>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <!-- Destination -->
               <div v-if="results.destination === 'ALL'">
-                <p class="text-sm text-gray-600 dark:text-gray-400">Destination</p>
+                <p class="text-sm text-gray-600 dark:text-gray-400">Cel Podróży</p>
                 <p class="font-semibold text-gray-900 dark:text-gray-100">
                   {{ selectedTrip.destination }} - {{ selectedTrip.destination_name }}
                 </p>
@@ -59,15 +59,15 @@
 
               <!-- Duration -->
               <div>
-                <p class="text-sm text-gray-600 dark:text-gray-400">Duration</p>
+                <p class="text-sm text-gray-600 dark:text-gray-400">Czas Trwania</p>
                 <p class="font-semibold text-gray-900 dark:text-gray-100">
-                  {{ selectedTrip.trip_duration_days }} days
+                  {{ selectedTrip.trip_duration_days }} dni
                 </p>
               </div>
 
               <!-- Outbound Flight -->
               <div>
-                <p class="text-sm text-gray-600 dark:text-gray-400">Outbound</p>
+                <p class="text-sm text-gray-600 dark:text-gray-400">Lot Tam</p>
                 <p class="font-medium text-gray-900 dark:text-gray-100">
                   {{ formatDate(selectedTrip.outbound_flight.date) }}
                 </p>
@@ -83,7 +83,7 @@
 
               <!-- Return Flight -->
               <div>
-                <p class="text-sm text-gray-600 dark:text-gray-400">Return</p>
+                <p class="text-sm text-gray-600 dark:text-gray-400">Lot Powrotny</p>
                 <p class="font-medium text-gray-900 dark:text-gray-100">
                   {{ formatDate(selectedTrip.return_flight.date) }}
                 </p>

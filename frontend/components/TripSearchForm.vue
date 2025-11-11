@@ -1,19 +1,19 @@
 <template>
   <div class="mt-8 p-6 bg-white dark:bg-gray-800 rounded-xl shadow-md">
     <h2 class="text-2xl font-semibold text-gray-800 dark:text-gray-100 border-b-2 border-gray-200 dark:border-gray-700 pb-2 mb-4">
-      Search Parameters
+      Parametry Wyszukiwania
     </h2>
 
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
       <!-- Origin -->
       <div class="flex flex-col">
-        <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200">Departure Airport</label>
+        <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200">Lotnisko Wylotu</label>
         <select
           :value="origin"
           @change="$emit('update:origin', $event.target.value)"
           class="px-3 py-2 border-2 border-gray-300 dark:border-gray-500 rounded-md bg-white dark:bg-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800 transition cursor-pointer"
         >
-          <option value="">Select departure...</option>
+          <option value="">Wybierz lotnisko wylotu...</option>
           <option v-for="orig in origins" :key="orig.code" :value="orig.code">
             {{ orig.code }} - {{ orig.name }}
           </option>
@@ -22,14 +22,14 @@
 
       <!-- Destination -->
       <div class="flex flex-col">
-        <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200">Destination Airport (optional)</label>
+        <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200">Lotnisko Docelowe (opcjonalne)</label>
         <select
           :value="destination"
           @change="$emit('update:destination', $event.target.value)"
           :disabled="!origin || availableDestinations.length === 0"
           class="px-3 py-2 border-2 border-gray-300 dark:border-gray-500 rounded-md bg-white dark:bg-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800 transition cursor-pointer disabled:bg-gray-200 dark:disabled:bg-gray-700 disabled:text-gray-500 dark:disabled:text-gray-400 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          <option value="">{{ origin ? 'All destinations' : 'Select departure first' }}</option>
+          <option value="">{{ origin ? 'Wszystkie cele' : 'Najpierw wybierz lotnisko wylotu' }}</option>
           <option v-for="dest in availableDestinations" :key="dest.code" :value="dest.code">
             {{ dest.code }} - {{ dest.name }}
           </option>
@@ -38,7 +38,7 @@
 
       <!-- Min Days -->
       <div class="flex flex-col">
-        <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200">Minimum Days</label>
+        <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200">Minimalna Liczba Dni</label>
         <input
           type="number"
           :value="minDays"
@@ -52,7 +52,7 @@
 
       <!-- Max Days -->
       <div class="flex flex-col">
-        <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200">Maximum Days</label>
+        <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200">Maksymalna Liczba Dni</label>
         <input
           type="number"
           :value="maxDays"
@@ -66,7 +66,7 @@
 
       <!-- Max Results -->
       <div class="flex flex-col">
-        <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200">Max Results</label>
+        <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200">Maksymalna Liczba Wyników</label>
         <input
           type="number"
           :value="limit"
@@ -81,12 +81,12 @@
 
     <!-- Additional Filters Section -->
     <div class="mt-6 pt-6 border-t-2 border-gray-200 dark:border-gray-700">
-      <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">Advanced Filters</h3>
+      <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">Filtry Zaawansowane</h3>
 
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <!-- Return from same airport checkbox -->
         <div class="flex flex-col">
-          <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200">Return Flight</label>
+          <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200">Lot Powrotny</label>
           <div class="flex items-center h-10">
             <input
               type="checkbox"
@@ -99,43 +99,43 @@
               for="return-from-same-airport"
               class="ml-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer"
             >
-              Return from same airport
+              Powrót z tego samego lotniska
             </label>
           </div>
           <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            Uncheck to allow returns from different airports (e.g., fly to BCN, return from ALC)
+            Odznacz, aby zezwolić na powroty z innych lotnisk (np. lecieć do BCN, wrócić z ALC)
           </p>
         </div>
 
         <!-- Outbound Weekdays -->
         <div class="flex flex-col">
-          <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200">Outbound Flight Days</label>
+          <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200">Dni Lotu Tam</label>
           <MultiSelectDropdown
             :options="weekdayOptions"
             :selected-values="outboundWeekdays"
             @update:selected-values="$emit('update:outboundWeekdays', $event)"
-            placeholder="Any day"
+            placeholder="Dowolny dzień"
             :searchable="false"
             :show-selected-items="false"
           />
           <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            Select specific days of the week for outbound flights
+            Wybierz konkretne dni tygodnia dla lotów tam
           </p>
         </div>
 
         <!-- Return Weekdays -->
         <div class="flex flex-col">
-          <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200">Return Flight Days</label>
+          <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200">Dni Lotu Powrotnego</label>
           <MultiSelectDropdown
             :options="weekdayOptions"
             :selected-values="returnWeekdays"
             @update:selected-values="$emit('update:returnWeekdays', $event)"
-            placeholder="Any day"
+            placeholder="Dowolny dzień"
             :searchable="false"
             :show-selected-items="false"
           />
           <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            Select specific days of the week for return flights
+            Wybierz konkretne dni tygodnia dla lotów powrotnych
           </p>
         </div>
       </div>
@@ -148,13 +148,13 @@
         :disabled="!canSearch"
         class="px-6 py-3 bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white font-medium rounded-md transition transform hover:-translate-y-0.5 hover:shadow-lg disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none disabled:bg-gray-400 dark:disabled:bg-gray-600"
       >
-        Search Trips
+        Szukaj Lotów
       </button>
       <button
         @click="$emit('clear')"
         class="px-6 py-3 bg-gray-600 hover:bg-gray-700 dark:bg-gray-600 dark:hover:bg-gray-700 text-white font-medium rounded-md transition"
       >
-        Clear
+        Wyczyść
       </button>
     </div>
   </div>

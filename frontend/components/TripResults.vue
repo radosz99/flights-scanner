@@ -113,7 +113,7 @@
                   </td>
                   <td v-if="twoWayRoutes" :rowspan="trip.return ? 2 : 1" class="p-3 text-center align-middle border-l border-gray-200 dark:border-gray-700">
                     <div class="flex flex-col gap-1">
-                      <div class="text-base font-bold text-gray-800 dark:text-gray-200">{{ trip.trip_duration_days }} days</div>
+                      <div class="text-base font-bold text-gray-800 dark:text-gray-200">{{ trip.trip_duration_days }} dni</div>
                       <div class="text-xs text-gray-600 dark:text-gray-400">{{ trip.stay_duration }}</div>
                     </div>
                   </td>
