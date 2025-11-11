@@ -43,7 +43,7 @@
             <div class="flex flex-col gap-4 pt-4">
             <!-- Origin Airports (Multi-select) - Polish airports only -->
             <div class="flex flex-col">
-              <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200 text-sm">Origin Airports (Polish only)</label>
+              <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200 text-sm">Origin Airports</label>
               <MultiSelectDropdown
                 :options="polishAirportsOptions"
                 :selected-values="searchParams.origins"
@@ -56,13 +56,32 @@
             <!-- Destination Selection Mode -->
             <div class="flex flex-col">
               <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200 text-sm">Destination Mode</label>
-              <select
-                v-model="destinationMode"
-                class="p-2.5 border-2 border-gray-300 dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600 rounded-md text-base focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-              >
-                <option value="airports">Select Airports</option>
-                <option value="country">Select by Country</option>
-              </select>
+              <div class="inline-flex rounded-md shadow-sm" role="group">
+                <button
+                  type="button"
+                  @click="destinationMode = 'airports'"
+                  :class="[
+                    'flex-1 px-4 py-2.5 text-sm font-medium border-2 rounded-l-md transition-all duration-200',
+                    destinationMode === 'airports'
+                      ? 'bg-blue-600 text-white border-blue-600 dark:bg-blue-600 dark:border-blue-600'
+                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600 dark:hover:bg-gray-600'
+                  ]"
+                >
+                  Airports
+                </button>
+                <button
+                  type="button"
+                  @click="destinationMode = 'country'"
+                  :class="[
+                    'flex-1 px-4 py-2.5 text-sm font-medium border-2 border-l-0 rounded-r-md transition-all duration-200',
+                    destinationMode === 'country'
+                      ? 'bg-blue-600 text-white border-blue-600 dark:bg-blue-600 dark:border-blue-600'
+                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600 dark:hover:bg-gray-600'
+                  ]"
+                >
+                  Countries
+                </button>
+              </div>
             </div>
 
             <!-- Destination Airports (Multi-select) -->
@@ -263,6 +282,9 @@
                   <th class="p-3 text-left font-semibold text-gray-700 dark:text-gray-200 whitespace-nowrap">
                     Destination
                   </th>
+                  <th class="p-3 text-center font-semibold text-gray-700 dark:text-gray-200 whitespace-nowrap">
+                    Date Range
+                  </th>
                   <th class="p-3 text-left font-semibold text-gray-700 dark:text-gray-200 whitespace-nowrap">
                     Flight Info
                   </th>
@@ -281,6 +303,9 @@
                     <td :rowspan="searchParams.twoWayRoutes && trip.return ? 2 : 1" class="p-3 text-center align-middle font-bold text-gray-800 dark:text-gray-200 border-r-2 border-gray-300 dark:border-gray-600">
                       <div class="text-lg">{{ trip.outbound.destination }}</div>
                       <div class="text-xs font-normal text-gray-600 dark:text-gray-400">{{ trip.outbound.destination_name }}</div>
+                    </td>
+                    <td :rowspan="searchParams.twoWayRoutes && trip.return ? 2 : 1" class="p-3 text-center align-middle text-gray-800 dark:text-gray-200">
+                      <div class="text-sm font-semibold">{{ formatDateRange(trip) }}</div>
                     </td>
                     <td class="p-3 text-gray-800 dark:text-gray-200">
                       <div class="flex flex-col gap-1">
@@ -373,7 +398,7 @@
 
                   <!-- One-way flight wider separation -->
                   <tr v-if="!searchParams.twoWayRoutes" class="h-3 bg-gray-100 dark:bg-gray-900">
-                    <td colspan="3" class="p-0"></td>
+                    <td colspan="4" class="p-0"></td>
                   </tr>
                 </template>
               </tbody>
@@ -792,6 +817,25 @@ const scrollToTop = () => {
     top: 0,
     behavior: 'smooth'
   })
+}
+
+const formatDateRange = (trip) => {
+  const formatDate = (dateStr) => {
+    const date = new Date(dateStr)
+    const day = String(date.getDate()).padStart(2, '0')
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const year = date.getFullYear()
+    return `${day}.${month}.${year}`
+  }
+
+  const outboundDate = formatDate(trip.outbound.date_out)
+
+  if (searchParams.value.twoWayRoutes && trip.return) {
+    const returnDate = formatDate(trip.return.date_out)
+    return `${outboundDate}-${returnDate}`
+  }
+
+  return outboundDate
 }
 
 const buildRyanairUrl = (flight) => {

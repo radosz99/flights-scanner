@@ -146,7 +146,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onUnmounted } from 'vue'
+import { ref, computed, watch, onUnmounted, nextTick } from 'vue'
 
 const props = defineProps({
   options: {
@@ -296,9 +296,14 @@ const openDropdown = () => {
   }
 }
 
-watch(isDropdownOpen, (open) => {
+watch(isDropdownOpen, async (open) => {
   if (open) {
     document.addEventListener('click', handleClickOutside)
+    // Auto-focus search input when dropdown opens
+    if (props.searchable && searchInputRef.value) {
+      await nextTick()
+      searchInputRef.value.focus()
+    }
   } else {
     document.removeEventListener('click', handleClickOutside)
   }
