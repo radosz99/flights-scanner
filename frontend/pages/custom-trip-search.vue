@@ -794,14 +794,15 @@ const scrollToTop = () => {
   })
 }
 
-// Build Ryanair booking URL for a flight
 const buildRyanairUrl = (flight) => {
+  const dateOnly = flight.date_out.split('T')[0]
+
   const params = new URLSearchParams({
     adults: '1',
     teens: '0',
     children: '0',
     infants: '0',
-    dateOut: flight.date_out,
+    dateOut: dateOnly,
     dateIn: '',
     isConnectedFlight: 'false',
     discount: '0',
@@ -813,7 +814,7 @@ const buildRyanairUrl = (flight) => {
     tpTeens: '0',
     tpChildren: '0',
     tpInfants: '0',
-    tpStartDate: flight.date_out,
+    tpStartDate: dateOnly,
     tpEndDate: '',
     tpDiscount: '0',
     tpPromoCode: '',
