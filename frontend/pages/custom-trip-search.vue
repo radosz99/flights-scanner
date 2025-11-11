@@ -261,6 +261,9 @@
               <thead class="bg-gray-50 dark:bg-gray-700 border-b-2 border-gray-200 dark:border-gray-600">
                 <tr>
                   <th class="p-3 text-left font-semibold text-gray-700 dark:text-gray-200 whitespace-nowrap">
+                    Destination
+                  </th>
+                  <th class="p-3 text-left font-semibold text-gray-700 dark:text-gray-200 whitespace-nowrap">
                     Flight Info
                   </th>
                   <th class="p-3 text-center font-semibold text-gray-700 dark:text-gray-200 whitespace-nowrap">
@@ -275,12 +278,13 @@
                 <template v-for="(trip, index) in paginatedTrips" :key="index">
                   <!-- Outbound / One-way Flight Row -->
                   <tr class="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                    <td :rowspan="searchParams.twoWayRoutes && trip.return ? 2 : 1" class="p-3 text-center align-middle font-bold text-gray-800 dark:text-gray-200 border-r-2 border-gray-300 dark:border-gray-600">
+                      <div class="text-lg">{{ trip.outbound.destination }}</div>
+                      <div class="text-xs font-normal text-gray-600 dark:text-gray-400">{{ trip.outbound.destination_name }}</div>
+                    </td>
                     <td class="p-3 text-gray-800 dark:text-gray-200">
                       <div class="flex flex-col gap-1">
                         <div class="flex items-center gap-2">
-                          <span class="text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded">
-                            {{ searchParams.twoWayRoutes ? 'OUT' : 'FLIGHT' }}
-                          </span>
                           <a
                             :href="buildRyanairUrl(trip.outbound)"
                             target="_blank"
@@ -299,10 +303,10 @@
                             {{ formatDate(trip.outbound.date_out) }}
                           </span>
                         </div>
-                        <div class="text-xs text-gray-600 dark:text-gray-400 ml-14">
+                        <div class="text-xs text-gray-600 dark:text-gray-400 ml-7">
                           {{ trip.outbound.origin_name }} → {{ trip.outbound.destination_name }}
                         </div>
-                        <div class="flex items-center gap-3 ml-14 text-xs">
+                        <div class="flex items-center gap-3 ml-7 text-xs">
                           <span class="text-gray-700 dark:text-gray-300">
                             {{ formatTime(trip.outbound.departure_time) }} - {{ formatTime(trip.outbound.arrival_time) }}
                           </span>
@@ -327,13 +331,10 @@
                   </tr>
 
                   <!-- Return Flight Row (only for two-way routes) -->
-                  <tr v-if="searchParams.twoWayRoutes && trip.return" class="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                  <tr v-if="searchParams.twoWayRoutes && trip.return" class="border-b-4 border-gray-400 dark:border-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                     <td class="p-3 text-gray-800 dark:text-gray-200">
                       <div class="flex flex-col gap-1">
                         <div class="flex items-center gap-2">
-                          <span class="text-xs font-semibold text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/30 px-2 py-0.5 rounded">
-                            RET
-                          </span>
                           <a
                             :href="buildRyanairUrl(trip.return)"
                             target="_blank"
@@ -352,10 +353,10 @@
                             {{ formatDate(trip.return.date_out) }}
                           </span>
                         </div>
-                        <div class="text-xs text-gray-600 dark:text-gray-400 ml-14">
+                        <div class="text-xs text-gray-600 dark:text-gray-400 ml-7">
                           {{ trip.return.origin_name }} → {{ trip.return.destination_name }}
                         </div>
-                        <div class="flex items-center gap-3 ml-14 text-xs">
+                        <div class="flex items-center gap-3 ml-7 text-xs">
                           <span class="text-gray-700 dark:text-gray-300">
                             {{ formatTime(trip.return.departure_time) }} - {{ formatTime(trip.return.arrival_time) }}
                           </span>
@@ -368,6 +369,11 @@
                         </div>
                       </div>
                     </td>
+                  </tr>
+
+                  <!-- One-way flight wider separation -->
+                  <tr v-if="!searchParams.twoWayRoutes" class="h-3 bg-gray-100 dark:bg-gray-900">
+                    <td colspan="3" class="p-0"></td>
                   </tr>
                 </template>
               </tbody>
