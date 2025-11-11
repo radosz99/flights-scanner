@@ -52,8 +52,18 @@
                   @mouseleave="hoveredTripIndex = null"
                 >
                   <td :rowspan="twoWayRoutes && trip.return ? 2 : 1" class="p-3 text-center align-middle font-bold text-gray-800 dark:text-gray-200 border-r-2 border-gray-300 dark:border-gray-600">
-                    <div class="text-lg">{{ trip.outbound.destination }}</div>
-                    <div class="text-xs font-normal text-gray-600 dark:text-gray-400">{{ trip.outbound.destination_name }}</div>
+                    <template v-if="twoWayRoutes && trip.return && trip.outbound.destination !== trip.return.origin">
+                      <!-- Show both airports when they're different -->
+                      <div class="text-sm">{{ trip.outbound.destination }} / {{ trip.return.origin }}</div>
+                      <div class="text-xs font-normal text-gray-600 dark:text-gray-400">
+                        {{ trip.outbound.destination_name }} / {{ trip.return.origin_name }}
+                      </div>
+                    </template>
+                    <template v-else>
+                      <!-- Show single airport -->
+                      <div class="text-lg">{{ trip.outbound.destination }}</div>
+                      <div class="text-xs font-normal text-gray-600 dark:text-gray-400">{{ trip.outbound.destination_name }}</div>
+                    </template>
                   </td>
                   <td :rowspan="twoWayRoutes && trip.return ? 2 : 1" class="p-3 text-center align-middle text-gray-800 dark:text-gray-200">
                     <div class="text-sm font-semibold">{{ formatDateRange(trip) }}</div>

@@ -36,7 +36,37 @@
       </div>
 
       <!-- Results Section (Right Side on Desktop) -->
-      <div class="lg:flex-1 lg:min-w-0">
+      <div class="lg:flex-1 lg:min-w-0 relative">
+        <!-- Filters Changed Overlay -->
+        <div
+          v-if="filtersChanged && results"
+          class="absolute inset-0 bg-gray-900/50 dark:bg-gray-950/70 backdrop-blur-sm z-20 flex items-start justify-center pt-16"
+        >
+          <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 max-w-md mx-4">
+            <h3 class="text-xl font-bold text-gray-800 dark:text-gray-100 mb-3">
+              Filters have been changed
+            </h3>
+            <p class="text-gray-600 dark:text-gray-300 mb-4 text-sm">
+              Your filters have been modified. Click "Search Trips" to see updated results or revert to previous filters.
+            </p>
+            <div class="flex gap-3">
+              <button
+                @click="revertFilters"
+                class="flex-1 px-4 py-2 bg-gray-600 hover:bg-gray-700 dark:bg-gray-600 dark:hover:bg-gray-700 text-white font-medium rounded-md transition-colors"
+              >
+                Revert Changes
+              </button>
+              <button
+                @click="searchTrips"
+                :disabled="!canSearch"
+                class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white font-medium rounded-md transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                Search Now
+              </button>
+            </div>
+          </div>
+        </div>
+
         <TripResults
           :results="results"
           :loading="loading"
@@ -133,6 +163,11 @@ const searchParams = ref({
   returnWeekdays: []
 })
 
+// Track last searched parameters to detect changes
+const lastSearchedParams = ref(null)
+const lastSearchedDestinationMode = ref(null)
+const lastSearchedSelectedCountries = ref(null)
+
 const results = ref(null)
 
 // Computed
@@ -150,6 +185,17 @@ const canSearch = computed(() => {
 
   // For one-way routes, just need origins and destinations
   return hasOrigins && hasDestinations
+})
+
+// Check if filters have changed since last search
+const filtersChanged = computed(() => {
+  if (!lastSearchedParams.value) return false
+
+  const paramsMatch = JSON.stringify(searchParams.value) === JSON.stringify(lastSearchedParams.value)
+  const modeMatch = destinationMode.value === lastSearchedDestinationMode.value
+  const countriesMatch = JSON.stringify(selectedCountries.value) === JSON.stringify(lastSearchedSelectedCountries.value)
+
+  return !paramsMatch || !modeMatch || !countriesMatch
 })
 
 // Computed property for Polish airports only (for origin selection)
@@ -311,11 +357,6 @@ const updateUrlParams = () => {
   router.replace({ query })
 }
 
-// Watch for changes to searchParams, destinationMode, and selectedCountries, then update URL
-watch([searchParams, destinationMode, selectedCountries], () => {
-  updateUrlParams()
-}, { deep: true })
-
 // Methods
 const updateFilters = (newFilters) => {
   searchParams.value = { ...newFilters }
@@ -377,6 +418,14 @@ const searchTrips = async () => {
       // One-way routes
       await searchOneWayTrips()
     }
+
+    // Save last searched params for change detection
+    lastSearchedParams.value = JSON.parse(JSON.stringify(searchParams.value))
+    lastSearchedDestinationMode.value = destinationMode.value
+    lastSearchedSelectedCountries.value = JSON.parse(JSON.stringify(selectedCountries.value))
+
+    // Update URL only after successful search
+    updateUrlParams()
   } catch (e) {
     error.value = e.statusCode === 404
       ? 'No trips found for the selected criteria'
@@ -488,6 +537,15 @@ const clearFilters = () => {
   error.value = null
   searched.value = false
   currentPage.value = 1
+}
+
+// Revert to last searched filters
+const revertFilters = () => {
+  if (lastSearchedParams.value) {
+    searchParams.value = JSON.parse(JSON.stringify(lastSearchedParams.value))
+    destinationMode.value = lastSearchedDestinationMode.value
+    selectedCountries.value = JSON.parse(JSON.stringify(lastSearchedSelectedCountries.value))
+  }
 }
 
 // Scroll to top functionality
