@@ -120,7 +120,8 @@ class CustomTripSearch:
                             "arrival_time": outbound["arrival_time"],
                             "duration": outbound["duration"],
                             "price": outbound["current_price"],
-                            "currency": outbound["currency"]
+                            "currency": outbound["currency"],
+                            "last_seen": outbound.get("last_seen")
                         },
                         "return_flight": {
                             "flight_id": return_flight["flight_id"],
@@ -130,7 +131,8 @@ class CustomTripSearch:
                             "arrival_time": return_flight["arrival_time"],
                             "duration": return_flight["duration"],
                             "price": return_flight["current_price"],
-                            "currency": return_flight["currency"]
+                            "currency": return_flight["currency"],
+                            "last_seen": return_flight.get("last_seen")
                         },
                         "trip_duration_days": trip_duration,
                         "total_price": round(total_price, 2),
@@ -376,7 +378,8 @@ class CustomTripSearch:
                             "departure_time": outbound["departure_time"],
                             "arrival_time": outbound["arrival_time"],
                             "duration": outbound["duration"],
-                            "current_price": outbound["current_price"]
+                            "current_price": outbound["current_price"],
+                            "last_seen": outbound.get("last_seen")
                         },
                         "return": {
                             "flight_id": return_flight["flight_id"],
@@ -388,7 +391,8 @@ class CustomTripSearch:
                             "departure_time": return_flight["departure_time"],
                             "arrival_time": return_flight["arrival_time"],
                             "duration": return_flight["duration"],
-                            "current_price": return_flight["current_price"]
+                            "current_price": return_flight["current_price"],
+                            "last_seen": return_flight.get("last_seen")
                         },
                         "trip_duration_days": trip_duration,
                         "stay_duration": stay_duration_formatted,

@@ -103,6 +103,9 @@
                           {{ formatPrice(twoWayRoutes ? trip.outbound.current_price : trip.outbound.price_per_person) }}
                         </span>
                       </div>
+                      <div v-if="trip.outbound.last_seen" class="ml-7 text-xs text-gray-500 dark:text-gray-400">
+                        Last updated: {{ formatDateTime(trip.outbound.last_seen) }}
+                      </div>
                     </div>
                   </td>
                   <td :rowspan="twoWayRoutes && trip.return ? 2 : 1" class="p-3 text-center align-middle border-l border-gray-200 dark:border-gray-700">
@@ -158,6 +161,9 @@
                         <span class="text-green-600 dark:text-green-400 font-semibold">
                           {{ formatPrice(trip.return.current_price) }}
                         </span>
+                      </div>
+                      <div v-if="trip.return.last_seen" class="ml-7 text-xs text-gray-500 dark:text-gray-400">
+                        Last updated: {{ formatDateTime(trip.return.last_seen) }}
                       </div>
                     </div>
                   </td>
@@ -221,7 +227,7 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import { formatPrice, formatDate, formatTime } from '~/utils/formatters'
+import { formatPrice, formatDate, formatTime, formatDateTime } from '~/utils/formatters'
 
 // Hover state for highlighting trip rows
 const hoveredTripIndex = ref(null)

@@ -73,6 +73,9 @@
                   <span>{{ trip.outbound_flight.flight_number }}</span>
                   <span>{{ trip.outbound_flight.duration }}</span>
                 </div>
+                <div v-if="trip.outbound_flight.last_seen" class="text-xs text-gray-500 dark:text-gray-400">
+                  Updated: {{ formatDateTime(trip.outbound_flight.last_seen) }}
+                </div>
               </div>
             </td>
 
@@ -94,6 +97,9 @@
                 <div class="flex gap-2 text-xs text-gray-600 dark:text-gray-400">
                   <span>{{ trip.return_flight.flight_number }}</span>
                   <span>{{ trip.return_flight.duration }}</span>
+                </div>
+                <div v-if="trip.return_flight.last_seen" class="text-xs text-gray-500 dark:text-gray-400">
+                  Updated: {{ formatDateTime(trip.return_flight.last_seen) }}
                 </div>
               </div>
             </td>
@@ -124,7 +130,7 @@
 </template>
 
 <script setup>
-import { formatPrice, formatDate, formatTime } from '~/utils/formatters'
+import { formatPrice, formatDate, formatTime, formatDateTime } from '~/utils/formatters'
 
 const props = defineProps({
   results: Object
