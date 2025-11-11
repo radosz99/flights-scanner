@@ -31,7 +31,7 @@ RYANAIR_AIRLINE_ID=39                 # Ryanair airline ID (fixed value)
 WIZZAIR_AIRLINE_IDS=52,6002,6092      # Wizz Air airline IDs (comma-separated)
 
 # Ryanair Scraping Configuration
-RYANAIR_REQUEST_DELAY=2.0             # Delay between API requests (seconds) - avoid rate limiting
+RYANAIR_REQUEST_DELAY=0.5             # Delay between API requests (seconds) - avoid rate limiting
 RYANAIR_COOKIE_WAIT_TIME=30           # Max wait time for cookie extraction (seconds)
 RYANAIR_COOKIE_CHECK_INTERVAL=0.5     # Cookie extraction check interval (seconds)
 
@@ -171,7 +171,7 @@ npm run dev
 |----------|----------|---------|-------------|
 | `RYANAIR_AIRLINE_ID` | No | 39 | Ryanair airline identifier |
 | `WIZZAIR_AIRLINE_IDS` | No | 52,6002,6092 | Wizz Air airline identifiers |
-| `RYANAIR_REQUEST_DELAY` | No | 2.0 | Delay between requests (seconds) |
+| `RYANAIR_REQUEST_DELAY` | No | 0.5 | Delay between requests (seconds) |
 | `RYANAIR_COOKIE_WAIT_TIME` | No | 30 | Cookie extraction timeout (seconds) |
 | `RYANAIR_COOKIE_CHECK_INTERVAL` | No | 0.5 | Cookie check interval (seconds) |
 
@@ -267,7 +267,7 @@ MONGO_HOST=localhost
 MONGO_PORT=27017
 MONGO_DATABASE=flights_scanner
 API_BASE_URL=http://localhost:8900
-RYANAIR_REQUEST_DELAY=2.0
+RYANAIR_REQUEST_DELAY=0.5
 ```
 
 ## Quick Start Checklist
