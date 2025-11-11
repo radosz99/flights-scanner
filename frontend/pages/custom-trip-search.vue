@@ -281,6 +281,17 @@
                           <span class="text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded">
                             {{ searchParams.twoWayRoutes ? 'OUT' : 'FLIGHT' }}
                           </span>
+                          <a
+                            :href="buildRyanairUrl(trip.outbound)"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
+                            title="Book on Ryanair"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                            </svg>
+                          </a>
                           <span class="text-sm font-bold">
                             {{ trip.outbound.origin }} → {{ trip.outbound.destination }}
                           </span>
@@ -323,6 +334,17 @@
                           <span class="text-xs font-semibold text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/30 px-2 py-0.5 rounded">
                             RET
                           </span>
+                          <a
+                            :href="buildRyanairUrl(trip.return)"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
+                            title="Book on Ryanair"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                            </svg>
+                          </a>
                           <span class="text-sm font-bold">
                             {{ trip.return.origin }} → {{ trip.return.destination }}
                           </span>
@@ -398,16 +420,31 @@
         </div>
       </div>
     </div>
+
+    <!-- Scroll to Top Button -->
+    <button
+      v-if="showScrollTop"
+      @click="scrollToTop"
+      class="fixed bottom-8 right-8 p-4 bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white rounded-full shadow-lg transition-all duration-300 hover:scale-110 z-50"
+      title="Scroll to top"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+      </svg>
+    </button>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { formatPrice, formatDate, formatTime } from '~/utils/formatters'
 import MultiSelectDropdown from '~/components/MultiSelectDropdown.vue'
 
 const config = useRuntimeConfig()
 const apiBaseUrl = config.public.apiBaseUrl
+
+// Scroll to top state
+const showScrollTop = ref(false)
 
 // List of Polish airport codes
 const POLISH_AIRPORT_CODES = [
@@ -739,9 +776,56 @@ const clearFilters = () => {
   currentPage.value = 1
 }
 
+// Scroll to top functionality
+const handleScroll = () => {
+  showScrollTop.value = window.scrollY > 300
+}
+
+const scrollToTop = () => {
+  window.scrollTo({
+    top: 0,
+    behavior: 'smooth'
+  })
+}
+
+// Build Ryanair booking URL for a flight
+const buildRyanairUrl = (flight) => {
+  const params = new URLSearchParams({
+    adults: '1',
+    teens: '0',
+    children: '0',
+    infants: '0',
+    dateOut: flight.date_out,
+    dateIn: '',
+    isConnectedFlight: 'false',
+    discount: '0',
+    promoCode: '',
+    isReturn: 'false',
+    originIata: flight.origin,
+    destinationIata: flight.destination,
+    tpAdults: '1',
+    tpTeens: '0',
+    tpChildren: '0',
+    tpInfants: '0',
+    tpStartDate: flight.date_out,
+    tpEndDate: '',
+    tpDiscount: '0',
+    tpPromoCode: '',
+    tpOriginIata: flight.origin,
+    tpDestinationIata: flight.destination
+  })
+
+  return `https://www.ryanair.com/hr/en/trip/flights/select?${params.toString()}`
+}
+
 // Lifecycle
 onMounted(async () => {
   await loadAirports()
+  window.addEventListener('scroll', handleScroll)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('scroll', handleScroll)
 })
 </script>
 
