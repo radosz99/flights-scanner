@@ -9,13 +9,13 @@
           :disabled="!canSearch || loading"
           class="flex-1 py-3 px-6 bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700 text-white font-semibold rounded-lg transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed hover:shadow-lg hover:-translate-y-0.5 text-base"
         >
-          🔍 Search Trips
+          🔍 Szukaj Lotów
         </button>
         <button
           @click="$emit('clear')"
           class="flex-1 py-3 px-6 bg-red-600 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700 text-white font-semibold rounded-lg transition-all duration-200 hover:shadow-lg text-base"
         >
-          🗑️ Clear All
+          🗑️ Wyczyść Wszystko
         </button>
       </div>
     </div>
@@ -25,7 +25,7 @@
       <div class="flex flex-col gap-4 pt-4">
         <!-- Trip Type Toggle -->
         <div class="flex flex-col">
-          <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200 text-sm">Trip Type</label>
+          <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200 text-sm">Typ Lotu</label>
           <div class="inline-flex rounded-md shadow-sm" role="group">
             <button
               type="button"
@@ -37,7 +37,7 @@
                   : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600 dark:hover:bg-gray-600'
               ]"
             >
-              One-way
+              W jedną stronę
             </button>
             <button
               type="button"
@@ -49,26 +49,26 @@
                   : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600 dark:hover:bg-gray-600'
               ]"
             >
-              Round-trip
+              W obie strony
             </button>
           </div>
         </div>
 
         <!-- Origin Airports (Multi-select) - Polish airports only -->
         <div class="flex flex-col">
-          <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200 text-sm">From</label>
+          <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200 text-sm">Z</label>
           <MultiSelectDropdown
             :options="polishAirportsOptions"
             :selected-values="filters.origins"
             @update:selected-values="updateFilter('origins', $event)"
-            placeholder="Select Polish airports..."
-            search-placeholder="Search airports..."
+            placeholder="Wybierz polskie lotniska..."
+            search-placeholder="Szukaj lotnisk..."
           />
         </div>
 
         <!-- Destination Selection Mode -->
         <div class="flex flex-col">
-          <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200 text-sm">To</label>
+          <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200 text-sm">Do</label>
           <div class="inline-flex rounded-md shadow-sm mb-2" role="group">
             <button
               type="button"
@@ -81,7 +81,7 @@
                   : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600 dark:hover:bg-gray-600'
               ]"
             >
-              Airports
+              Lotniska
             </button>
             <button
               type="button"
@@ -94,7 +94,7 @@
                   : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600 dark:hover:bg-gray-600'
               ]"
             >
-              Countries
+              Kraje
             </button>
             <button
               v-if="filters.origins.length === 1"
