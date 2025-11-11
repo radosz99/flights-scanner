@@ -19,6 +19,13 @@ except ImportError:
     print("Install with: pip install airportsdata")
     sys.exit(1)
 
+try:
+    import pycountry
+except ImportError:
+    print("✗ pycountry package not installed")
+    print("Install with: pip install pycountry")
+    sys.exit(1)
+
 from .flight_connector import (
     load_from_mongodb,
     save_to_mongodb,
@@ -72,7 +79,22 @@ def update_airport_coordinates(
             # Update coordinates and country
             airport.latitude = airport_data['lat']
             airport.longitude = airport_data['lon']
-            airport.country = airport_data.get('country', 'Unknown')
+
+            # Convert full country name to ISO2 code using pycountry
+            country_name = airport_data.get('country', 'Unknown')
+            try:
+                if country_name and country_name != 'Unknown':
+                    # Try to find country by name
+                    country = pycountry.countries.search_fuzzy(country_name)
+                    if country:
+                        airport.country = country[0].alpha_2
+                    else:
+                        airport.country = 'XX'  # Unknown country code
+                else:
+                    airport.country = 'XX'
+            except (LookupError, AttributeError):
+                airport.country = 'XX'  # Fallback for lookup errors
+
             updated_count += 1
 
             if verbose:

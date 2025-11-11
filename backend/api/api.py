@@ -624,9 +624,9 @@ async def get_countries(
     airline: str = Query("ryanair", description="Airline name (ryanair, wizzair)")
 ):
     """
-    Get list of all unique countries from the airports database.
+    Get list of all unique countries from the airports that have flights in the database.
 
-    This endpoint returns all countries that have airports in the airline's network,
+    This endpoint returns only countries that have airports with actual flights,
     useful for filtering destinations by country.
 
     Args:
@@ -647,6 +647,10 @@ async def get_countries(
                 detail="Invalid airline. Must be 'ryanair' or 'wizzair'"
             )
 
+        # Get list of destination airports that have flights
+        destinations = api_service.get_destinations()
+        destination_codes = {dest["code"] for dest in destinations}
+
         # Load database
         database = load_from_mongodb(airline, settings.mongo_uri)
 
@@ -656,13 +660,17 @@ async def get_countries(
                 detail=f"Failed to load {airline} database from MongoDB"
             )
 
-        # Group airports by country
+        # Group airports by country, but only for airports that have flights
         countries = {}
         for airport in database.get_all_airports():
+            # Only include airports that are in the destinations list
+            if airport.code not in destination_codes:
+                continue
+
             country_iso2 = airport.country
 
             # Skip airports without country information
-            if not country_iso2 or country_iso2 == "Unknown":
+            if not country_iso2 or country_iso2 == "Unknown" or country_iso2 == "XX":
                 continue
 
             # Convert ISO2 code to full country name using pycountry

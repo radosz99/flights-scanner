@@ -244,7 +244,12 @@ const parseUrlParams = () => {
   }
 
   // Parse destination mode and destinations
-  if (query.destinationCountries) {
+  if (query.destinationMode === 'anywhere') {
+    // Anywhere mode - no destinations specified
+    destinationMode.value = 'anywhere'
+    selectedCountries.value = []
+    searchParams.value.destinations = []
+  } else if (query.destinationCountries) {
     // Country mode - parse countries and convert to airports
     destinationMode.value = 'country'
     selectedCountries.value = query.destinationCountries.split(',').filter(Boolean)
@@ -315,7 +320,10 @@ const updateUrlParams = () => {
   }
 
   // Add destinations based on mode
-  if (destinationMode.value === 'country' && selectedCountries.value.length > 0) {
+  if (destinationMode.value === 'anywhere') {
+    // Anywhere mode - save mode only, no destinations
+    query.destinationMode = 'anywhere'
+  } else if (destinationMode.value === 'country' && selectedCountries.value.length > 0) {
     // Country mode - save country names
     query.destinationCountries = selectedCountries.value.join(',')
   } else if (destinationMode.value === 'airports' && searchParams.value.destinations.length > 0) {
