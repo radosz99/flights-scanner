@@ -21,6 +21,7 @@ make docker-logs
 - **Scheduler**: Automatically scans flights every 8 hours (00:00, 08:00, 16:00 UTC)
 
 📖 **For detailed Docker instructions, see [DOCKER_SETUP.md](DOCKER_SETUP.md)**
+🔒 **For automatic SSL/HTTPS setup (2 steps!), see [SSL_SETUP.md](SSL_SETUP.md)**
 
 ## ⏰ Automatic Scheduling
 
