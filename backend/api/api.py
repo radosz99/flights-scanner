@@ -433,7 +433,7 @@ async def get_round_trips_batch(
 @app.get("/flights/one-way-batch")
 async def get_one_way_flights_batch(
     origins: str = Query(..., description="Comma-separated origin airport codes (e.g., WRO,WAW,KRK)"),
-    destinations: str = Query(..., description="Comma-separated destination airport codes (e.g., BCN,AGP,MAD)"),
+    destinations: Optional[str] = Query(None, description="Comma-separated destination airport codes (e.g., BCN,AGP,MAD). Leave empty for 'anywhere' search."),
     passengers: int = Query(1, ge=1, le=10, description="Number of passengers"),
     date_from: Optional[str] = Query(None, description="Filter flights departing from this date (YYYY-MM-DD)"),
     date_to: Optional[str] = Query(None, description="Filter flights departing until this date (YYYY-MM-DD)"),
@@ -450,7 +450,7 @@ async def get_one_way_flights_batch(
 
     Args:
         origins: Comma-separated list of origin airport codes
-        destinations: Comma-separated list of destination airport codes
+        destinations: Comma-separated list of destination airport codes. Leave empty for 'anywhere' search.
         passengers: Number of passengers (default 1)
         date_from: Optional departure date filter (YYYY-MM-DD)
         date_to: Optional departure date filter (YYYY-MM-DD)
@@ -464,12 +464,19 @@ async def get_one_way_flights_batch(
     """
     # Parse comma-separated airport codes
     origins_list = [o.strip().upper() for o in origins.split(",") if o.strip()]
-    destinations_list = [d.strip().upper() for d in destinations.split(",") if d.strip()]
+    destinations_list = [d.strip().upper() for d in destinations.split(",") if d.strip()] if destinations else []
 
-    if not origins_list or not destinations_list:
+    if not origins_list:
         raise HTTPException(
             status_code=400,
-            detail="Both origins and destinations must contain at least one airport code"
+            detail="Origins must contain at least one airport code"
+        )
+
+    # For "anywhere" search, only one origin is allowed
+    if not destinations_list and len(origins_list) > 1:
+        raise HTTPException(
+            status_code=400,
+            detail="Anywhere search (empty destinations) is only supported with a single origin airport"
         )
 
     # Parse weekday parameters
@@ -482,9 +489,12 @@ async def get_one_way_flights_batch(
 
     # Build MongoDB query
     query = {
-        "origin": {"$in": origins_list},
-        "destination": {"$in": destinations_list}
+        "origin": {"$in": origins_list}
     }
+
+    # Only filter by destination if destinations are specified (not "anywhere" mode)
+    if destinations_list:
+        query["destination"] = {"$in": destinations_list}
 
     # Add optional date filters
     if date_from or date_to:
