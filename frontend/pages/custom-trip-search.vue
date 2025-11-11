@@ -5,12 +5,15 @@
       Search for one-way or round-trip flights with flexible origin and destination matching. Use batch search to efficiently find flights across multiple airports.
     </p>
 
-    <!-- Loading -->
-    <div
-      v-if="loading"
-      class="loading dark:bg-yellow-900 dark:text-yellow-200 dark:border-yellow-700"
-    >
-      {{ loadingMessage }}
+    <!-- Loading with Progress Bar -->
+    <div v-if="loading" class="mt-8">
+      <div class="p-4 bg-yellow-50 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 rounded-md border border-yellow-200 dark:border-yellow-700 text-center text-lg">
+        <div class="mb-3">{{ loadingMessage }}</div>
+        <!-- Animated Progress Bar -->
+        <div class="w-full bg-yellow-200 dark:bg-yellow-700 rounded-full h-2.5 overflow-hidden">
+          <div class="bg-yellow-600 dark:bg-yellow-400 h-2.5 rounded-full animate-progress"></div>
+        </div>
+      </div>
     </div>
 
     <!-- Error -->
@@ -27,6 +30,23 @@
       <div class="search-form-container">
         <div class="search-form dark:bg-gray-800">
           <h2 class="dark:text-gray-100 dark:border-gray-700">Search Parameters</h2>
+
+          <!-- Action Buttons -->
+          <div class="action-buttons">
+            <button
+              @click="searchTrips"
+              :disabled="!canSearch || loading"
+              class="btn-primary dark:bg-blue-600 dark:hover:bg-blue-700"
+            >
+              Search Trips
+            </button>
+            <button
+              @click="clearFilters"
+              class="btn-secondary dark:bg-gray-600 dark:hover:bg-gray-700"
+            >
+              Clear All
+            </button>
+          </div>
 
       <div class="form-grid">
         <!-- Origin Airports (Multi-select) - Polish airports only -->
@@ -75,8 +95,8 @@
             placeholder="Select countries..."
             search-placeholder="Search countries..."
           />
-          <p v-if="selectedCountries.length > 0" class="help-text dark:text-gray-400">
-            Selected {{ getTotalAirportsFromCountries() }} airports from {{ selectedCountries.length }} {{ selectedCountries.length === 1 ? 'country' : 'countries' }}
+          <p v-if="selectedCountries.length > 0" class="selected-info dark:text-gray-400">
+            {{ getTotalAirportsFromCountries() }} airports from {{ selectedCountries.length }} {{ selectedCountries.length === 1 ? 'country' : 'countries' }}
           </p>
         </div>
 
@@ -89,10 +109,8 @@
               class="checkbox"
             />
             <span>Two-way routes (flexible matching)</span>
+            <span class="info-icon" title="When checked, return flight can be to any selected origin airport">ℹ</span>
           </label>
-          <p class="help-text dark:text-gray-400">
-            When checked, return flight can be to any selected origin airport
-          </p>
         </div>
 
         <!-- Return from Same Airport Checkbox (only for two-way routes) -->
@@ -104,10 +122,8 @@
               class="checkbox"
             />
             <span>Return from same airport</span>
+            <span class="info-icon" title="Uncheck to allow returns from different airports (e.g., fly to BCN, return from VLC)">ℹ</span>
           </label>
-          <p class="help-text dark:text-gray-400">
-            Uncheck to allow returns from different airports (e.g., fly to BCN, return from VLC)
-          </p>
         </div>
 
         <!-- Return to Same Airport Checkbox (only for two-way routes) -->
@@ -119,10 +135,8 @@
               class="checkbox"
             />
             <span>Return to same airport</span>
+            <span class="info-icon" title="Uncheck to allow returns to different origin airports (e.g., fly from WRO, return to KRK)">ℹ</span>
           </label>
-          <p class="help-text dark:text-gray-400">
-            Uncheck to allow returns to different origin airports (e.g., fly from WRO, return to KRK)
-          </p>
         </div>
 
         <!-- Date Range From -->
@@ -207,7 +221,10 @@
 
         <!-- Outbound Weekdays -->
         <div class="form-group">
-          <label class="dark:text-gray-200">{{ searchParams.twoWayRoutes ? 'Outbound Flight Days' : 'Flight Days' }}</label>
+          <label class="dark:text-gray-200">
+            {{ searchParams.twoWayRoutes ? 'Outbound Flight Days' : 'Flight Days' }}
+            <span class="info-icon" :title="'Select specific days of the week for ' + (searchParams.twoWayRoutes ? 'outbound' : '') + ' flights'">ℹ</span>
+          </label>
           <MultiSelectDropdown
             :options="weekdayOptions"
             :selected-values="searchParams.outboundWeekdays"
@@ -216,14 +233,14 @@
             :searchable="false"
             :show-selected-items="false"
           />
-          <p class="help-text dark:text-gray-400">
-            Select specific days of the week for {{ searchParams.twoWayRoutes ? 'outbound' : '' }} flights
-          </p>
         </div>
 
         <!-- Return Weekdays (only for two-way routes) -->
         <div v-if="searchParams.twoWayRoutes" class="form-group">
-          <label class="dark:text-gray-200">Return Flight Days</label>
+          <label class="dark:text-gray-200">
+            Return Flight Days
+            <span class="info-icon" title="Select specific days of the week for return flights">ℹ</span>
+          </label>
           <MultiSelectDropdown
             :options="weekdayOptions"
             :selected-values="searchParams.returnWeekdays"
@@ -232,33 +249,13 @@
             :searchable="false"
             :show-selected-items="false"
           />
-          <p class="help-text dark:text-gray-400">
-            Select specific days of the week for return flights
-          </p>
         </div>
-      </div>
-
-      <!-- Action Buttons -->
-      <div class="action-buttons">
-        <button
-          @click="searchTrips"
-          :disabled="!canSearch || loading"
-          class="btn-primary dark:bg-blue-600 dark:hover:bg-blue-700"
-        >
-          Search Trips
-        </button>
-        <button
-          @click="clearFilters"
-          class="btn-secondary dark:bg-gray-600 dark:hover:bg-gray-700"
-        >
-          Clear All
-        </button>
       </div>
         </div>
       </div>
 
       <!-- Results Section (Right Side on Desktop) -->
-      <div class="results-container">
+      <div class="results-container" :class="{ 'blur-sm opacity-60 pointer-events-none': loading && results }">
             <div v-if="results" class="results-summary dark:bg-gray-800">
           <h3 class="dark:text-gray-100">
             Found {{ results.total }} trips
@@ -363,7 +360,7 @@
 
         <!-- No Results -->
         <div
-          v-if="searched && (!results || results.trips.length === 0)"
+          v-if="!loading && searched && (!results || results.trips.length === 0)"
           class="no-results dark:bg-gray-700 dark:text-gray-300"
         >
           <p>No trips found matching your criteria. Try adjusting your search parameters.</p>
@@ -781,16 +778,6 @@ h3 {
   font-size: 1.2rem;
 }
 
-.loading {
-  margin-top: 2rem;
-  padding: 1rem;
-  background: #fff3cd;
-  color: #856404;
-  border-radius: 5px;
-  border: 1px solid #ffeaa7;
-  text-align: center;
-}
-
 .error {
   margin-top: 2rem;
   padding: 1rem;
@@ -810,8 +797,8 @@ h3 {
 .form-grid {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
-  margin-top: 1.5rem;
+  gap: 1rem;
+  margin-top: 1rem;
 }
 
 .form-group {
@@ -881,17 +868,55 @@ h3 {
   cursor: pointer;
 }
 
-.help-text {
+.selected-info {
   margin-top: 0.25rem;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: #6c757d;
+}
+
+.info-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin-left: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: bold;
+  color: #007bff;
+  background: rgba(0, 123, 255, 0.1);
+  border-radius: 50%;
+  cursor: help;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.info-icon:hover {
+  background: rgba(0, 123, 255, 0.2);
+  transform: scale(1.1);
+}
+
+.dark .info-icon {
+  color: #60a5fa;
+  background: rgba(96, 165, 250, 0.15);
+}
+
+.dark .info-icon:hover {
+  background: rgba(96, 165, 250, 0.25);
 }
 
 .action-buttons {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-  margin-top: 2rem;
+  margin-top: 1.25rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.dark .action-buttons {
+  border-bottom-color: #4a5568;
 }
 
 @media (min-width: 768px) and (max-width: 1023px) {
@@ -1069,5 +1094,22 @@ button {
 /* Ensure results container takes full width */
 .results-container {
   width: 100%;
+}
+
+/* Progress bar animation */
+@keyframes progress {
+  0% {
+    width: 0%;
+  }
+  50% {
+    width: 70%;
+  }
+  100% {
+    width: 100%;
+  }
+}
+
+.animate-progress {
+  animation: progress 2s ease-in-out infinite;
 }
 </style>
