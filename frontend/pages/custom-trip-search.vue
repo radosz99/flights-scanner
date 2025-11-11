@@ -471,6 +471,12 @@ const scrollToTop = () => {
 onMounted(async () => {
   await loadAirports()
   parseUrlParams() // Load filters from URL
+
+  // Auto-search if URL has valid search parameters
+  if (route.query && Object.keys(route.query).length > 0 && canSearch.value) {
+    await searchTrips()
+  }
+
   window.addEventListener('scroll', handleScroll)
 })
 
