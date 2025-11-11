@@ -110,6 +110,35 @@ services:
     networks:
       - flights-scanner-network
 
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: flights-scanner-nginx
+    restart: unless-stopped
+    ports:
+      - "${NGINX_HTTP_PORT:-80}:80"
+      - "${NGINX_HTTPS_PORT:-443}:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - nginx_logs:/var/log/nginx
+      # Uncomment the following line after setting up SSL certificates
+      # - ./certbot/conf:/etc/letsencrypt:ro
+      # - ./certbot/www:/var/www/certbot:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+    networks:
+      - flights-scanner-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
 networks:
   flights-scanner-network:
     driver: bridge
@@ -122,3 +151,5 @@ volumes:
     name: flights-scanner-mongodb-config
   scheduler_logs:
     name: flights-scanner-scheduler-logs
+  nginx_logs:
+    name: flights-scanner-nginx-logs

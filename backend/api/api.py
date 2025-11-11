@@ -1191,6 +1191,13 @@ def run_scanner_background(
             SCAN_ITERATIONS_COLLECTION
         )
 
+        # Initialize FlightStorage
+        storage = FlightStorage(
+            settings.mongo_uri,
+            settings.MONGO_DATABASE,
+            FLIGHTS_COLLECTION
+        )
+
         # Run scan for each date range
         total_stats = {
             "total_routes": 0,
@@ -1202,7 +1209,7 @@ def run_scanner_background(
         for idx, (date_out_str, date_in_str) in enumerate(date_ranges, 1):
             logger.info(f"Scanning date range {idx}/{len(date_ranges)}: {date_out_str} to {date_in_str}")
 
-            stats = scan_flights(departure_airports, date_out_str, date_in_str, cookie)
+            stats = scan_flights(departure_airports, date_out_str, date_in_str, cookie, storage)
 
             # Update totals
             for key in total_stats:
