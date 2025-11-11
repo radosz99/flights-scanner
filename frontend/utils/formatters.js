@@ -13,9 +13,9 @@ export function formatPrice(price) {
 }
 
 /**
- * Format a date from YYYY-MM-DD or ISO format to a readable format
+ * Format a date from YYYY-MM-DD or ISO format to DD.MM.YYYY format
  * @param {string} dateStr - The date string to format
- * @returns {string} Formatted date (e.g., "Mon, Jan 15, 2025")
+ * @returns {string} Formatted date (e.g., "06.12.2025")
  */
 export function formatDate(dateStr) {
   if (!dateStr) return 'N/A'
@@ -25,19 +25,18 @@ export function formatDate(dateStr) {
   // Check if date is valid
   if (isNaN(date.getTime())) return dateStr
 
-  // Format as: Mon, Jan 15, 2025
-  return date.toLocaleDateString('en-US', {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric'
-  })
+  // Format as: DD.MM.YYYY
+  const day = String(date.getDate()).padStart(2, '0')
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const year = date.getFullYear()
+
+  return `${day}.${month}.${year}`
 }
 
 /**
- * Format a datetime string to a readable format
+ * Format a datetime string to DD.MM.YYYY HH:MM format
  * @param {string} dateTimeStr - The datetime string to format
- * @returns {string} Formatted datetime (e.g., "1/15/2025, 3:45 PM")
+ * @returns {string} Formatted datetime (e.g., "06.12.2025 15:30")
  */
 export function formatDateTime(dateTimeStr) {
   if (!dateTimeStr) return 'N/A'
@@ -47,14 +46,14 @@ export function formatDateTime(dateTimeStr) {
   // Check if date is valid
   if (isNaN(date.getTime())) return dateTimeStr
 
-  return date.toLocaleString('en-US', {
-    month: 'numeric',
-    day: 'numeric',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true
-  })
+  // Format as: DD.MM.YYYY HH:MM
+  const day = String(date.getDate()).padStart(2, '0')
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const year = date.getFullYear()
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+
+  return `${day}.${month}.${year} ${hours}:${minutes}`
 }
 
 /**
