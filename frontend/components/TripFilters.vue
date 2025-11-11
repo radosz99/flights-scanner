@@ -23,6 +23,37 @@
     <!-- Scrollable Filters -->
     <div class="overflow-y-auto px-6 pb-6">
       <div class="flex flex-col gap-4 pt-4">
+        <!-- Trip Type Toggle -->
+        <div class="flex flex-col">
+          <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200 text-sm">Trip Type</label>
+          <div class="inline-flex rounded-md shadow-sm" role="group">
+            <button
+              type="button"
+              @click="updateFilter('twoWayRoutes', false)"
+              :class="[
+                'flex-1 px-4 py-2.5 text-sm font-medium border-2 rounded-l-md transition-all duration-200',
+                !filters.twoWayRoutes
+                  ? 'bg-blue-600 text-white border-blue-600 dark:bg-blue-600 dark:border-blue-600'
+                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600 dark:hover:bg-gray-600'
+              ]"
+            >
+              One-way
+            </button>
+            <button
+              type="button"
+              @click="updateFilter('twoWayRoutes', true)"
+              :class="[
+                'flex-1 px-4 py-2.5 text-sm font-medium border-2 border-l-0 rounded-r-md transition-all duration-200',
+                filters.twoWayRoutes
+                  ? 'bg-blue-600 text-white border-blue-600 dark:bg-blue-600 dark:border-blue-600'
+                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600 dark:hover:bg-gray-600'
+              ]"
+            >
+              Round-trip
+            </button>
+          </div>
+        </div>
+
         <!-- Origin Airports (Multi-select) - Polish airports only -->
         <div class="flex flex-col">
           <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200 text-sm">From</label>
@@ -88,37 +119,6 @@
             <p v-if="selectedCountries.length > 0" class="mt-1 text-xs text-gray-500 dark:text-gray-400">
               {{ getTotalAirportsFromCountries() }} airports from {{ selectedCountries.length }} {{ selectedCountries.length === 1 ? 'country' : 'countries' }}
             </p>
-          </div>
-        </div>
-
-        <!-- Trip Type Toggle -->
-        <div class="flex flex-col">
-          <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200 text-sm">Trip Type</label>
-          <div class="inline-flex rounded-md shadow-sm" role="group">
-            <button
-              type="button"
-              @click="updateFilter('twoWayRoutes', false)"
-              :class="[
-                'flex-1 px-4 py-2.5 text-sm font-medium border-2 rounded-l-md transition-all duration-200',
-                !filters.twoWayRoutes
-                  ? 'bg-blue-600 text-white border-blue-600 dark:bg-blue-600 dark:border-blue-600'
-                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600 dark:hover:bg-gray-600'
-              ]"
-            >
-              One-way
-            </button>
-            <button
-              type="button"
-              @click="updateFilter('twoWayRoutes', true)"
-              :class="[
-                'flex-1 px-4 py-2.5 text-sm font-medium border-2 border-l-0 rounded-r-md transition-all duration-200',
-                filters.twoWayRoutes
-                  ? 'bg-blue-600 text-white border-blue-600 dark:bg-blue-600 dark:border-blue-600'
-                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600 dark:hover:bg-gray-600'
-              ]"
-            >
-              Round-trip
-            </button>
           </div>
         </div>
 
