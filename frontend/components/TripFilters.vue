@@ -3,19 +3,19 @@
     <!-- Header and Buttons (Sticky) -->
     <div class="p-6 pb-4 sticky top-0 bg-white dark:bg-gray-800 z-10 rounded-t-lg">
       <!-- Action Buttons -->
-      <div class="flex gap-2 pb-4 border-b border-gray-200 dark:border-gray-700">
+      <div class="flex gap-3 pb-4 border-b border-gray-200 dark:border-gray-700">
         <button
           @click="$emit('search')"
           :disabled="!canSearch || loading"
-          class="flex-1 py-2 px-4 bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white font-medium rounded-md transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed hover:shadow-lg hover:-translate-y-0.5 text-sm"
+          class="flex-1 py-3 px-6 bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700 text-white font-semibold rounded-lg transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed hover:shadow-lg hover:-translate-y-0.5 text-base"
         >
-          Search Trips
+          🔍 Search Trips
         </button>
         <button
           @click="$emit('clear')"
-          class="flex-1 py-2 px-4 bg-gray-600 hover:bg-gray-700 dark:bg-gray-600 dark:hover:bg-gray-700 text-white font-medium rounded-md transition-all duration-200 text-sm"
+          class="flex-1 py-3 px-6 bg-red-600 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700 text-white font-semibold rounded-lg transition-all duration-200 hover:shadow-lg text-base"
         >
-          Clear All
+          🗑️ Clear All
         </button>
       </div>
     </div>
@@ -74,7 +74,8 @@
               type="button"
               @click="updateDestinationMode('airports')"
               :class="[
-                'flex-1 px-4 py-2.5 text-sm font-medium border-2 rounded-l-md transition-all duration-200',
+                'flex-1 px-4 py-2.5 text-sm font-medium border-2 transition-all duration-200',
+                filters.origins.length === 1 ? 'rounded-l-md' : 'rounded-l-md rounded-r-md',
                 destinationMode === 'airports'
                   ? 'bg-blue-600 text-white border-blue-600 dark:bg-blue-600 dark:border-blue-600'
                   : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600 dark:hover:bg-gray-600'
@@ -87,6 +88,7 @@
               @click="updateDestinationMode('country')"
               :class="[
                 'flex-1 px-4 py-2.5 text-sm font-medium border-2 border-l-0 transition-all duration-200',
+                filters.origins.length === 1 ? '' : 'rounded-r-md',
                 destinationMode === 'country'
                   ? 'bg-blue-600 text-white border-blue-600 dark:bg-blue-600 dark:border-blue-600'
                   : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600 dark:hover:bg-gray-600'
@@ -95,18 +97,16 @@
               Countries
             </button>
             <button
+              v-if="filters.origins.length === 1"
               type="button"
               @click="updateDestinationMode('anywhere')"
-              :disabled="filters.origins.length !== 1"
               :class="[
                 'flex-1 px-4 py-2.5 text-sm font-medium border-2 border-l-0 rounded-r-md transition-all duration-200',
                 destinationMode === 'anywhere'
                   ? 'bg-purple-600 text-white border-purple-600 dark:bg-purple-600 dark:border-purple-600'
-                  : filters.origins.length === 1
-                    ? 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600 dark:hover:bg-gray-600'
-                    : 'bg-gray-300 text-gray-500 border-gray-300 cursor-not-allowed dark:bg-gray-600 dark:text-gray-400 dark:border-gray-600'
+                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600 dark:hover:bg-gray-600'
               ]"
-              :title="filters.origins.length !== 1 ? 'Select exactly one origin airport to search anywhere' : 'Search all destinations from selected origin'"
+              title="Search all destinations from selected origin"
             >
               🌍 Anywhere
             </button>
@@ -144,9 +144,9 @@
             </p>
           </div>
 
-          <!-- Warning when anywhere is disabled -->
-          <p v-if="destinationMode !== 'anywhere' && filters.origins.length !== 1" class="mt-1 text-xs text-gray-500 dark:text-gray-400 text-center">
-            Select one origin to enable "Anywhere" mode
+          <!-- Warning when anywhere is hidden -->
+          <p v-if="filters.origins.length > 1" class="mt-1 text-xs text-gray-500 dark:text-gray-400 text-center">
+            "Anywhere" mode requires exactly one origin airport
           </p>
         </div>
 
@@ -345,7 +345,23 @@ const weekdayOptions = [
 
 // Methods
 const updateFilter = (key, value) => {
-  emit('update:filters', { ...props.filters, [key]: value })
+  const updatedFilters = { ...props.filters, [key]: value }
+
+  // Validation: Ensure minDays never exceeds maxDays
+  if (key === 'minDays' && value > props.filters.maxDays) {
+    // If user increases minDays beyond maxDays, increase maxDays to match
+    updatedFilters.maxDays = value
+  } else if (key === 'maxDays' && value < props.filters.minDays) {
+    // If user decreases maxDays below minDays, decrease minDays to match
+    updatedFilters.minDays = value
+  }
+
+  // If user adds a second origin while in "anywhere" mode, switch to airports mode
+  if (key === 'origins' && value.length > 1 && props.destinationMode === 'anywhere') {
+    emit('update:destination-mode', 'airports')
+  }
+
+  emit('update:filters', updatedFilters)
 }
 
 const updateDestinationMode = (mode) => {
