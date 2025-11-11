@@ -5,16 +5,6 @@
       Search for one-way or round-trip flights with flexible origin and destination matching. Use batch search to efficiently find flights across multiple airports.
     </p>
 
-    <!-- Loading with Progress Bar -->
-    <div v-if="loading" class="mt-8">
-      <div class="p-4 bg-yellow-50 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 rounded-md border border-yellow-200 dark:border-yellow-700 text-center text-lg">
-        <div class="mb-3">{{ loadingMessage }}</div>
-        <div class="w-full bg-yellow-200 dark:bg-yellow-700 rounded-full h-2.5 overflow-hidden">
-          <div class="bg-yellow-600 dark:bg-yellow-400 h-2.5 rounded-full animate-progress"></div>
-        </div>
-      </div>
-    </div>
-
     <!-- Error -->
     <div
       v-if="error"
@@ -26,30 +16,35 @@
     <!-- Main Content: Filters + Results Side by Side on Desktop -->
     <div class="flex flex-col lg:flex-row lg:items-start gap-6 mt-8">
       <!-- Search Form (Left Side on Desktop) -->
-      <div class="lg:w-[30%] lg:sticky lg:top-8 lg:max-h-[calc(100vh-4rem)] lg:overflow-y-auto">
-        <div class="p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md">
-          <h2 class="text-gray-800 dark:text-gray-100 text-lg font-semibold mb-4 pb-3 border-b-2 border-gray-200 dark:border-gray-700">
-            Search Parameters
-          </h2>
+      <div class="lg:w-[30%] lg:sticky lg:top-8">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md flex flex-col max-h-[calc(100vh-6rem)]">
+          <!-- Header and Buttons (Sticky) -->
+          <div class="p-6 pb-4 sticky top-0 bg-white dark:bg-gray-800 z-10 rounded-t-lg">
+            <h2 class="text-gray-800 dark:text-gray-100 text-lg font-semibold mb-4 pb-3 border-b-2 border-gray-200 dark:border-gray-700">
+              Search Parameters
+            </h2>
 
-          <!-- Action Buttons -->
-          <div class="flex flex-col gap-3 mb-4 pb-4 border-b border-gray-200 dark:border-gray-700">
-            <button
-              @click="searchTrips"
-              :disabled="!canSearch || loading"
-              class="w-full py-3 px-6 bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white font-medium rounded-md transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed hover:shadow-lg hover:-translate-y-0.5"
-            >
-              Search Trips
-            </button>
-            <button
-              @click="clearFilters"
-              class="w-full py-3 px-6 bg-gray-600 hover:bg-gray-700 dark:bg-gray-600 dark:hover:bg-gray-700 text-white font-medium rounded-md transition-all duration-200"
-            >
-              Clear All
-            </button>
+            <!-- Action Buttons -->
+            <div class="flex gap-2 pb-4 border-b border-gray-200 dark:border-gray-700">
+              <button
+                @click="searchTrips"
+                :disabled="!canSearch || loading"
+                class="flex-1 py-2 px-4 bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white font-medium rounded-md transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed hover:shadow-lg hover:-translate-y-0.5 text-sm"
+              >
+                Search Trips
+              </button>
+              <button
+                @click="clearFilters"
+                class="flex-1 py-2 px-4 bg-gray-600 hover:bg-gray-700 dark:bg-gray-600 dark:hover:bg-gray-700 text-white font-medium rounded-md transition-all duration-200 text-sm"
+              >
+                Clear All
+              </button>
+            </div>
           </div>
 
-          <div class="flex flex-col gap-4">
+          <!-- Scrollable Filters -->
+          <div class="overflow-y-auto px-6 pb-6">
+            <div class="flex flex-col gap-4 pt-4">
             <!-- Origin Airports (Multi-select) - Polish airports only -->
             <div class="flex flex-col">
               <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200 text-sm">Origin Airports (Polish only)</label>
@@ -237,18 +232,31 @@
                 :show-selected-items="false"
               />
             </div>
+            </div>
           </div>
         </div>
       </div>
 
       <!-- Results Section (Right Side on Desktop) -->
-      <div class="lg:flex-1 lg:min-w-0" :class="{ 'blur-sm opacity-60 pointer-events-none': loading && results }">
-        <!-- Initial State Message -->
-        <div v-if="!searched" class="p-8 bg-blue-50 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 rounded-lg border-2 border-blue-200 dark:border-blue-700 text-center">
-          <div class="text-2xl mb-3">🔍</div>
-          <h3 class="text-xl font-semibold mb-2">Ready to Search</h3>
-          <p class="text-base">Please select your origin, destination, and other filters, then click "Search Trips" to find available flights.</p>
+      <div class="lg:flex-1 lg:min-w-0 relative">
+        <!-- Loading Overlay -->
+        <div v-if="loading" class="absolute inset-0 flex items-start justify-center pt-8 z-10">
+          <div class="w-full max-w-[70%] p-4 bg-yellow-50 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 rounded-md border border-yellow-200 dark:border-yellow-700 text-center text-lg shadow-lg">
+            <div class="mb-3">{{ loadingMessage }}</div>
+            <div class="w-full bg-yellow-200 dark:bg-yellow-700 rounded-full h-2.5 overflow-hidden">
+              <div class="bg-yellow-600 dark:bg-yellow-400 h-2.5 rounded-full animate-progress"></div>
+            </div>
+          </div>
         </div>
+
+        <!-- Results Content (blurred when loading) -->
+        <div :class="{ 'blur-sm opacity-60 pointer-events-none': loading && results }">
+          <!-- Initial State Message -->
+          <div v-if="!searched" class="p-8 bg-blue-50 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 rounded-lg border-2 border-blue-200 dark:border-blue-700 text-center">
+            <div class="text-2xl mb-3">🔍</div>
+            <h3 class="text-xl font-semibold mb-2">Ready to Search</h3>
+            <p class="text-base">Please select your origin, destination, and other filters, then click "Search Trips" to find available flights.</p>
+          </div>
 
         <!-- Results Summary -->
         <div v-if="results" class="p-4 bg-white dark:bg-gray-800 rounded-lg shadow-md mb-4">
@@ -400,12 +408,13 @@
           </div>
         </div>
 
-        <!-- No Results -->
-        <div
-          v-if="!loading && searched && (!results || results.trips.length === 0)"
-          class="p-8 text-center bg-gray-50 dark:bg-gray-700 rounded-lg text-gray-600 dark:text-gray-300 text-lg"
-        >
-          <p>No trips found matching your criteria. Try adjusting your search parameters.</p>
+          <!-- No Results -->
+          <div
+            v-if="!loading && searched && (!results || results.trips.length === 0)"
+            class="p-8 text-center bg-gray-50 dark:bg-gray-700 rounded-lg text-gray-600 dark:text-gray-300 text-lg"
+          >
+            <p>No trips found matching your criteria. Try adjusting your search parameters.</p>
+          </div>
         </div>
       </div>
     </div>
