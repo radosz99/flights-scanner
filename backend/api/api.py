@@ -311,7 +311,7 @@ async def get_round_trips_preview(
 @app.get("/flights/round-trips-batch")
 async def get_round_trips_batch(
     origins: str = Query(..., description="Comma-separated origin airport codes (e.g., WRO,WAW,KRK)"),
-    destinations: str = Query(..., description="Comma-separated destination airport codes (e.g., BCN,AGP,MAD)"),
+    destinations: Optional[str] = Query(None, description="Comma-separated destination airport codes (e.g., BCN,AGP,MAD). Leave empty for 'anywhere' search."),
     min_days: int = Query(..., ge=1, description="Minimum trip duration in days"),
     max_days: int = Query(..., ge=1, description="Maximum trip duration in days"),
     passengers: int = Query(1, ge=1, le=10, description="Number of passengers"),
@@ -359,12 +359,19 @@ async def get_round_trips_batch(
 
     # Parse comma-separated airport codes
     origins_list = [o.strip().upper() for o in origins.split(",") if o.strip()]
-    destinations_list = [d.strip().upper() for d in destinations.split(",") if d.strip()]
+    destinations_list = [d.strip().upper() for d in destinations.split(",") if d.strip()] if destinations else []
 
-    if not origins_list or not destinations_list:
+    if not origins_list:
         raise HTTPException(
             status_code=400,
-            detail="Both origins and destinations must contain at least one airport code"
+            detail="Origins must contain at least one airport code"
+        )
+
+    # For "anywhere" search, only one origin is allowed
+    if not destinations_list and len(origins_list) > 1:
+        raise HTTPException(
+            status_code=400,
+            detail="Anywhere search (empty destinations) is only supported with a single origin airport"
         )
 
     # Parse weekday parameters

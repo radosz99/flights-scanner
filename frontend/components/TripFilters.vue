@@ -120,6 +120,25 @@
               {{ getTotalAirportsFromCountries() }} airports from {{ selectedCountries.length }} {{ selectedCountries.length === 1 ? 'country' : 'countries' }}
             </p>
           </div>
+
+          <!-- Anywhere Button -->
+          <button
+            type="button"
+            @click="selectAnywhere"
+            :disabled="filters.origins.length !== 1"
+            :class="[
+              'w-full px-4 py-2.5 text-sm font-medium border-2 rounded-md transition-all duration-200 mt-2',
+              filters.origins.length === 1
+                ? 'bg-purple-600 text-white border-purple-600 hover:bg-purple-700 dark:bg-purple-600 dark:border-purple-600 dark:hover:bg-purple-700 cursor-pointer'
+                : 'bg-gray-300 text-gray-500 border-gray-300 cursor-not-allowed dark:bg-gray-600 dark:text-gray-400 dark:border-gray-600'
+            ]"
+            :title="filters.origins.length !== 1 ? 'Select exactly one origin airport to search anywhere' : 'Search all destinations from selected origin'"
+          >
+            🌍 Anywhere
+          </button>
+          <p v-if="filters.origins.length !== 1" class="mt-1 text-xs text-gray-500 dark:text-gray-400 text-center">
+            Select one origin to search anywhere
+          </p>
         </div>
 
         <!-- Return from Same Airport Checkbox (only for two-way routes) -->
@@ -325,6 +344,15 @@ const updateDestinationMode = (mode) => {
   if (mode === 'airports') {
     emit('update:selected-countries', [])
   }
+}
+
+const selectAnywhere = () => {
+  // Clear destinations to trigger "anywhere" search
+  emit('update:destination-mode', 'airports')
+  emit('update:selected-countries', [])
+  updateFilter('destinations', [])
+  // Trigger search immediately
+  emit('search')
 }
 
 const selectAirportsByCountries = (countries) => {

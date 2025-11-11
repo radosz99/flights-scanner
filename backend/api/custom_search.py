@@ -256,21 +256,30 @@ class CustomTripSearch:
         return_weekdays: Optional[List[int]] = None
     ) -> List[Dict[str, Any]]:
         origins_upper = [o.upper() for o in origins]
-        destinations_upper = [d.upper() for d in destinations]
 
-        outbound_query = {
-            "origin": {"$in": origins_upper},
-            "destination": {"$in": destinations_upper}
-        }
-
-        if return_from_same_airport:
-            return_query = {
-                "origin": {"$in": destinations_upper},
-                "destination": {"$in": origins_upper}
+        # Support "anywhere" search when destinations is empty
+        if destinations:
+            destinations_upper = [d.upper() for d in destinations]
+            outbound_query = {
+                "origin": {"$in": origins_upper},
+                "destination": {"$in": destinations_upper}
             }
+            if return_from_same_airport:
+                return_query = {
+                    "origin": {"$in": destinations_upper},
+                    "destination": {"$in": origins_upper}
+                }
+            else:
+                return_query = {
+                    "origin": {"$in": destinations_upper},
+                    "destination": {"$in": origins_upper}
+                }
         else:
+            # "Anywhere" search - search all destinations from origins
+            outbound_query = {
+                "origin": {"$in": origins_upper}
+            }
             return_query = {
-                "origin": {"$in": destinations_upper},
                 "destination": {"$in": origins_upper}
             }
 

@@ -394,13 +394,17 @@ const searchTwoWayTrips = async () => {
   try {
     const params = {
       origins: searchParams.value.origins.join(','),
-      destinations: searchParams.value.destinations.join(','),
       min_days: searchParams.value.minDays,
       max_days: searchParams.value.maxDays,
       passengers: 1, // Default to 1 passenger for price display
       limit: 1000, // Backend maximum limit
       return_from_same_airport: searchParams.value.returnFromSameAirport,
       return_to_same_airport: searchParams.value.returnToSameAirport
+    }
+
+    // Add destinations only if not empty (for "anywhere" search, destinations is empty)
+    if (searchParams.value.destinations.length > 0) {
+      params.destinations = searchParams.value.destinations.join(',')
     }
 
     // Add optional filters
