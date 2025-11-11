@@ -73,3 +73,37 @@ export function formatTime(timeStr) {
   const [hours, minutes] = timePart.split(':')
   return `${hours}:${minutes}`
 }
+
+/**
+ * Format a date with weekday in Polish from YYYY-MM-DD or ISO format to "Weekday, DD.MM.YYYY" format
+ * @param {string} dateStr - The date string to format
+ * @returns {string} Formatted date with weekday (e.g., "Poniedziałek, 16.11.2025")
+ */
+export function formatDateWithWeekday(dateStr) {
+  if (!dateStr) return 'N/A'
+
+  const date = new Date(dateStr)
+
+  // Check if date is valid
+  if (isNaN(date.getTime())) return dateStr
+
+  // Polish weekday names
+  const weekdays = [
+    'Niedziela',      // Sunday
+    'Poniedziałek',   // Monday
+    'Wtorek',         // Tuesday
+    'Środa',          // Wednesday
+    'Czwartek',       // Thursday
+    'Piątek',         // Friday
+    'Sobota'          // Saturday
+  ]
+
+  const weekday = weekdays[date.getDay()]
+
+  // Format as: DD.MM.YYYY
+  const day = String(date.getDate()).padStart(2, '0')
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const year = date.getFullYear()
+
+  return `${weekday}, ${day}.${month}.${year}`
+}

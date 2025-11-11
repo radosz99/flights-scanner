@@ -67,7 +67,7 @@
             <td class="px-3 py-3 min-w-[140px] bg-white dark:bg-gray-800">
               <div class="flex flex-col gap-1">
                 <div class="font-medium text-gray-900 dark:text-gray-200">
-                  {{ formatDate(trip.outbound_flight.date) }}
+                  {{ formatDateWithWeekday(trip.outbound_flight.date) }}
                 </div>
                 <div class="flex gap-2 text-xs text-gray-600 dark:text-gray-400">
                   <span>{{ trip.outbound_flight.flight_number }}</span>
@@ -92,7 +92,7 @@
             <td class="px-3 py-3 min-w-[140px] bg-white dark:bg-gray-800">
               <div class="flex flex-col gap-1">
                 <div class="font-medium text-gray-900 dark:text-gray-200">
-                  {{ formatDate(trip.return_flight.date) }}
+                  {{ formatDateWithWeekday(trip.return_flight.date) }}
                 </div>
                 <div class="flex gap-2 text-xs text-gray-600 dark:text-gray-400">
                   <span>{{ trip.return_flight.flight_number }}</span>
@@ -130,7 +130,7 @@
 </template>
 
 <script setup>
-import { formatPrice, formatDate, formatTime, formatDateTime } from '~/utils/formatters'
+import { formatPrice, formatDate, formatTime, formatDateTime, formatDateWithWeekday } from '~/utils/formatters'
 
 const props = defineProps({
   results: Object

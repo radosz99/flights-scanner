@@ -86,7 +86,7 @@
                           {{ trip.outbound.origin }} → {{ trip.outbound.destination }}
                         </span>
                         <span class="text-xs text-gray-500 dark:text-gray-400">
-                          {{ formatDate(trip.outbound.date_out) }}
+                          {{ formatDateWithWeekday(trip.outbound.date_out) }}
                         </span>
                       </div>
                       <div class="text-xs text-gray-600 dark:text-gray-400 ml-7">
@@ -145,7 +145,7 @@
                           {{ trip.return.origin }} → {{ trip.return.destination }}
                         </span>
                         <span class="text-xs text-gray-500 dark:text-gray-400">
-                          {{ formatDate(trip.return.date_out) }}
+                          {{ formatDateWithWeekday(trip.return.date_out) }}
                         </span>
                       </div>
                       <div class="text-xs text-gray-600 dark:text-gray-400 ml-7">
@@ -227,7 +227,7 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import { formatPrice, formatDate, formatTime, formatDateTime } from '~/utils/formatters'
+import { formatPrice, formatDate, formatTime, formatDateTime, formatDateWithWeekday } from '~/utils/formatters'
 
 // Hover state for highlighting trip rows
 const hoveredTripIndex = ref(null)
