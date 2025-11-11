@@ -59,7 +59,7 @@
       <!-- Row 2 -->
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <div class="flex flex-col">
-          <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200">Min Price (PLN)</label>
+          <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200">Cena Min (PLN)</label>
           <input
             type="number"
             :value="filters.minPrice"
@@ -71,7 +71,7 @@
         </div>
 
         <div class="flex flex-col">
-          <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200">Max Price (PLN)</label>
+          <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200">Cena Maks (PLN)</label>
           <input
             type="number"
             :value="filters.maxPrice"
@@ -83,21 +83,21 @@
         </div>
 
         <div class="flex flex-col">
-          <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200">Sort By</label>
+          <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200">Sortuj Według</label>
           <select
             :value="filters.sortBy"
             @change="$emit('update:sortBy', $event.target.value)"
             class="px-3 py-2 border-2 border-gray-300 dark:border-gray-500 rounded-md bg-white dark:bg-gray-600 text-gray-900 dark:text-gray-100 cursor-pointer focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800"
           >
-            <option value="price">Price (Low to High)</option>
-            <option value="price_desc">Price (High to Low)</option>
-            <option value="date">Date (Earliest)</option>
-            <option value="duration">Duration</option>
+            <option value="price">Cena (Od Najniższej)</option>
+            <option value="price_desc">Cena (Od Najwyższej)</option>
+            <option value="date">Data (Najwcześniejsza)</option>
+            <option value="duration">Czas Trwania</option>
           </select>
         </div>
 
         <div class="flex flex-col">
-          <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200">Page Size</label>
+          <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200">Rozmiar Strony</label>
           <select
             :value="filters.pageSize"
             @change="$emit('update:pageSize', parseInt($event.target.value))"
@@ -117,13 +117,13 @@
           :disabled="loading"
           class="px-6 py-3 bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white font-medium rounded-md transition transform hover:-translate-y-0.5 hover:shadow-lg disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none"
         >
-          Search Flights
+          Szukaj Lotów
         </button>
         <button
           @click="$emit('clear')"
           class="px-6 py-3 bg-gray-600 hover:bg-gray-700 dark:bg-gray-600 dark:hover:bg-gray-700 text-white font-medium rounded-md transition"
         >
-          Clear Filters
+          Wyczyść Filtry
         </button>
       </div>
     </div>
