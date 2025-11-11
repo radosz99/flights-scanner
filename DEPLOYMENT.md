@@ -11,9 +11,9 @@ This guide provides comprehensive instructions for deploying the Flights Scanner
   - [1. Server Setup](#1-server-setup)
   - [2. Domain Configuration](#2-domain-configuration)
   - [3. Application Setup](#3-application-setup)
-  - [4. SSL/TLS Configuration](#4-ssltls-configuration)
-  - [5. Environment Configuration](#5-environment-configuration)
-  - [6. Starting the Application](#6-starting-the-application)
+  - [4. Environment Configuration](#4-environment-configuration)
+  - [5. Starting the Application](#5-starting-the-application)
+  - [6. SSL/HTTPS Setup](#6-sslhttps-setup)
 - [Maintenance](#maintenance)
 - [Monitoring](#monitoring)
 - [Troubleshooting](#troubleshooting)
@@ -201,109 +201,7 @@ MAX_SCAN_WORKERS=4
 WORKER_TIMEOUT=300
 ```
 
-### 4. SSL/TLS Configuration
-
-#### Install Certbot
-
-```bash
-# Install Certbot
-sudo apt install certbot -y
-
-# Create directories for certificates
-mkdir -p certbot/conf
-mkdir -p certbot/www
-```
-
-#### Obtain SSL Certificate
-
-```bash
-# Stop nginx if running
-docker-compose stop nginx
-
-# Obtain certificate (replace with your domain and email)
-sudo certbot certonly --standalone \
-  -d your-domain.com \
-  -d www.your-domain.com \
-  --email your-email@example.com \
-  --agree-tos \
-  --non-interactive
-
-# Copy certificates to project directory
-sudo cp -rL /etc/letsencrypt certbot/conf/
-
-# Fix permissions
-sudo chown -R $USER:$USER certbot/
-```
-
-#### Configure Nginx for SSL
-
-Edit `nginx/conf.d/default.conf`:
-
-```bash
-nano nginx/conf.d/default.conf
-```
-
-1. **Uncomment the HTTP redirect** (around line 9-10):
-   ```nginx
-   return 301 https://$host$request_uri;
-   ```
-
-2. **Comment out the HTTP location blocks** (around lines 14-45)
-
-3. **Uncomment the HTTPS server block** (starting around line 48)
-
-4. **Update `server_name`** with your domain:
-   ```nginx
-   server_name your-domain.com www.your-domain.com;
-   ```
-
-5. **Update SSL certificate paths**:
-   ```nginx
-   ssl_certificate /etc/letsencrypt/live/your-domain.com/fullchain.pem;
-   ssl_certificate_key /etc/letsencrypt/live/your-domain.com/privkey.pem;
-   ```
-
-6. Save and exit (Ctrl+X, Y, Enter)
-
-#### Update Docker Compose for SSL
-
-Edit `docker-compose.yml`:
-
-```bash
-nano docker-compose.yml
-```
-
-Uncomment the certbot volume mounts in the nginx service (around lines 126-127):
-
-```yaml
-volumes:
-  - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-  - ./nginx/conf.d:/etc/nginx/conf.d:ro
-  - nginx_logs:/var/log/nginx
-  - ./certbot/conf:/etc/letsencrypt:ro  # Uncomment this
-  - ./certbot/www:/var/www/certbot:ro    # Uncomment this
-```
-
-#### Setup Certificate Auto-Renewal
-
-```bash
-# Create renewal script
-cat > renew-certs.sh << 'EOF'
-#!/bin/bash
-sudo certbot renew --quiet
-sudo cp -rL /etc/letsencrypt /opt/flights-scanner/certbot/conf/
-sudo chown -R $USER:$USER /opt/flights-scanner/certbot/
-docker-compose restart nginx
-EOF
-
-# Make executable
-chmod +x renew-certs.sh
-
-# Add to crontab (runs daily at 2 AM)
-(crontab -l 2>/dev/null; echo "0 2 * * * cd /opt/flights-scanner && ./renew-certs.sh >> /var/log/certbot-renew.log 2>&1") | crontab -
-```
-
-### 5. Environment Configuration
+### 4. Environment Configuration
 
 #### Security Hardening
 
@@ -338,7 +236,7 @@ GUNICORN_WORKERS=2
 MAX_SCAN_WORKERS=2
 ```
 
-### 6. Starting the Application
+### 5. Starting the Application
 
 #### Build and Start Services
 
@@ -366,21 +264,52 @@ docker-compose ps
 
 2. **Test health endpoints**:
    ```bash
-   # Via nginx (external)
-   curl https://your-domain.com/api/health
+   # Via nginx (external, HTTP for now)
+   curl http://your-domain.com/api/health
 
    # Should return: {"status":"ok"}
    ```
 
 3. **Access the web interface**:
-   - Navigate to `https://your-domain.com`
+   - Navigate to `http://your-domain.com`
    - You should see the Flights Scanner interface
 
 4. **Test API**:
    ```bash
-   curl https://your-domain.com/api/airports
+   curl http://your-domain.com/api/airports
    # Should return a list of airports
    ```
+
+### 6. SSL/HTTPS Setup
+
+**For production, you should enable SSL/HTTPS.** This has been fully automated!
+
+Simply run:
+
+```bash
+./init-letsencrypt.sh your-domain.com your-email@example.com
+```
+
+This single command will:
+- Automatically obtain SSL certificates from Let's Encrypt
+- Configure nginx with HTTPS and security best practices
+- Set up automatic certificate renewal (every 60 days)
+- Redirect all HTTP traffic to HTTPS
+
+**For detailed SSL setup instructions and troubleshooting, see [SSL_SETUP.md](SSL_SETUP.md)**
+
+After running the script, verify HTTPS is working:
+
+```bash
+# Test HTTPS
+curl https://your-domain.com/api/health
+
+# Verify HTTP redirects to HTTPS
+curl -I http://your-domain.com
+# Should return 301 redirect to https://
+```
+
+**Note:** If you don't need SSL (e.g., for local development or testing), you can skip this step entirely. The application works fine over HTTP.
 
 ## Maintenance
 
@@ -566,14 +495,17 @@ docker-compose up -d
 
 ```bash
 # Test certificate
-sudo certbot certificates
+docker-compose exec certbot certbot certificates
 
 # Renew manually
-sudo certbot renew --force-renewal
+docker-compose exec certbot certbot renew --force-renewal
+docker-compose exec nginx nginx -s reload
 
 # Check nginx configuration
 docker-compose exec nginx nginx -t
 ```
+
+For more SSL troubleshooting, see [SSL_SETUP.md](SSL_SETUP.md#troubleshooting)
 
 ### Database Connection Issues
 
@@ -636,8 +568,8 @@ cp -r /opt/flights-scanner/nginx /backup/flights-scanner/
 # Backup database
 ./backup.sh
 
-# Backup SSL certificates
-sudo cp -r /etc/letsencrypt /backup/flights-scanner/
+# Backup SSL certificates (if using SSL)
+cp -r certbot/conf /backup/flights-scanner/certbot-conf
 ```
 
 ### Disaster Recovery
@@ -655,8 +587,12 @@ cp /backup/flights-scanner/.env .
 cp /backup/flights-scanner/mongo.env .
 cp -r /backup/flights-scanner/nginx .
 
-# Restore SSL certificates
-sudo cp -r /backup/flights-scanner/letsencrypt /etc/
+# Restore SSL certificates (if you have a backup)
+cp -r /backup/flights-scanner/certbot-conf certbot/conf
+
+# OR set up SSL fresh (recommended)
+# See step 6 in production deployment or run:
+# ./init-letsencrypt.sh your-domain.com your-email@example.com
 
 # Start services
 docker-compose up -d
