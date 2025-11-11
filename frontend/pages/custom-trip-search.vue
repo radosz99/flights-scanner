@@ -20,10 +20,6 @@
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md flex flex-col max-h-[calc(100vh-6rem)]">
           <!-- Header and Buttons (Sticky) -->
           <div class="p-6 pb-4 sticky top-0 bg-white dark:bg-gray-800 z-10 rounded-t-lg">
-            <h2 class="text-gray-800 dark:text-gray-100 text-lg font-semibold mb-4 pb-3 border-b-2 border-gray-200 dark:border-gray-700">
-              Search Parameters
-            </h2>
-
             <!-- Action Buttons -->
             <div class="flex gap-2 pb-4 border-b border-gray-200 dark:border-gray-700">
               <button
@@ -258,116 +254,100 @@
             <p class="text-base">Please select your origin, destination, and other filters, then click "Search Trips" to find available flights.</p>
           </div>
 
-        <!-- Results Summary -->
-        <div v-if="results" class="p-4 bg-white dark:bg-gray-800 rounded-lg shadow-md mb-4">
-          <h3 class="text-gray-800 dark:text-gray-100 text-lg font-semibold m-0">
-            Found {{ results.total }} trips
-            <span v-if="paginatedTrips.length < results.total">
-              (showing {{ pageStart + 1 }}-{{ pageEnd }} of {{ results.total }})
-            </span>
-          </h3>
-        </div>
-
         <!-- Results Table -->
         <div v-if="results && results.trips.length > 0" class="mt-4">
           <div class="overflow-x-auto bg-white dark:bg-gray-800 rounded-lg shadow-md w-full">
             <table class="w-full border-collapse text-sm">
               <thead class="bg-gray-50 dark:bg-gray-700 border-b-2 border-gray-200 dark:border-gray-600">
                 <tr>
-                  <th class="p-4 text-left font-semibold text-gray-700 dark:text-gray-200 whitespace-nowrap">
-                    {{ searchParams.twoWayRoutes ? 'Outbound' : 'Flight' }}
+                  <th class="p-3 text-left font-semibold text-gray-700 dark:text-gray-200 whitespace-nowrap">
+                    Flight Info
                   </th>
-                  <th v-if="searchParams.twoWayRoutes" class="p-4 text-left font-semibold text-gray-700 dark:text-gray-200 whitespace-nowrap">
-                    Return
-                  </th>
-                  <th class="p-4 text-left font-semibold text-gray-700 dark:text-gray-200 whitespace-nowrap">
-                    {{ searchParams.twoWayRoutes ? 'Dates' : 'Date' }}
-                  </th>
-                  <th v-if="searchParams.twoWayRoutes" class="p-4 text-left font-semibold text-gray-700 dark:text-gray-200 whitespace-nowrap">
-                    Duration
-                  </th>
-                  <th class="p-4 text-left font-semibold text-gray-700 dark:text-gray-200 whitespace-nowrap">
+                  <th class="p-3 text-center font-semibold text-gray-700 dark:text-gray-200 whitespace-nowrap">
                     Total Price
                   </th>
-                  <th class="p-4 text-left font-semibold text-gray-700 dark:text-gray-200 whitespace-nowrap">
-                    Details
+                  <th v-if="searchParams.twoWayRoutes" class="p-3 text-center font-semibold text-gray-700 dark:text-gray-200 whitespace-nowrap">
+                    Duration
                   </th>
                 </tr>
               </thead>
               <tbody class="bg-white dark:bg-gray-800">
-                <tr
-                  v-for="(trip, index) in paginatedTrips"
-                  :key="index"
-                  class="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                >
-                  <!-- Outbound / One-way Flight -->
-                  <td class="p-4 align-top text-gray-800 dark:text-gray-200">
-                    <div class="flex flex-col gap-2">
-                      <div class="text-base font-semibold">
-                        <strong>{{ trip.outbound.origin }}</strong> → <strong>{{ trip.outbound.destination }}</strong>
+                <template v-for="(trip, index) in paginatedTrips" :key="index">
+                  <!-- Outbound / One-way Flight Row -->
+                  <tr class="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                    <td class="p-3 text-gray-800 dark:text-gray-200">
+                      <div class="flex flex-col gap-1">
+                        <div class="flex items-center gap-2">
+                          <span class="text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded">
+                            {{ searchParams.twoWayRoutes ? 'OUT' : 'FLIGHT' }}
+                          </span>
+                          <span class="text-sm font-bold">
+                            {{ trip.outbound.origin }} → {{ trip.outbound.destination }}
+                          </span>
+                          <span class="text-xs text-gray-500 dark:text-gray-400">
+                            {{ formatDate(trip.outbound.date_out) }}
+                          </span>
+                        </div>
+                        <div class="text-xs text-gray-600 dark:text-gray-400 ml-14">
+                          {{ trip.outbound.origin_name }} → {{ trip.outbound.destination_name }}
+                        </div>
+                        <div class="flex items-center gap-3 ml-14 text-xs">
+                          <span class="text-gray-700 dark:text-gray-300">
+                            {{ formatTime(trip.outbound.departure_time) }} - {{ formatTime(trip.outbound.arrival_time) }}
+                          </span>
+                          <span class="text-gray-500 dark:text-gray-400">
+                            {{ trip.outbound.duration }}
+                          </span>
+                          <span class="text-green-600 dark:text-green-400 font-semibold">
+                            {{ formatPrice(searchParams.twoWayRoutes ? trip.outbound.current_price : trip.outbound.price_per_person) }}
+                          </span>
+                        </div>
                       </div>
-                      <div class="text-xs text-gray-600 dark:text-gray-400">
-                        {{ trip.outbound.origin_name }} → {{ trip.outbound.destination_name }}
+                    </td>
+                    <td :rowspan="searchParams.twoWayRoutes && trip.return ? 2 : 1" class="p-3 text-center align-middle border-l border-gray-200 dark:border-gray-700">
+                      <strong class="text-lg text-green-600 dark:text-green-400">{{ formatPrice(trip.total_price) }}</strong>
+                    </td>
+                    <td v-if="searchParams.twoWayRoutes" :rowspan="trip.return ? 2 : 1" class="p-3 text-center align-middle border-l border-gray-200 dark:border-gray-700">
+                      <div class="flex flex-col gap-1">
+                        <div class="text-base font-bold text-gray-800 dark:text-gray-200">{{ trip.trip_duration_days }} days</div>
+                        <div class="text-xs text-gray-600 dark:text-gray-400">{{ trip.stay_duration }}</div>
                       </div>
-                      <div class="text-xs text-gray-600 dark:text-gray-400">
-                        {{ formatTime(trip.outbound.departure_time) }} - {{ formatTime(trip.outbound.arrival_time) }}
-                      </div>
-                      <div class="text-sm text-green-600 dark:text-green-400 font-semibold">
-                        {{ formatPrice(searchParams.twoWayRoutes ? trip.outbound.current_price : trip.outbound.price_per_person) }}
-                      </div>
-                    </div>
-                  </td>
+                    </td>
+                  </tr>
 
-                  <!-- Return (only for two-way routes) -->
-                  <td v-if="searchParams.twoWayRoutes && trip.return" class="p-4 align-top text-gray-800 dark:text-gray-200">
-                    <div class="flex flex-col gap-2">
-                      <div class="text-base font-semibold">
-                        <strong>{{ trip.return.origin }}</strong> → <strong>{{ trip.return.destination }}</strong>
+                  <!-- Return Flight Row (only for two-way routes) -->
+                  <tr v-if="searchParams.twoWayRoutes && trip.return" class="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                    <td class="p-3 text-gray-800 dark:text-gray-200">
+                      <div class="flex flex-col gap-1">
+                        <div class="flex items-center gap-2">
+                          <span class="text-xs font-semibold text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/30 px-2 py-0.5 rounded">
+                            RET
+                          </span>
+                          <span class="text-sm font-bold">
+                            {{ trip.return.origin }} → {{ trip.return.destination }}
+                          </span>
+                          <span class="text-xs text-gray-500 dark:text-gray-400">
+                            {{ formatDate(trip.return.date_out) }}
+                          </span>
+                        </div>
+                        <div class="text-xs text-gray-600 dark:text-gray-400 ml-14">
+                          {{ trip.return.origin_name }} → {{ trip.return.destination_name }}
+                        </div>
+                        <div class="flex items-center gap-3 ml-14 text-xs">
+                          <span class="text-gray-700 dark:text-gray-300">
+                            {{ formatTime(trip.return.departure_time) }} - {{ formatTime(trip.return.arrival_time) }}
+                          </span>
+                          <span class="text-gray-500 dark:text-gray-400">
+                            {{ trip.return.duration }}
+                          </span>
+                          <span class="text-green-600 dark:text-green-400 font-semibold">
+                            {{ formatPrice(trip.return.current_price) }}
+                          </span>
+                        </div>
                       </div>
-                      <div class="text-xs text-gray-600 dark:text-gray-400">
-                        {{ trip.return.origin_name }} → {{ trip.return.destination_name }}
-                      </div>
-                      <div class="text-xs text-gray-600 dark:text-gray-400">
-                        {{ formatTime(trip.return.departure_time) }} - {{ formatTime(trip.return.arrival_time) }}
-                      </div>
-                      <div class="text-sm text-green-600 dark:text-green-400 font-semibold">
-                        {{ formatPrice(trip.return.current_price) }}
-                      </div>
-                    </div>
-                  </td>
-
-                  <!-- Dates -->
-                  <td class="p-4 align-top text-gray-800 dark:text-gray-200">
-                    <div class="flex flex-col gap-2 text-sm">
-                      <div>{{ searchParams.twoWayRoutes ? 'Out: ' : '' }}{{ formatDate(trip.outbound.date_out) }}</div>
-                      <div v-if="searchParams.twoWayRoutes && trip.return">Return: {{ formatDate(trip.return.date_out) }}</div>
-                    </div>
-                  </td>
-
-                  <!-- Duration (only for two-way routes) -->
-                  <td v-if="searchParams.twoWayRoutes" class="p-4 align-top text-gray-800 dark:text-gray-200 text-center">
-                    <div class="flex flex-col gap-1">
-                      <div><strong>{{ trip.trip_duration_days }}</strong> days</div>
-                      <div class="text-xs text-gray-600 dark:text-gray-400">{{ trip.stay_duration }}</div>
-                    </div>
-                  </td>
-
-                  <!-- Total Price -->
-                  <td class="p-4 align-top text-center">
-                    <strong class="text-lg text-green-600 dark:text-green-400">{{ formatPrice(trip.total_price) }}</strong>
-                  </td>
-
-                  <!-- Details -->
-                  <td class="p-4 align-top text-gray-800 dark:text-gray-200">
-                    <div class="text-xs">
-                      <div class="flex flex-col gap-1 mb-2">
-                        <span class="text-gray-600 dark:text-gray-400">{{ searchParams.twoWayRoutes ? 'Flight durations:' : 'Duration:' }}</span>
-                        <span v-if="searchParams.twoWayRoutes && trip.return">{{ trip.outbound.duration }} / {{ trip.return.duration }}</span>
-                        <span v-else>{{ trip.outbound.duration }}</span>
-                      </div>
-                    </div>
-                  </td>
-                </tr>
+                    </td>
+                  </tr>
+                </template>
               </tbody>
             </table>
           </div>
