@@ -1,37 +1,37 @@
 <template>
   <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md flex flex-col max-h-[calc(100vh-6rem)]">
-    <!-- Header and Buttons (Sticky) -->
-    <div class="p-6 pb-4 sticky top-0 bg-white dark:bg-gray-800 z-10 rounded-t-lg">
+    <!-- Desktop: Buttons at top (Sticky) -->
+    <div class="hidden md:block p-3 md:p-6 pb-2 md:pb-4 sticky top-0 bg-white dark:bg-gray-800 z-10 rounded-t-lg">
       <!-- Action Buttons -->
-      <div class="flex gap-3 pb-4 border-b border-gray-200 dark:border-gray-700">
+      <div class="flex gap-2 md:gap-3 pb-2 md:pb-4 border-b border-gray-200 dark:border-gray-700">
         <button
           @click="$emit('search')"
           :disabled="!canSearch || loading"
-          class="flex-1 py-3 px-6 bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700 text-white font-semibold rounded-lg transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed hover:shadow-lg hover:-translate-y-0.5 text-base"
+          class="flex-1 py-2 md:py-3 px-3 md:px-6 bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700 text-white font-semibold rounded-lg transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed hover:shadow-lg hover:-translate-y-0.5 text-sm md:text-base"
         >
           🔍 Szukaj Lotów
         </button>
         <button
           @click="$emit('clear')"
-          class="flex-1 py-3 px-6 bg-red-600 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700 text-white font-semibold rounded-lg transition-all duration-200 hover:shadow-lg text-base"
+          class="flex-1 py-2 md:py-3 px-3 md:px-6 bg-red-600 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700 text-white font-semibold rounded-lg transition-all duration-200 hover:shadow-lg text-sm md:text-base"
         >
-          🗑️ Wyczyść Wszystko
+          🗑️ Wyczyść
         </button>
       </div>
     </div>
 
     <!-- Scrollable Filters -->
-    <div class="overflow-y-auto px-6 pb-6">
-      <div class="flex flex-col gap-4 pt-4">
+    <div class="overflow-y-auto px-3 md:px-6 pb-3 md:pb-6 pt-3 md:pt-0">
+      <div class="flex flex-col gap-3 md:gap-4 pt-2 md:pt-4">
         <!-- Trip Type Toggle -->
         <div class="flex flex-col">
-          <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200 text-sm">Typ Lotu</label>
+          <label class="font-semibold mb-1.5 md:mb-2 text-gray-700 dark:text-gray-200 text-xs md:text-sm">Typ Lotu</label>
           <div class="inline-flex rounded-md shadow-sm" role="group">
             <button
               type="button"
               @click="updateFilter('twoWayRoutes', false)"
               :class="[
-                'flex-1 px-4 py-2.5 text-sm font-medium border-2 rounded-l-md transition-all duration-200',
+                'flex-1 px-2 md:px-4 py-1.5 md:py-2.5 text-xs md:text-sm font-medium border-2 rounded-l-md transition-all duration-200',
                 !filters.twoWayRoutes
                   ? 'bg-blue-600 text-white border-blue-600 dark:bg-blue-600 dark:border-blue-600'
                   : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600 dark:hover:bg-gray-600'
@@ -43,7 +43,7 @@
               type="button"
               @click="updateFilter('twoWayRoutes', true)"
               :class="[
-                'flex-1 px-4 py-2.5 text-sm font-medium border-2 border-l-0 rounded-r-md transition-all duration-200',
+                'flex-1 px-2 md:px-4 py-1.5 md:py-2.5 text-xs md:text-sm font-medium border-2 border-l-0 rounded-r-md transition-all duration-200',
                 filters.twoWayRoutes
                   ? 'bg-blue-600 text-white border-blue-600 dark:bg-blue-600 dark:border-blue-600'
                   : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600 dark:hover:bg-gray-600'
@@ -56,7 +56,7 @@
 
         <!-- Origin Airports (Multi-select) - Polish airports only -->
         <div class="flex flex-col">
-          <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200 text-sm">Z</label>
+          <label class="font-semibold mb-1.5 md:mb-2 text-gray-700 dark:text-gray-200 text-xs md:text-sm">Z</label>
           <MultiSelectDropdown
             :options="polishAirportsOptions"
             :selected-values="filters.origins"
@@ -68,13 +68,13 @@
 
         <!-- Destination Selection Mode -->
         <div class="flex flex-col">
-          <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200 text-sm">Do</label>
+          <label class="font-semibold mb-1.5 md:mb-2 text-gray-700 dark:text-gray-200 text-xs md:text-sm">Do</label>
           <div class="inline-flex rounded-md shadow-sm mb-2" role="group">
             <button
               type="button"
               @click="updateDestinationMode('airports')"
               :class="[
-                'flex-1 px-4 py-2.5 text-sm font-medium border-2 transition-all duration-200',
+                'flex-1 px-2 md:px-4 py-1.5 md:py-2.5 text-xs md:text-sm font-medium border-2 transition-all duration-200',
                 filters.origins.length === 1 ? 'rounded-l-md' : 'rounded-l-md rounded-r-md',
                 destinationMode === 'airports'
                   ? 'bg-blue-600 text-white border-blue-600 dark:bg-blue-600 dark:border-blue-600'
@@ -108,7 +108,7 @@
               ]"
               title="Szukaj wszystkich miejsc docelowych z wybranego lotniska"
             >
-              🌍 Gdziekolwiek
+              Gdziekolwiek
             </button>
           </div>
 
@@ -152,16 +152,16 @@
 
         <!-- Return from Same Airport Checkbox (only for two-way routes) -->
         <div v-if="filters.twoWayRoutes" class="flex items-start">
-          <label class="flex items-start gap-2 cursor-pointer text-gray-700 dark:text-gray-200 text-sm">
+          <label class="flex items-start gap-1.5 md:gap-2 cursor-pointer text-gray-700 dark:text-gray-200 text-xs md:text-sm">
             <input
               :checked="filters.returnFromSameAirport"
               @change="updateFilter('returnFromSameAirport', $event.target.checked)"
               type="checkbox"
-              class="w-4 h-4 mt-0.5 cursor-pointer"
+              class="w-3.5 h-3.5 md:w-4 md:h-4 mt-0.5 cursor-pointer"
             />
-            <span class="flex items-center gap-1">
+            <span class="flex items-center gap-0.5 md:gap-1">
               <span>Powrót z tego samego lotniska</span>
-              <span class="inline-flex items-center justify-center w-4 h-4 text-xs font-bold text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/30 rounded-full cursor-help transition-all hover:bg-blue-100 dark:hover:bg-blue-900/50 hover:scale-110"
+              <span class="inline-flex items-center justify-center w-3.5 h-3.5 md:w-4 md:h-4 text-[0.6rem] md:text-xs font-bold text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/30 rounded-full cursor-help transition-all hover:bg-blue-100 dark:hover:bg-blue-900/50 hover:scale-110"
                     title="Odznacz, aby zezwolić na powroty z innych lotnisk (np. przelecieć do BCN, wrócić z VLC)">ℹ</span>
             </span>
           </label>
@@ -169,75 +169,76 @@
 
         <!-- Return to Same Airport Checkbox (only for two-way routes) -->
         <div v-if="filters.twoWayRoutes" class="flex items-start">
-          <label class="flex items-start gap-2 cursor-pointer text-gray-700 dark:text-gray-200 text-sm">
+          <label class="flex items-start gap-1.5 md:gap-2 cursor-pointer text-gray-700 dark:text-gray-200 text-xs md:text-sm">
             <input
               :checked="filters.returnToSameAirport"
               @change="updateFilter('returnToSameAirport', $event.target.checked)"
               type="checkbox"
-              class="w-4 h-4 mt-0.5 cursor-pointer"
+              class="w-3.5 h-3.5 md:w-4 md:h-4 mt-0.5 cursor-pointer"
             />
-            <span class="flex items-center gap-1">
+            <span class="flex items-center gap-0.5 md:gap-1">
               <span>Powrót na to samo lotnisko</span>
-              <span class="inline-flex items-center justify-center w-4 h-4 text-xs font-bold text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/30 rounded-full cursor-help transition-all hover:bg-blue-100 dark:hover:bg-blue-900/50 hover:scale-110"
+              <span class="inline-flex items-center justify-center w-3.5 h-3.5 md:w-4 md:h-4 text-[0.6rem] md:text-xs font-bold text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/30 rounded-full cursor-help transition-all hover:bg-blue-100 dark:hover:bg-blue-900/50 hover:scale-110"
                     title="Odznacz, aby zezwolić na powroty na inne lotniska wylotu (np. lecieć z WRO, wrócić do KRK)">ℹ</span>
             </span>
           </label>
         </div>
 
         <!-- Date Range (Start Date and End Date on same line) -->
-        <div class="flex gap-2">
+        <div class="flex gap-1.5 md:gap-2">
           <div class="flex flex-col flex-1">
-            <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200 text-sm">Data Początkowa</label>
+            <label class="font-semibold mb-1 md:mb-2 text-gray-700 dark:text-gray-200 text-xs md:text-sm">Data Od</label>
             <input
               :value="filters.dateFrom"
               @input="updateFilter('dateFrom', $event.target.value)"
               type="date"
-              class="p-2 border-2 border-gray-300 dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600 rounded-md text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+              class="p-1.5 md:p-2 border-2 border-gray-300 dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600 rounded-md text-xs md:text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
             />
           </div>
           <div class="flex flex-col flex-1">
-            <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200 text-sm">Data Końcowa</label>
+            <label class="font-semibold mb-1 md:mb-2 text-gray-700 dark:text-gray-200 text-xs md:text-sm">Data Do</label>
             <input
               :value="filters.dateTo"
               @input="updateFilter('dateTo', $event.target.value)"
               type="date"
-              class="p-2 border-2 border-gray-300 dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600 rounded-md text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+              class="p-1.5 md:p-2 border-2 border-gray-300 dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600 rounded-md text-xs md:text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
             />
           </div>
         </div>
 
         <!-- Min/Max Days (on same line, only for two-way routes) -->
-        <div v-if="filters.twoWayRoutes" class="flex gap-2">
+        <div v-if="filters.twoWayRoutes" class="flex gap-1.5 md:gap-2">
           <div class="flex flex-col flex-1">
-            <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200 text-sm">Min. Dni</label>
+            <label class="font-semibold mb-1 md:mb-2 text-gray-700 dark:text-gray-200 text-xs md:text-sm">Min. Dni</label>
             <input
               :value="filters.minDays"
               @input="updateFilter('minDays', parseInt($event.target.value))"
               type="number"
               min="1"
               max="365"
-              class="p-2 border-2 border-gray-300 dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600 rounded-md text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+              class="p-1.5 md:p-2 border-2 border-gray-300 dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600 rounded-md text-xs md:text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
             />
           </div>
           <div class="flex flex-col flex-1">
-            <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200 text-sm">Maks. Dni</label>
+            <label class="font-semibold mb-1 md:mb-2 text-gray-700 dark:text-gray-200 text-xs md:text-sm">Maks. Dni</label>
             <input
               :value="filters.maxDays"
               @input="updateFilter('maxDays', parseInt($event.target.value))"
               type="number"
               min="1"
               max="365"
-              class="p-2 border-2 border-gray-300 dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600 rounded-md text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+              class="p-1.5 md:p-2 border-2 border-gray-300 dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600 rounded-md text-xs md:text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
             />
           </div>
         </div>
 
         <!-- Outbound and Return Weekdays (on same line for two-way, single for one-way) -->
-        <div v-if="filters.twoWayRoutes" class="flex gap-2">
+        <div v-if="filters.twoWayRoutes" class="flex gap-1.5 md:gap-2">
           <div class="flex flex-col flex-1">
-            <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200 text-sm flex items-center gap-1">
-              Dni Tygodnia (Tam)
-              <span class="inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/30 rounded-full cursor-help transition-all hover:bg-blue-100 dark:hover:bg-blue-900/50 hover:scale-110"
+            <label class="font-semibold mb-1 md:mb-2 text-gray-700 dark:text-gray-200 text-xs md:text-sm flex items-center gap-0.5 md:gap-1">
+              <span class="hidden md:inline">Dni Tygodnia (Tam)</span>
+              <span class="md:hidden">Tam</span>
+              <span class="inline-flex items-center justify-center w-3.5 h-3.5 md:w-5 md:h-5 text-[0.6rem] md:text-xs font-bold text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/30 rounded-full cursor-help transition-all hover:bg-blue-100 dark:hover:bg-blue-900/50 hover:scale-110"
                     title="Wybierz konkretne dni tygodnia dla lotów tam">ℹ</span>
             </label>
             <MultiSelectDropdown
@@ -250,9 +251,10 @@
             />
           </div>
           <div class="flex flex-col flex-1">
-            <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200 text-sm flex items-center gap-1">
-              Dni Tygodnia (Powrót)
-              <span class="inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/30 rounded-full cursor-help transition-all hover:bg-blue-100 dark:hover:bg-blue-900/50 hover:scale-110"
+            <label class="font-semibold mb-1 md:mb-2 text-gray-700 dark:text-gray-200 text-xs md:text-sm flex items-center gap-0.5 md:gap-1">
+              <span class="hidden md:inline">Dni Tygodnia (Powrót)</span>
+              <span class="md:hidden">Powrót</span>
+              <span class="inline-flex items-center justify-center w-3.5 h-3.5 md:w-5 md:h-5 text-[0.6rem] md:text-xs font-bold text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/30 rounded-full cursor-help transition-all hover:bg-blue-100 dark:hover:bg-blue-900/50 hover:scale-110"
                     title="Wybierz konkretne dni tygodnia dla lotów powrotnych">ℹ</span>
             </label>
             <MultiSelectDropdown
@@ -268,19 +270,36 @@
 
         <!-- One-way Flight Days (single column) -->
         <div v-if="!filters.twoWayRoutes" class="flex flex-col">
-          <label class="font-semibold mb-2 text-gray-700 dark:text-gray-200 text-sm flex items-center gap-1">
+          <label class="font-semibold mb-1 md:mb-2 text-gray-700 dark:text-gray-200 text-xs md:text-sm flex items-center gap-0.5 md:gap-1">
             Dni Tygodnia
-            <span class="inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/30 rounded-full cursor-help transition-all hover:bg-blue-100 dark:hover:bg-blue-900/50 hover:scale-110"
+            <span class="inline-flex items-center justify-center w-3.5 h-3.5 md:w-5 md:h-5 text-[0.6rem] md:text-xs font-bold text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/30 rounded-full cursor-help transition-all hover:bg-blue-100 dark:hover:bg-blue-900/50 hover:scale-110"
                   title="Wybierz konkretne dni tygodnia dla lotów">ℹ</span>
           </label>
           <MultiSelectDropdown
             :options="weekdayOptions"
             :selected-values="filters.outboundWeekdays"
             @update:selected-values="updateFilter('outboundWeekdays', $event)"
-            placeholder="Any day"
+            placeholder="Dowolny dzień"
             :searchable="false"
             :show-selected-items="false"
           />
+        </div>
+
+        <!-- Mobile: Action Buttons at bottom -->
+        <div class="md:hidden flex gap-2 pt-3 mt-3 border-t border-gray-200 dark:border-gray-700">
+          <button
+            @click="$emit('search')"
+            :disabled="!canSearch || loading"
+            class="flex-1 py-2 px-3 bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700 text-white font-semibold rounded-lg transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed text-sm"
+          >
+            🔍 Szukaj Lotów
+          </button>
+          <button
+            @click="$emit('clear')"
+            class="flex-1 py-2 px-3 bg-red-600 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700 text-white font-semibold rounded-lg transition-all duration-200 text-sm"
+          >
+            🗑️ Wyczyść
+          </button>
         </div>
       </div>
     </div>

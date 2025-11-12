@@ -1,7 +1,7 @@
 <template>
-  <div class="max-w-full mx-auto p-8 min-h-screen dark:bg-gray-900">
-    <h1 class="text-gray-800 dark:text-gray-100 text-4xl font-bold mb-4">Wyszukiwarka Lotów</h1>
-    <p class="text-gray-600 dark:text-gray-300 text-lg mb-8">
+  <div class="max-w-full mx-auto p-4 md:p-8 min-h-screen dark:bg-gray-900">
+    <h1 class="text-gray-800 dark:text-gray-100 text-2xl md:text-4xl font-bold mb-2 md:mb-4">Wyszukiwarka Lotów</h1>
+    <p class="text-gray-600 dark:text-gray-300 text-sm md:text-lg mb-4 md:mb-8">
       Szukaj lotów w jedną stronę lub w obie strony z elastycznym dopasowaniem tras. Użyj wyszukiwania wsadowego, aby efektywnie znaleźć loty na wielu lotniskach.
     </p>
 
@@ -14,7 +14,7 @@
     </div>
 
     <!-- Main Content: Filters + Results Side by Side on Desktop -->
-    <div class="flex flex-col lg:flex-row lg:items-start gap-6 mt-8">
+    <div class="flex flex-col lg:flex-row lg:items-start gap-3 md:gap-6 mt-4 md:mt-8">
       <!-- Search Form (Left Side on Desktop) -->
       <div class="lg:w-[30%] lg:sticky lg:top-8">
         <TripFilters
@@ -40,7 +40,7 @@
         <!-- Filters Changed Overlay -->
         <div
           v-if="filtersChanged && results"
-          class="absolute inset-0 bg-gray-900/50 dark:bg-gray-950/70 backdrop-blur-sm z-20 flex items-start justify-center pt-16"
+          class="absolute inset-0 -mx-4 md:mx-0 bg-gray-900/50 dark:bg-gray-950/70 backdrop-blur-sm z-20 flex items-start justify-center pt-16"
         >
           <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 max-w-md mx-4">
             <h3 class="text-xl font-bold text-gray-800 dark:text-gray-100 mb-3">
@@ -110,6 +110,7 @@ const showScrollTop = ref(false)
 
 // List of Polish airport codes
 const POLISH_AIRPORT_CODES = [
+  'BER', // Berlin
   'BZG', // Bydgoszcz
   'GDN', // Gdańsk
   'KRK', // Krakow
@@ -230,29 +231,73 @@ const countriesOptions = computed(() => {
   }))
 })
 
-// URL Parameter Sync Methods
+// LocalStorage Methods
+const saveFiltersToLocalStorage = () => {
+  try {
+    const filtersData = {
+      searchParams: searchParams.value,
+      destinationMode: destinationMode.value,
+      selectedCountries: selectedCountries.value
+    }
+    localStorage.setItem('flightFilters', JSON.stringify(filtersData))
+  } catch (e) {
+    console.error('Failed to save filters to localStorage:', e)
+  }
+}
+
+const loadFiltersFromLocalStorage = () => {
+  try {
+    const savedFilters = localStorage.getItem('flightFilters')
+    if (savedFilters) {
+      const filtersData = JSON.parse(savedFilters)
+
+      // Load search params
+      if (filtersData.searchParams) {
+        searchParams.value = { ...searchParams.value, ...filtersData.searchParams }
+      }
+
+      // Load destination mode
+      if (filtersData.destinationMode) {
+        destinationMode.value = filtersData.destinationMode
+      }
+
+      // Load selected countries
+      if (filtersData.selectedCountries) {
+        selectedCountries.value = filtersData.selectedCountries
+      }
+
+      return true
+    }
+    return false
+  } catch (e) {
+    console.error('Failed to load filters from localStorage:', e)
+    return false
+  }
+}
+
+// URL Parameter Sync Methods (with Polish param names)
 const parseUrlParams = () => {
   const query = route.query
 
   if (Object.keys(query).length === 0) {
-    return // No URL params, use defaults
+    return false // No URL params
   }
 
-  // Parse origins
-  if (query.origins) {
-    searchParams.value.origins = query.origins.split(',').filter(Boolean)
+  // Parse origins (skąd)
+  if (query.skad) {
+    searchParams.value.origins = query.skad.split(',').filter(Boolean)
   }
 
   // Parse destination mode and destinations
-  if (query.destinationMode === 'anywhere') {
+  if (query.trybCelu === 'gdziekolwiek') {
     // Anywhere mode - no destinations specified
     destinationMode.value = 'anywhere'
     selectedCountries.value = []
     searchParams.value.destinations = []
-  } else if (query.destinationCountries) {
+  } else if (query.krajeCelu) {
     // Country mode - parse countries and convert to airports
     destinationMode.value = 'country'
-    selectedCountries.value = query.destinationCountries.split(',').filter(Boolean)
+    selectedCountries.value = query.krajeCelu.split(',').filter(Boolean)
 
     // Convert countries to airport codes
     const airportCodes = []
@@ -263,105 +308,110 @@ const parseUrlParams = () => {
       }
     })
     searchParams.value.destinations = airportCodes
-  } else if (query.destinations) {
+  } else if (query.dokad) {
     // Airport mode - use airport codes directly
     destinationMode.value = 'airports'
     selectedCountries.value = []
-    searchParams.value.destinations = query.destinations.split(',').filter(Boolean)
+    searchParams.value.destinations = query.dokad.split(',').filter(Boolean)
   }
 
   // Parse boolean flags
-  if (query.twoWayRoutes !== undefined) {
-    searchParams.value.twoWayRoutes = query.twoWayRoutes === 'true'
+  if (query.wObieSstrony !== undefined) {
+    searchParams.value.twoWayRoutes = query.wObieSstrony === 'true'
   }
 
-  if (query.returnFromSameAirport !== undefined) {
-    searchParams.value.returnFromSameAirport = query.returnFromSameAirport === 'true'
+  if (query.powrotZTegoSamegoLotniska !== undefined) {
+    searchParams.value.returnFromSameAirport = query.powrotZTegoSamegoLotniska === 'true'
   }
 
-  if (query.returnToSameAirport !== undefined) {
-    searchParams.value.returnToSameAirport = query.returnToSameAirport === 'true'
+  if (query.powrotNaToSamoLotnisko !== undefined) {
+    searchParams.value.returnToSameAirport = query.powrotNaToSamoLotnisko === 'true'
   }
 
   // Parse dates
-  if (query.dateFrom) {
-    searchParams.value.dateFrom = query.dateFrom
+  if (query.dataOd) {
+    searchParams.value.dateFrom = query.dataOd
   }
 
-  if (query.dateTo) {
-    searchParams.value.dateTo = query.dateTo
+  if (query.dataDo) {
+    searchParams.value.dateTo = query.dataDo
   }
 
   // Parse numbers
-  if (query.minDays) {
-    searchParams.value.minDays = parseInt(query.minDays)
+  if (query.minDni) {
+    searchParams.value.minDays = parseInt(query.minDni)
   }
 
-  if (query.maxDays) {
-    searchParams.value.maxDays = parseInt(query.maxDays)
+  if (query.maxDni) {
+    searchParams.value.maxDays = parseInt(query.maxDni)
   }
 
   // Parse weekday arrays
-  if (query.outboundWeekdays) {
-    searchParams.value.outboundWeekdays = query.outboundWeekdays.split(',').map(Number).filter(n => !isNaN(n))
+  if (query.dniWylotu) {
+    searchParams.value.outboundWeekdays = query.dniWylotu.split(',').map(Number).filter(n => !isNaN(n))
   }
 
-  if (query.returnWeekdays) {
-    searchParams.value.returnWeekdays = query.returnWeekdays.split(',').map(Number).filter(n => !isNaN(n))
+  if (query.dniPowrotu) {
+    searchParams.value.returnWeekdays = query.dniPowrotu.split(',').map(Number).filter(n => !isNaN(n))
   }
+
+  return true // URL params were loaded
 }
 
 const updateUrlParams = () => {
   const query = {}
 
-  // Add origins
+  // Add origins (skąd - from where)
   if (searchParams.value.origins.length > 0) {
-    query.origins = searchParams.value.origins.join(',')
+    query.skad = searchParams.value.origins.join(',')
   }
 
   // Add destinations based on mode
   if (destinationMode.value === 'anywhere') {
     // Anywhere mode - save mode only, no destinations
-    query.destinationMode = 'anywhere'
+    query.trybCelu = 'gdziekolwiek'
   } else if (destinationMode.value === 'country' && selectedCountries.value.length > 0) {
     // Country mode - save country names
-    query.destinationCountries = selectedCountries.value.join(',')
+    query.krajeCelu = selectedCountries.value.join(',')
   } else if (destinationMode.value === 'airports' && searchParams.value.destinations.length > 0) {
-    // Airport mode - save airport codes
-    query.destinations = searchParams.value.destinations.join(',')
+    // Airport mode - save airport codes (dokąd - to where)
+    query.dokad = searchParams.value.destinations.join(',')
   }
 
   // Add boolean flags
-  query.twoWayRoutes = searchParams.value.twoWayRoutes.toString()
-  query.returnFromSameAirport = searchParams.value.returnFromSameAirport.toString()
-  query.returnToSameAirport = searchParams.value.returnToSameAirport.toString()
+  query.wObieSstrony = searchParams.value.twoWayRoutes.toString()
+  query.powrotZTegoSamegoLotniska = searchParams.value.returnFromSameAirport.toString()
+  query.powrotNaToSamoLotnisko = searchParams.value.returnToSameAirport.toString()
 
   // Add dates
   if (searchParams.value.dateFrom) {
-    query.dateFrom = searchParams.value.dateFrom
+    query.dataOd = searchParams.value.dateFrom
   }
 
   if (searchParams.value.dateTo) {
-    query.dateTo = searchParams.value.dateTo
+    query.dataDo = searchParams.value.dateTo
   }
 
   // Add numbers
   if (searchParams.value.minDays) {
-    query.minDays = searchParams.value.minDays.toString()
+    query.minDni = searchParams.value.minDays.toString()
   }
 
   if (searchParams.value.maxDays) {
-    query.maxDays = searchParams.value.maxDays.toString()
+    query.maxDni = searchParams.value.maxDays.toString()
   }
 
   // Add weekday arrays
   if (searchParams.value.outboundWeekdays.length > 0) {
-    query.outboundWeekdays = searchParams.value.outboundWeekdays.join(',')
+    query.dniWylotu = searchParams.value.outboundWeekdays.join(',')
   }
 
   if (searchParams.value.returnWeekdays.length > 0) {
-    query.returnWeekdays = searchParams.value.returnWeekdays.join(',')
+    query.dniPowrotu = searchParams.value.returnWeekdays.join(',')
   }
+
+  // Save to localStorage whenever URL is updated
+  saveFiltersToLocalStorage()
 
   // Update URL without triggering navigation
   router.replace({ query })
@@ -370,6 +420,7 @@ const updateUrlParams = () => {
 // Methods
 const updateFilters = (newFilters) => {
   searchParams.value = { ...newFilters }
+  saveFiltersToLocalStorage()
 }
 
 const loadAirports = async () => {
@@ -551,6 +602,12 @@ const clearFilters = () => {
   error.value = null
   searched.value = false
   currentPage.value = 1
+
+  // Save cleared state to localStorage
+  saveFiltersToLocalStorage()
+
+  // Clear URL params
+  router.replace({ query: {} })
 }
 
 // Revert to last searched filters
@@ -577,10 +634,18 @@ const scrollToTop = () => {
 // Lifecycle
 onMounted(async () => {
   await loadAirports()
-  parseUrlParams() // Load filters from URL
 
-  // Auto-search if URL has valid search parameters
-  if (route.query && Object.keys(route.query).length > 0 && canSearch.value) {
+  // Try to load from URL first, then fall back to localStorage
+  const hasUrlParams = parseUrlParams()
+  let loadedFromLocalStorage = false
+
+  if (!hasUrlParams) {
+    // No URL params, try to load from localStorage
+    loadedFromLocalStorage = loadFiltersFromLocalStorage()
+  }
+
+  // Auto-search if URL has valid search parameters OR if filters were loaded from localStorage
+  if (canSearch.value && (hasUrlParams || loadedFromLocalStorage)) {
     await searchTrips()
   }
 
@@ -590,4 +655,9 @@ onMounted(async () => {
 onUnmounted(() => {
   window.removeEventListener('scroll', handleScroll)
 })
+
+// Watch for filter changes and save to localStorage
+watch([searchParams, destinationMode, selectedCountries], () => {
+  saveFiltersToLocalStorage()
+}, { deep: true })
 </script>

@@ -569,10 +569,15 @@ async def get_one_way_flights_batch(
     # Apply limit
     limited_flights = flights[:limit]
 
-    # Format response - calculate total price based on passengers
+    # EUR to PLN conversion rate
+    euro_pln = float(os.getenv("EURO_PLN", "4.23"))
+
+    # Format response - calculate total price based on passengers and convert EUR to PLN
     formatted_flights = []
     for flight in limited_flights:
-        total_price = flight["current_price"] * passengers
+        # Convert price to PLN if it's in EUR
+        price_pln = flight["current_price"] * euro_pln if flight["currency"] == "EUR" else flight["current_price"]
+        total_price = price_pln * passengers
         formatted_flights.append({
             "flight_id": flight["flight_id"],
             "origin": flight["origin"],
@@ -583,10 +588,10 @@ async def get_one_way_flights_batch(
             "departure_time": flight["departure_time"],
             "arrival_time": flight["arrival_time"],
             "duration": flight["duration"],
-            "price_per_person": flight["current_price"],
+            "price_per_person": round(price_pln, 2),
             "total_price": round(total_price, 2),
             "passengers": passengers,
-            "currency": flight["currency"]
+            "currency": "PLN"
         })
 
     return {

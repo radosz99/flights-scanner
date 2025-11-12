@@ -22,6 +22,14 @@ class CustomTripSearch:
 
     def __init__(self, flights_collection: Collection):
         self.flights_collection = flights_collection
+        # EUR to PLN conversion rate
+        self.euro_pln = float(os.getenv("EURO_PLN", "4.23"))
+
+    def convert_price_to_pln(self, price: float, currency: str) -> float:
+        """Convert price to PLN if it's in EUR."""
+        if currency == "EUR":
+            return price * self.euro_pln
+        return price
 
     def find_round_trips(
         self,
@@ -350,7 +358,10 @@ class CustomTripSearch:
                 trip_duration = (return_date - outbound_date).days
 
                 if min_days <= trip_duration <= max_days:
-                    total_price = (outbound["current_price"] + return_flight["current_price"]) * passengers
+                    # Convert prices to PLN if they are in EUR
+                    outbound_price_pln = self.convert_price_to_pln(outbound["current_price"], outbound["currency"])
+                    return_price_pln = self.convert_price_to_pln(return_flight["current_price"], return_flight["currency"])
+                    total_price = (outbound_price_pln + return_price_pln) * passengers
 
                     if min_price is not None and total_price < min_price:
                         continue
@@ -378,7 +389,7 @@ class CustomTripSearch:
                             "departure_time": outbound["departure_time"],
                             "arrival_time": outbound["arrival_time"],
                             "duration": outbound["duration"],
-                            "current_price": outbound["current_price"],
+                            "current_price": round(outbound_price_pln, 2),
                             "last_seen": outbound.get("last_seen")
                         },
                         "return": {
@@ -391,7 +402,7 @@ class CustomTripSearch:
                             "departure_time": return_flight["departure_time"],
                             "arrival_time": return_flight["arrival_time"],
                             "duration": return_flight["duration"],
-                            "current_price": return_flight["current_price"],
+                            "current_price": round(return_price_pln, 2),
                             "last_seen": return_flight.get("last_seen")
                         },
                         "trip_duration_days": trip_duration,
@@ -399,7 +410,7 @@ class CustomTripSearch:
                         "total_price": round(total_price, 2),
                         "price_per_person": round(total_price / passengers, 2) if passengers > 0 else round(total_price, 2),
                         "passengers": passengers,
-                        "currency": outbound["currency"]
+                        "currency": "PLN"
                     }
 
                     round_trips.append(trip_data)
