@@ -21,6 +21,7 @@ Example secrets.json:
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Optional
+from urllib.parse import quote_plus
 
 
 class Settings(BaseSettings):
@@ -52,13 +53,16 @@ class Settings(BaseSettings):
     @property
     def mongo_uri(self) -> str:
         """
-        Generate MongoDB connection URI.
+        Generate MongoDB connection URI with properly URL-encoded credentials.
 
         Returns:
             MongoDB connection string
         """
         if self.MONGO_USERNAME and self.MONGO_PASSWORD:
-            return f"mongodb://{self.MONGO_USERNAME}:{self.MONGO_PASSWORD}@{self.MONGO_HOST}:{self.MONGO_PORT}/{self.MONGO_DATABASE}?authSource=admin"
+            # URL-encode username and password to handle special characters
+            username = quote_plus(self.MONGO_USERNAME)
+            password = quote_plus(self.MONGO_PASSWORD)
+            return f"mongodb://{username}:{password}@{self.MONGO_HOST}:{self.MONGO_PORT}/{self.MONGO_DATABASE}?authSource=admin"
         else:
             return f"mongodb://{self.MONGO_HOST}:{self.MONGO_PORT}/{self.MONGO_DATABASE}"
 
