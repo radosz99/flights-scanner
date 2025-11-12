@@ -669,6 +669,7 @@ async def get_countries(
         from scrapper.database_population import load_from_mongodb
 
         airline = airline.lower()
+        logger.info(f"Getting countries for airline: {airline}")
 
         # Validate airline
         if airline not in ["ryanair", "wizzair"]:
@@ -680,27 +681,38 @@ async def get_countries(
         # Get list of destination airports that have flights
         destinations = api_service.get_destinations()
         destination_codes = {dest["code"] for dest in destinations}
+        logger.info(f"Found {len(destination_codes)} destinations with flights in database")
 
         # Load database
         database = load_from_mongodb(airline, settings.mongo_uri)
 
         if not database:
+            logger.error(f"Failed to load {airline} database from MongoDB")
             raise HTTPException(
                 status_code=500,
                 detail=f"Failed to load {airline} database from MongoDB"
             )
 
+        logger.info(f"Successfully loaded {airline} database")
+
         # Group airports by country, but only for airports that have flights
         countries = {}
+        total_airports = 0
+        matched_airports = 0
+        skipped_no_country = 0
+
         for airport in database.get_all_airports():
+            total_airports += 1
             # Only include airports that are in the destinations list
             if airport.code not in destination_codes:
                 continue
 
+            matched_airports += 1
             country_iso2 = airport.country
 
             # Skip airports without country information
             if not country_iso2 or country_iso2 == "Unknown" or country_iso2 == "XX":
+                skipped_no_country += 1
                 continue
 
             # Convert ISO2 code to full country name using pycountry
@@ -730,6 +742,11 @@ async def get_countries(
                 "code": airport.code,
                 "name": airport.name
             })
+
+        logger.info(f"Processed {total_airports} total airports")
+        logger.info(f"Matched {matched_airports} airports with flights")
+        logger.info(f"Skipped {skipped_no_country} airports without country info")
+        logger.info(f"Found {len(countries)} unique countries")
 
         # Convert to list and sort by country name
         countries_list = sorted(countries.values(), key=lambda x: x["country"])
