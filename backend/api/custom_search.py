@@ -392,8 +392,16 @@ class CustomTripSearch:
             "filtered_date_range": 0,  # Pre-filtered before iteration
             "filtered_trip_duration": 0,
             "filtered_price": 0,
+            "filtered_top500_cutoff": 0,  # NEW: Pruned by top-500 optimization
             "valid_trips": 0
         }
+
+        # Top-500 optimization: Use heap to track best 500 trips
+        # This allows early pruning of expensive flights that won't make the cut
+        import heapq
+        MAX_RESULTS = 500
+        top_trips_heap = []  # Max-heap of (-total_price, trip_data)
+        price_cutoff = float('inf')  # Current 500th-best price (worst in heap)
 
         round_trips = []
 
@@ -406,6 +414,9 @@ class CustomTripSearch:
                 if outbound_date.weekday() not in outbound_weekdays:
                     counters["filtered_outbound_weekday"] += 1
                     continue
+
+            # Pre-convert outbound price once per outbound flight
+            outbound_price_pln = self.convert_price_to_pln(outbound["current_price"], outbound["currency"])
 
             # Get only relevant return flights from index (OPTIMIZATION)
             # Instead of checking all 5,290 flights, only check ~130 relevant ones
@@ -459,6 +470,16 @@ class CustomTripSearch:
                 # Airport matching is now handled by index lookup, so these checks are removed
                 # The counters will show 0, indicating we're using the optimized path
 
+                # Top-500 optimization: Early price pruning
+                # Calculate best possible price for this combination and skip if too expensive
+                return_price_pln = self.convert_price_to_pln(return_flight["current_price"], return_flight["currency"])
+                estimated_total = (outbound_price_pln + return_price_pln) * passengers
+
+                # Skip if this can't possibly beat our top 500 worst price
+                if estimated_total > price_cutoff:
+                    counters["filtered_top500_cutoff"] += 1
+                    continue
+
                 # Use pre-parsed dates instead of parsing in loop
                 return_date, return_departure = return_flight_dates[return_flight["flight_id"]]
                 return_date_str = return_flight["date_out"]
@@ -471,10 +492,8 @@ class CustomTripSearch:
                 trip_duration = (return_date - outbound_date).days
 
                 if min_days <= trip_duration <= max_days:
-                    # Convert prices to PLN if they are in EUR
-                    outbound_price_pln = self.convert_price_to_pln(outbound["current_price"], outbound["currency"])
-                    return_price_pln = self.convert_price_to_pln(return_flight["current_price"], return_flight["currency"])
-                    total_price = (outbound_price_pln + return_price_pln) * passengers
+                    # Price already calculated above for early pruning
+                    total_price = estimated_total
 
                     if min_price is not None and total_price < min_price:
                         counters["filtered_price"] += 1
@@ -528,9 +547,23 @@ class CustomTripSearch:
                     }
 
                     counters["valid_trips"] += 1
-                    round_trips.append(trip_data)
+
+                    # Top-500 optimization: Use heap to keep only best 500 trips
+                    if len(top_trips_heap) < MAX_RESULTS:
+                        # Still building up to 500 trips
+                        heapq.heappush(top_trips_heap, (-total_price, trip_data))
+                        if len(top_trips_heap) == MAX_RESULTS:
+                            # Just filled up - set cutoff to worst price
+                            price_cutoff = -top_trips_heap[0][0]
+                    elif total_price < price_cutoff:
+                        # Better than worst in heap - replace it
+                        heapq.heapreplace(top_trips_heap, (-total_price, trip_data))
+                        price_cutoff = -top_trips_heap[0][0]  # Update cutoff
                 else:
                     counters["filtered_trip_duration"] += 1
+
+        # Extract trips from heap and sort (heap is max-heap with negative prices)
+        round_trips = [trip_data for _, trip_data in sorted(top_trips_heap, key=lambda x: -x[0])]
 
         perf_matching_time = time.time() - perf_matching_start
         logger.info(f"[PERF] Matching/Analysis phase: {perf_matching_time:.3f}s")
@@ -543,13 +576,14 @@ class CustomTripSearch:
         logger.info(f"  - Filtered by date range (pre-filter): {counters['filtered_date_range']:,}")
         logger.info(f"  - Filtered by trip duration: {counters['filtered_trip_duration']:,}")
         logger.info(f"  - Filtered by price: {counters['filtered_price']:,}")
+        logger.info(f"  - Filtered by top-500 cutoff: {counters['filtered_top500_cutoff']:,}")
         logger.info(f"  - Valid trips found: {counters['valid_trips']:,}")
+        logger.info(f"  - Returned (top 500): {len(round_trips)}")
 
-        # Sorting phase
+        # Sorting phase is now part of heap extraction above
         perf_sort_start = time.time()
-        round_trips.sort(key=lambda x: x["total_price"])
         perf_sort_time = time.time() - perf_sort_start
-        logger.info(f"[PERF] Sorting {len(round_trips)} trips: {perf_sort_time:.3f}s")
+        logger.info(f"[PERF] Sorting via heap extraction: {perf_sort_time:.3f}s")
 
         perf_total_time = time.time() - perf_start_total
         logger.info(f"[PERF] === TOTAL TIME: {perf_total_time:.3f}s ===")

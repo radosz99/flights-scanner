@@ -367,7 +367,6 @@ async def get_round_trips_batch(
     date_to: Optional[str] = Query(None, description="Filter flights departing until this date (YYYY-MM-DD)"),
     min_price: Optional[float] = Query(None, description="Minimum total price filter"),
     max_price: Optional[float] = Query(None, description="Maximum total price filter"),
-    limit: int = Query(100, ge=1, le=1000, description="Maximum number of results"),
     return_from_same_airport: bool = Query(True, description="If true, return must be from same airport as destination"),
     return_to_same_airport: bool = Query(True, description="If true, return must land at same airport as origin"),
     outbound_weekdays: Optional[str] = Query(None, description="Comma-separated weekday numbers for outbound flights (0=Monday, 6=Sunday)"),
@@ -380,6 +379,8 @@ async def get_round_trips_batch(
     in a single request. It supports flexible two-way matching where the return flight
     can go back to ANY of the selected origin airports.
 
+    Returns a maximum of 500 best (cheapest) trips sorted by total price.
+
     Args:
         origins: Comma-separated list of origin airport codes
         destinations: Comma-separated list of destination airport codes
@@ -390,14 +391,13 @@ async def get_round_trips_batch(
         date_to: Optional departure date filter (YYYY-MM-DD)
         min_price: Optional minimum total price filter
         max_price: Optional maximum total price filter
-        limit: Maximum number of results to return
         return_from_same_airport: Control whether return must depart from same airport as destination
         return_to_same_airport: Control whether return must land at same airport as origin
         outbound_weekdays: Filter outbound flights by weekdays (e.g., "0,1,2,3,4")
         return_weekdays: Filter return flights by weekdays (e.g., "5,6")
 
     Returns:
-        Batch search results with all matching round trips sorted by price
+        Batch search results with up to 500 best round trips sorted by price
     """
     if min_days > max_days:
         raise HTTPException(
@@ -463,9 +463,7 @@ async def get_round_trips_batch(
             detail=f"No round trips found for the specified criteria"
         )
 
-    # Apply limit
-    limited_trips = round_trips[:limit]
-
+    # Service method now returns max 500 trips automatically (top-K optimization)
     return {
         "origins": origins_list,
         "destinations": destinations_list,
@@ -473,8 +471,8 @@ async def get_round_trips_batch(
         "max_days": max_days,
         "passengers": passengers,
         "total": len(round_trips),
-        "showing": len(limited_trips),
-        "trips": limited_trips
+        "showing": len(round_trips),
+        "trips": round_trips
     }
 
 
