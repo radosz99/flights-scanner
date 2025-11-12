@@ -50,6 +50,7 @@ from api_models import (
     UpdateCoordinatesRequest,
     UpdateCoordinatesResponse,
 )
+from .request_logging_middleware import setup_request_logging
 
 # Add scrapper directory to path to import scanner modules
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scrapper"))
@@ -69,6 +70,12 @@ scan_executor = ThreadPoolExecutor(max_workers=MAX_SCAN_WORKERS, thread_name_pre
 # API Key authentication for non-GET endpoints
 API_KEY = os.getenv("API_KEY", "")
 api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
+
+# Swagger/OpenAPI docs access control
+# Docs are protected by HTTP Basic Auth at nginx level (see nginx/.htpasswd)
+# Set ENABLE_API_DOCS=false to completely disable docs
+# Default: true (enabled, but protected by nginx basic auth)
+ENABLE_API_DOCS = os.getenv("ENABLE_API_DOCS", "true").lower() in ["true", "1", "yes"]
 
 def verify_api_key(api_key: str = Security(api_key_header)):
     """
@@ -97,7 +104,11 @@ app = FastAPI(
     title="Ryanair Flight Scanner API",
     description="REST API for filtering and sorting Ryanair flight data with price tracking",
     version="1.0.0",
-    root_path="/api"  # Required when behind nginx proxy at /api path
+    root_path="/api",  # Required when behind nginx proxy at /api path
+    # Disable docs in production for security unless explicitly enabled
+    docs_url="/docs" if ENABLE_API_DOCS else None,
+    redoc_url="/redoc" if ENABLE_API_DOCS else None,
+    openapi_url="/openapi.json" if ENABLE_API_DOCS else None
 )
 
 # Enable CORS for web frontend
@@ -115,6 +126,9 @@ db = client[settings.MONGO_DATABASE]
 flights_collection = db[FLIGHTS_COLLECTION]
 scan_iterations_collection = db[SCAN_ITERATIONS_COLLECTION]
 
+# Setup request logging middleware (logs all API requests to MongoDB)
+setup_request_logging(app, client, settings.MONGO_DATABASE)
+
 # Initialize API service
 from .api_service import APIService
 from .custom_search import TooManyFlightsError
@@ -128,12 +142,16 @@ api_service = APIService(client, settings.MONGO_DATABASE)
 @app.get("/")
 async def root():
     """Root endpoint - API information."""
-    return {
+    response = {
         "name": "Ryanair Flight Scanner API",
         "version": "1.0.0",
-        "docs": "/api/docs",
         "health": "/api/health"
     }
+    # Only include docs link if documentation is enabled
+    if ENABLE_API_DOCS:
+        response["docs"] = "/api/docs"
+        response["redoc"] = "/api/redoc"
+    return response
 
 
 @app.get("/flights", response_model=FlightListResponse)
@@ -1372,6 +1390,18 @@ async def startup_event():
     logger.info(f"Database: {settings.MONGO_DATABASE}")
     logger.info(f"Flights Collection: {FLIGHTS_COLLECTION}")
     logger.info(f"Scan Thread Pool Workers: {MAX_SCAN_WORKERS}")
+
+    # Log API docs status
+    if ENABLE_API_DOCS:
+        logger.success("✓ API Documentation is ENABLED (protected by nginx basic auth)")
+        logger.info("  - Swagger UI: /api/docs")
+        logger.info("  - ReDoc: /api/redoc")
+        logger.info("  - OpenAPI Schema: /api/openapi.json")
+        logger.info("  - Requires username/password configured in nginx/.htpasswd")
+    else:
+        logger.info("✓ API Documentation is DISABLED")
+        logger.info("  Set ENABLE_API_DOCS=true to enable docs")
+
     logger.info("=" * 60)
 
     try:

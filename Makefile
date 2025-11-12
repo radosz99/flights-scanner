@@ -1,4 +1,4 @@
-.PHONY: help backend backend-dev frontend install-backend install-frontend test test-api test-all docker-build docker-up docker-down docker-dev-up docker-dev-down docker-logs docker-backend-logs docker-restart docker-rebuild docker-rebuild-backend docker-clean-build docker-deploy clean
+.PHONY: help backend backend-dev frontend install-backend install-frontend test test-api test-all docker-build docker-up docker-down docker-dev-up docker-dev-down docker-logs docker-backend-logs docker-restart docker-rebuild docker-rebuild-backend docker-clean-build docker-deploy clean mongo-shell
 
 # Default target
 help:
@@ -32,6 +32,7 @@ help:
 	@echo ""
 	@echo "  Utility:"
 	@echo "    make clean               - Clean up temporary files and caches"
+	@echo "    make mongo-shell         - Connect to MongoDB shell (requires .env file)"
 	@echo "    make help                - Show this help message"
 
 # Local development commands
@@ -181,3 +182,7 @@ clean:
 	find . -type d -name "*.egg-info" -exec rm -rf {} + 2>/dev/null || true
 	find . -type f -name "*.pyc" -delete 2>/dev/null || true
 	cd frontend && rm -rf .nuxt node_modules/.cache 2>/dev/null || true
+
+mongo-shell:
+	@echo "Connecting to MongoDB shell..."
+	@set -a && . ./.env && set +a && docker exec -it flights-scanner-mongo mongosh admin -u $$MONGO_USERNAME -p $$MONGO_PASSWORD

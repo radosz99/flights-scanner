@@ -106,6 +106,7 @@ venv.bak/
 
 # Secrets and configuration
 secrets.json
+.htpasswd
 
 # Spyder project settings
 .spyderproject
