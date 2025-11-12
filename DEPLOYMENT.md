@@ -154,8 +154,10 @@ nano .env
 Update the following variables:
 
 ```env
-# Backend API URL - use your domain
-NUXT_PUBLIC_API_BASE_URL=https://your-domain.com/api
+# Backend API URL for client-side (browser) requests
+# Use the relative path /api for production with nginx proxy
+# This is already set correctly in .env.example
+NUXT_PUBLIC_API_BASE_URL=/api
 
 # Optional: Analytics, monitoring, etc.
 ```

@@ -72,7 +72,8 @@ scan_executor = ThreadPoolExecutor(max_workers=MAX_SCAN_WORKERS, thread_name_pre
 app = FastAPI(
     title="Ryanair Flight Scanner API",
     description="REST API for filtering and sorting Ryanair flight data with price tracking",
-    version="1.0.0"
+    version="1.0.0",
+    root_path="/api"  # Required when behind nginx proxy at /api path
 )
 
 # Enable CORS for web frontend
