@@ -1,240 +1,219 @@
 # Deployment Guide for wylot.eu
 
-This is your customized deployment guide for deploying the Flights Scanner application to **wylot.eu** (IP: 162.55.46.15).
+This guide assumes you have:
+- ✅ Server at 162.55.46.15 with Docker and Docker Compose installed
+- ✅ DNS configured (wylot.eu → 162.55.46.15)
+- ✅ Repository already cloned to `/opt/flights-scanner`
 
-## Quick Reference
+**Domain**: wylot.eu | **Server IP**: 162.55.46.15 | **Scan Period**: 140 days
 
-- **Domain**: wylot.eu
-- **Server IP**: 162.55.46.15
-- **Scan Until Days**: 140 days from each scan date
+---
 
-## Step-by-Step Deployment
+## 1. Configure Environment
 
-### 1. Configure DNS
-
-First, point your domain to your server:
-
-1. Log in to your domain registrar (where you bought wylot.eu)
-2. Go to DNS settings
-3. Add/update an A record:
-   ```
-   Type: A
-   Name: @ (or leave blank for root domain)
-   Value: 162.55.46.15
-   TTL: 3600 (or default)
-   ```
-
-4. If you want www subdomain, add another A record:
-   ```
-   Type: A
-   Name: www
-   Value: 162.55.46.15
-   TTL: 3600
-   ```
-
-5. Wait for DNS propagation (5 minutes to 48 hours). Verify with:
-   ```bash
-   nslookup wylot.eu
-   # Should return 162.55.46.15
-   ```
-
-### 2. Server Setup
-
-SSH into your server at 162.55.46.15:
+Navigate to your application directory:
 
 ```bash
-ssh root@162.55.46.15
-# or
-ssh your-username@162.55.46.15
-```
-
-#### Install Docker and Docker Compose
-
-```bash
-# Update system
-sudo apt update && sudo apt upgrade -y
-
-# Install Docker
-curl -fsSL https://get.docker.com -o get-docker.sh
-sudo sh get-docker.sh
-
-# Add your user to docker group
-sudo usermod -aG docker $USER
-newgrp docker
-
-# Install Docker Compose
-sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-sudo chmod +x /usr/local/bin/docker-compose
-
-# Verify installation
-docker --version
-docker-compose --version
-```
-
-#### Configure Firewall
-
-```bash
-# Allow SSH (IMPORTANT - don't lock yourself out!)
-sudo ufw allow OpenSSH
-
-# Allow HTTP and HTTPS
-sudo ufw allow 80/tcp
-sudo ufw allow 443/tcp
-
-# Enable firewall
-sudo ufw enable
-sudo ufw status
-```
-
-### 3. Deploy the Application
-
-#### Clone Repository
-
-```bash
-# Create application directory
-mkdir -p /opt/flights-scanner
 cd /opt/flights-scanner
-
-# Clone your repository
-git clone <your-repository-url> .
-# Or if you have the code locally, upload it via scp
 ```
 
-#### Configure Environment
+### Create .env file
 
-1. **MongoDB configuration is now in .env`):
-   ```bash
-   # MongoDB configuration is now in .env
-   ```
-
-   Add:
-   ```env
-   # MongoDB Configuration
-   MONGO_HOST=mongodb
-   MONGO_PORT=27017
-   MONGO_DATABASE=flights_scanner
-
-   # IMPORTANT: Set strong passwords!
-   MONGO_INITDB_ROOT_USERNAME=admin
-   MONGO_INITDB_ROOT_PASSWORD=YOUR_STRONG_PASSWORD_HERE
-
-   # MongoDB Connection String (use the same password as above)
-   MONGO_URI=mongodb://admin:YOUR_STRONG_PASSWORD_HERE@mongodb:27017/
-
-   # Airline IDs
-   RYANAIR_AIRLINE_ID=39
-   WIZZAIR_AIRLINE_IDS=52,6002,6092
-
-   # Ryanair Scraping Configuration
-   RYANAIR_REQUEST_DELAY=0.5
-   RYANAIR_COOKIE_WAIT_TIME=30
-   RYANAIR_COOKIE_CHECK_INTERVAL=0.5
-   ```
-
-2. **Create Frontend configuration** (`.env`):
-   ```bash
-   nano .env
-   ```
-
-   Add:
-   ```env
-   # Frontend Configuration
-   NUXT_PUBLIC_API_BASE_URL=https://wylot.eu/api
-
-   # Backend API Configuration
-   BACKEND_PORT=8900
-
-   # Frontend Configuration
-   FRONTEND_PORT=8901
-   API_BASE_URL=http://backend:8900
-
-   # MongoDB External Port (comment out for production security)
-   # MONGO_EXTERNAL_PORT=8902
-
-   # Worker Configuration
-   GUNICORN_WORKERS=4
-   MAX_SCAN_WORKERS=4
-   WORKER_TIMEOUT=300
-   ```
-
-3. **Set secure file permissions**:
-   ```bash
-   chmod 600 .env .env
-   ```
-
-### 4. Start the Application
-
-#### Build and start services:
+Copy the example file and edit it:
 
 ```bash
-# Start all services (production mode with nginx)
-docker-compose --profile production up -d
+cp .env.example .env
+nano .env
+```
 
-# View logs to ensure everything is starting correctly
+### Configure Required Settings
+
+Update the following sections in your `.env` file:
+
+#### MongoDB Authentication (IMPORTANT - Set Strong Passwords!)
+
+```env
+# MongoDB Authentication
+MONGO_USERNAME=admin
+MONGO_PASSWORD=YOUR_STRONG_PASSWORD_HERE
+```
+
+**⚠️ Security Note**: Replace `YOUR_STRONG_PASSWORD_HERE` with a strong password. Never commit this file to version control!
+
+#### Port Configuration
+
+For production deployment, verify these ports are correct:
+
+```env
+# Ports
+BACKEND_PORT=8900
+FRONTEND_PORT=8901
+MONGO_EXTERNAL_PORT=8902  # Optional: comment out to disable external MongoDB access
+```
+
+#### Worker Configuration (Optional)
+
+Adjust based on your server resources:
+
+```env
+# Performance Tuning
+GUNICORN_WORKERS=4        # Number of API workers
+MAX_SCAN_WORKERS=4        # Background scan threads
+WORKER_TIMEOUT=300        # Request timeout in seconds
+```
+
+#### Scheduler Configuration
+
+Already configured for wylot.eu (140 days scan period):
+
+```env
+# Scheduler (pre-configured for wylot.eu)
+SCAN_UNTIL_DAYS=140
+TRIP_DURATION_DAYS=7
+```
+
+### Secure Your Environment File
+
+```bash
+chmod 600 .env
+```
+
+---
+
+## 2. Start the Application
+
+### Start Production Services
+
+Start all services including nginx reverse proxy:
+
+```bash
+docker-compose --profile production up -d
+```
+
+### Monitor Startup
+
+Watch the logs to ensure everything starts correctly:
+
+```bash
 docker-compose logs -f
 ```
 
-Press `Ctrl+C` to stop following logs. The services will continue running.
+Press `Ctrl+C` to stop following logs (services continue running).
 
-#### Verify services are running:
+### Verify All Services Are Running
 
 ```bash
 docker-compose ps
 ```
 
-All services should show "Up" and "healthy".
+Expected output - all services should show "Up" status:
+```
+NAME                          STATUS
+flights-scanner-backend       Up (healthy)
+flights-scanner-certbot       Up
+flights-scanner-frontend      Up (healthy)
+flights-scanner-mongo         Up (healthy)
+flights-scanner-nginx         Up (healthy)
+flights-scanner-scheduler     Up
+```
 
-### 5. Set Up SSL/HTTPS
+---
 
-Once DNS is propagated and services are running, set up SSL:
+## 3. Set Up SSL/HTTPS
+
+Once DNS is propagated and services are running, obtain SSL certificate:
 
 ```bash
-# Run the automated SSL setup script
 ./init-letsencrypt.sh wylot.eu your-email@example.com
 ```
 
-Replace `your-email@example.com` with your actual email address for certificate notifications.
+Replace `your-email@example.com` with your actual email for certificate notifications.
 
-This script will:
+**This script will:**
 - Obtain SSL certificates from Let's Encrypt
 - Configure nginx with HTTPS
-- Set up automatic certificate renewal
+- Set up automatic certificate renewal (every 12 hours)
 - Redirect all HTTP traffic to HTTPS
 
-### 6. Verify Deployment
+---
 
-After SSL setup completes:
+## 4. Verify Deployment
 
-1. **Test HTTPS access**:
-   ```bash
-   curl https://wylot.eu/api/health
-   # Should return: {"status":"ok"}
-   ```
+### Test API Health
 
-2. **Open in browser**:
-   - Navigate to https://wylot.eu
-   - You should see the Flights Scanner interface with a valid SSL certificate
+```bash
+curl https://wylot.eu/api/health
+```
 
-3. **Test API**:
-   ```bash
-   curl https://wylot.eu/api/airports
-   # Should return a list of airports
-   ```
+Expected response:
+```json
+{"status":"healthy","database":"connected","collections":{"flights":0,"scan_iterations":0}}
+```
 
-## Configuration Details
+### Test in Browser
 
-### Scan Configuration
+1. Navigate to: **https://wylot.eu**
+2. You should see the Flights Scanner interface
+3. Check for valid SSL certificate (padlock icon)
 
-Your deployment is configured to scan flights for **140 days** from the current date:
+### Test API Endpoints
 
-- **trigger_scan.py**: SCAN_UNTIL_DAYS = 140 (default)
-- **docker-compose.yml**: Scheduler uses SCAN_UNTIL_DAYS = 140
+```bash
+# Get available origins
+curl https://wylot.eu/api/airports/origins
 
-This means each automated scan will search for flights up to 140 days in the future.
+# Get flight statistics
+curl https://wylot.eu/api/flights/stats/summary
+```
 
-### Automated Scanning
+---
 
-The scheduler service automatically triggers scans every 8 hours. No manual intervention needed.
+## 5. Initial Data Population (Optional)
+
+Populate airport databases for map visualizations and route data:
+
+```bash
+# Trigger airport population via API
+curl -X POST https://wylot.eu/api/airports/populate
+
+# Update airport coordinates
+curl -X POST https://wylot.eu/api/airports/update-coordinates \
+  -H "Content-Type: application/json" \
+  -d '{"airline": "ryanair"}'
+```
+
+Check backend logs to monitor progress:
+
+```bash
+docker-compose logs -f backend
+```
+
+---
+
+## 6. Trigger First Flight Scan
+
+The scheduler runs automatically every 8 hours, but you can trigger a manual scan immediately:
+
+```bash
+curl -X POST https://wylot.eu/api/scans/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "trip_duration_days": 7,
+    "scan_until_date": "2026-05-31"
+  }'
+```
+
+Check scan progress:
+
+```bash
+# Get latest scan status
+curl https://wylot.eu/api/scans/latest
+
+# Watch backend logs
+docker-compose logs -f backend
+```
+
+---
 
 ## Maintenance Commands
 
@@ -244,20 +223,32 @@ The scheduler service automatically triggers scans every 8 hours. No manual inte
 # All services
 docker-compose logs -f
 
-# Specific service
+# Specific services
 docker-compose logs -f backend
 docker-compose logs -f scheduler
 docker-compose logs -f nginx
+docker-compose logs -f mongodb
 ```
 
 ### Restart Services
 
 ```bash
-# Restart all
+# Restart all services
 docker-compose restart
 
 # Restart specific service
 docker-compose restart backend
+docker-compose restart scheduler
+```
+
+### Stop Services
+
+```bash
+# Stop all services
+docker-compose down
+
+# Stop and remove volumes (CAUTION: deletes database!)
+docker-compose down -v
 ```
 
 ### Update Application
@@ -270,14 +261,17 @@ git pull
 
 # Rebuild and restart
 docker-compose down
-docker-compose --profile production build
+docker-compose --profile production build --no-cache
 docker-compose --profile production up -d
 ```
 
 ### Backup Database
 
 ```bash
-# Create backup
+# Create backup directory
+mkdir -p ~/backups
+
+# Backup MongoDB
 docker-compose exec mongodb mongodump \
   --username admin \
   --password YOUR_PASSWORD \
@@ -286,115 +280,254 @@ docker-compose exec mongodb mongodump \
   --out /tmp/backup
 
 # Copy to host
-docker cp flights-scanner-mongo:/tmp/backup ./backup-$(date +%Y%m%d)
+docker cp flights-scanner-mongo:/tmp/backup ~/backups/backup-$(date +%Y%m%d-%H%M%S)
+
+# Compress backup
+cd ~/backups
+tar -czf backup-$(date +%Y%m%d-%H%M%S).tar.gz backup-$(date +%Y%m%d-%H%M%S)
 ```
+
+### Restore Database
+
+```bash
+# Extract backup
+cd ~/backups
+tar -xzf backup-YYYYMMDD-HHMMSS.tar.gz
+
+# Copy to container
+docker cp backup-YYYYMMDD-HHMMSS flights-scanner-mongo:/tmp/restore
+
+# Restore
+docker-compose exec mongodb mongorestore \
+  --username admin \
+  --password YOUR_PASSWORD \
+  --authenticationDatabase admin \
+  --db flights_scanner \
+  /tmp/restore/flights_scanner
+```
+
+---
 
 ## Monitoring
 
-### Check Service Status
+### Check Service Health
 
 ```bash
+# Container status
 docker-compose ps
+
+# Resource usage
 docker stats
+
+# Disk usage
+docker system df
 ```
 
-### Check Health Endpoints
+### Health Endpoints
 
 ```bash
+# Backend health
 curl https://wylot.eu/api/health
+
+# Check latest scan
+curl https://wylot.eu/api/scans/latest
 ```
 
 ### View Recent Errors
 
 ```bash
+# All errors
 docker-compose logs --tail=100 | grep -i error
+
+# Backend errors only
+docker-compose logs backend --tail=100 | grep -i error
 ```
+
+### Monitor Scheduler
+
+```bash
+# View scheduler logs
+docker-compose logs -f scheduler
+
+# Check when next scan will run (runs every 8 hours)
+docker-compose logs scheduler --tail=50 | grep "TRIGGERING FLIGHT SCAN"
+```
+
+---
 
 ## Troubleshooting
 
-### If services won't start:
+### Services Won't Start
 
 ```bash
-# Check logs
-docker-compose logs
+# Check what's using your ports
+sudo netstat -tulpn | grep -E ':80|:443|:8900|:8901'
 
-# Check if ports are in use
-sudo netstat -tulpn | grep :80
-sudo netstat -tulpn | grep :443
+# Check detailed logs
+docker-compose logs
 
 # Restart from scratch
 docker-compose down
 docker-compose --profile production up -d
 ```
 
-### If SSL certificate fails:
+### Database Connection Fails
 
 ```bash
-# Verify DNS is pointing to your server
-nslookup wylot.eu
-# Should return 162.55.46.15
+# Test MongoDB connection
+docker-compose exec mongodb mongosh \
+  -u admin \
+  -p YOUR_PASSWORD \
+  --authenticationDatabase admin \
+  --eval "db.adminCommand('ping')"
 
-# Check nginx logs
-docker-compose logs nginx
+# Check MongoDB logs
+docker-compose logs mongodb
 
-# Manually test certificate
-docker-compose run --rm certbot certonly --webroot \
-  --webroot-path=/var/www/certbot \
-  --email your-email@example.com \
-  --agree-tos \
-  -d wylot.eu
-```
+# Verify .env credentials match
+grep MONGO .env
 
-### If database connection fails:
-
-```bash
-# Check MongoDB is running
-docker-compose exec mongodb mongosh --eval "db.adminCommand('ping')"
-
-# Verify credentials in .env match
 # Restart MongoDB
 docker-compose restart mongodb
 ```
 
+### SSL Certificate Issues
+
+```bash
+# Verify DNS points to your server
+nslookup wylot.eu
+dig wylot.eu
+
+# Check nginx configuration
+docker-compose exec nginx nginx -t
+
+# Check certbot logs
+docker-compose logs certbot
+
+# Manually request certificate
+docker-compose run --rm certbot certonly \
+  --webroot \
+  --webroot-path=/var/www/certbot \
+  --email your-email@example.com \
+  --agree-tos \
+  --no-eff-email \
+  -d wylot.eu
+```
+
+### Backend API Not Responding
+
+```bash
+# Check if backend is healthy
+docker-compose ps backend
+
+# Check backend logs
+docker-compose logs backend --tail=100
+
+# Test internal connection
+docker-compose exec nginx curl http://backend:8900/health
+
+# Restart backend
+docker-compose restart backend
+```
+
+### Scheduler Not Running Scans
+
+```bash
+# Check scheduler logs
+docker-compose logs scheduler --tail=50
+
+# Verify scheduler is running
+docker-compose ps scheduler
+
+# Check scheduler environment variables
+docker-compose exec scheduler env | grep -E 'API_URL|TRIP_DURATION|SCAN_UNTIL'
+
+# Manually trigger scan
+curl -X POST https://wylot.eu/api/scans/run \
+  -H "Content-Type: application/json" \
+  -d '{"trip_duration_days": 7}'
+```
+
+---
+
+## Configuration Reference
+
+### Automated Scanning Schedule
+
+The scheduler automatically triggers flight scans:
+- **Frequency**: Every 8 hours (00:00, 08:00, 16:00 UTC)
+- **Scan Period**: 140 days from scan date
+- **Trip Duration**: 7 days
+- **Airports**: All Polish airports (GDN, SZN, KRK, KTW, WRO, POZ, WMI, WAW, LCJ, LUZ, RZE, SZY, BZG)
+
+### Environment Variables Reference
+
+For complete list of available configuration options, see `.env.example`:
+
+```bash
+cat .env.example
+```
+
+Key sections:
+- **MongoDB Configuration**: Database connection and authentication
+- **Ryanair Scraping Configuration**: Cookie extraction, request delays
+- **Backend API Configuration**: Worker processes, timeouts, scan threads
+- **Scheduler Configuration**: Scan frequency and duration
+
+---
+
 ## Security Checklist
 
-- [x] Strong password set in .env
-- [x] MongoDB external port disabled (not exposed publicly)
-- [x] SSL/HTTPS enabled and working
-- [x] Firewall configured (only ports 22, 80, 443 open)
-- [x] Environment files have restricted permissions (600)
-- [ ] Set up automated backups (optional)
-- [ ] Set up monitoring/alerts (optional)
+- ✅ Strong password set in `.env` for MongoDB
+- ✅ `.env` file has restricted permissions (600)
+- ✅ MongoDB external port disabled (or firewalled)
+- ✅ SSL/HTTPS enabled and working
+- ✅ Firewall configured (only ports 22, 80, 443 open)
+- ✅ Automated SSL certificate renewal configured
+- ⬜ Set up automated database backups (recommended)
+- ⬜ Set up monitoring/alerts (recommended)
 
-## Support
-
-For more detailed information, see:
-- [DEPLOYMENT.md](DEPLOYMENT.md) - Full deployment guide
-- [README.md](README.md) - Application overview
-- [SSL_SETUP.md](SSL_SETUP.md) - Detailed SSL setup guide
+---
 
 ## Quick Commands Reference
 
 ```bash
-# Start all services
+# Start production services
 docker-compose --profile production up -d
 
-# Stop all services
+# Stop services
 docker-compose down
 
 # View logs
 docker-compose logs -f
 
-# Restart
+# Restart all services
 docker-compose restart
 
-# Update
-git pull && docker-compose down && docker-compose --profile production build && docker-compose --profile production up -d
+# Update application
+cd /opt/flights-scanner && git pull && docker-compose down && docker-compose --profile production build && docker-compose --profile production up -d
 
-# Backup
-docker-compose exec mongodb mongodump --username admin --password YOUR_PASSWORD --authenticationDatabase admin --db flights_scanner --out /tmp/backup
+# Backup database
+docker-compose exec mongodb mongodump --username admin --password YOUR_PASSWORD --authenticationDatabase admin --db flights_scanner --out /tmp/backup && docker cp flights-scanner-mongo:/tmp/backup ~/backups/backup-$(date +%Y%m%d)
+
+# Check health
+curl https://wylot.eu/api/health
+
+# Trigger manual scan
+curl -X POST https://wylot.eu/api/scans/run -H "Content-Type: application/json" -d '{"trip_duration_days": 7}'
+
+# View scan status
+curl https://wylot.eu/api/scans/latest
 ```
 
 ---
 
-**Your application is now deployed at https://wylot.eu!** 🎉
+## Additional Resources
+
+- [.env.example](.env.example) - Complete configuration reference
+- [DEPLOYMENT.md](DEPLOYMENT.md) - Full deployment guide
+- [README.md](README.md) - Application overview
+
+---
+
+**🎉 Your application is now deployed at https://wylot.eu!**
