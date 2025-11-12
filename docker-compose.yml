@@ -112,6 +112,7 @@ services:
 
   # Nginx Reverse Proxy
   nginx:
+    profiles: ["production"]
     image: nginx:alpine
     container_name: flights-scanner-nginx
     restart: unless-stopped
@@ -141,6 +142,7 @@ services:
 
   # Certbot for automatic SSL certificate management
   certbot:
+    profiles: ["production"]
     image: certbot/certbot
     container_name: flights-scanner-certbot
     restart: unless-stopped

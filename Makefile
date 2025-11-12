@@ -70,29 +70,30 @@ test-all:
 
 # Docker commands
 docker-build:
-	docker-compose build
+	docker-compose --profile production build
 
 docker-up:
-	docker-compose up -d
+	docker-compose --profile production up -d
 	@echo ""
-	@echo "Services starting:"
+	@echo "Services starting in PRODUCTION mode:"
 	@echo "  - Backend API: http://localhost:8900"
 	@echo "  - Frontend:    http://localhost:8901"
 	@echo "  - MongoDB:     mongodb://localhost:8902"
+	@echo "  - Nginx:       http://localhost:80 (HTTPS: 443)"
 	@echo ""
 	@echo "Run 'make docker-logs' to see logs"
 
 docker-down:
-	docker-compose down
+	docker-compose --profile production down
 
 docker-logs:
-	docker-compose logs -f
+	docker-compose --profile production logs -f
 
 docker-backend-logs:
-	docker-compose logs -f --tail 100 backend
+	docker-compose --profile production logs -f --tail 100 backend
 
 docker-restart:
-	docker-compose restart
+	docker-compose --profile production restart
 
 # Docker development commands
 docker-dev-up:
