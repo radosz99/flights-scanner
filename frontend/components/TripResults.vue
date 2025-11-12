@@ -66,7 +66,12 @@
                     </template>
                   </td>
                   <td :rowspan="twoWayRoutes && trip.return ? 2 : 1" class="p-1.5 md:p-3 text-center align-middle text-gray-800 dark:text-gray-200">
-                    <div class="text-[0.65rem] md:text-sm font-semibold">{{ formatDateRange(trip) }}</div>
+                    <div class="flex flex-col text-[0.65rem] md:text-sm font-semibold">
+                      <span>{{ formatDateOnly(trip.outbound.date_out) }}</span>
+                      <span v-if="twoWayRoutes && trip.return" class="md:hidden">{{ formatDateOnly(trip.return.date_out) }}</span>
+                      <span v-if="twoWayRoutes && trip.return" class="hidden md:inline">-</span>
+                      <span v-if="twoWayRoutes && trip.return" class="hidden md:inline">{{ formatDateOnly(trip.return.date_out) }}</span>
+                    </div>
                   </td>
                   <td class="p-1.5 md:p-3 text-gray-800 dark:text-gray-200">
                     <div class="flex flex-col gap-0.5 md:gap-1">
@@ -85,6 +90,9 @@
                         <span class="text-xs md:text-sm font-bold">
                           {{ trip.outbound.origin }} → {{ trip.outbound.destination }}
                         </span>
+                        <span class="text-xs md:text-xs text-gray-700 dark:text-gray-300 md:hidden">
+                          {{ formatTime(trip.outbound.departure_time) }}-{{ formatTime(trip.outbound.arrival_time) }}
+                        </span>
                         <span class="text-[0.65rem] md:text-xs text-gray-500 dark:text-gray-400 hidden md:inline">
                           {{ formatDateWithWeekday(trip.outbound.date_out) }}
                         </span>
@@ -92,11 +100,11 @@
                       <div class="text-[0.65rem] md:text-xs text-gray-600 dark:text-gray-400 ml-4 md:ml-7 hidden md:block">
                         {{ trip.outbound.origin_name }} → {{ trip.outbound.destination_name }}
                       </div>
-                      <div class="flex items-center gap-1.5 md:gap-3 ml-4 md:ml-7 text-[0.65rem] md:text-xs flex-wrap">
+                      <div class="flex items-center gap-1.5 md:gap-3 ml-4 md:ml-7 text-[0.65rem] md:text-xs flex-wrap hidden md:flex">
                         <span class="text-gray-700 dark:text-gray-300">
                           {{ formatTime(trip.outbound.departure_time) }} - {{ formatTime(trip.outbound.arrival_time) }}
                         </span>
-                        <span class="text-gray-500 dark:text-gray-400 hidden md:inline">
+                        <span class="text-gray-500 dark:text-gray-400">
                           {{ trip.outbound.duration }}
                         </span>
                         <span class="text-green-600 dark:text-green-400 font-semibold">
@@ -144,6 +152,9 @@
                         <span class="text-xs md:text-sm font-bold">
                           {{ trip.return.origin }} → {{ trip.return.destination }}
                         </span>
+                        <span class="text-xs md:text-xs text-gray-700 dark:text-gray-300 md:hidden">
+                          {{ formatTime(trip.return.departure_time) }}-{{ formatTime(trip.return.arrival_time) }}
+                        </span>
                         <span class="text-[0.65rem] md:text-xs text-gray-500 dark:text-gray-400 hidden md:inline">
                           {{ formatDateWithWeekday(trip.return.date_out) }}
                         </span>
@@ -151,11 +162,11 @@
                       <div class="text-[0.65rem] md:text-xs text-gray-600 dark:text-gray-400 ml-4 md:ml-7 hidden md:block">
                         {{ trip.return.origin_name }} → {{ trip.return.destination_name }}
                       </div>
-                      <div class="flex items-center gap-1.5 md:gap-3 ml-4 md:ml-7 text-[0.65rem] md:text-xs flex-wrap">
+                      <div class="flex items-center gap-1.5 md:gap-3 ml-4 md:ml-7 text-[0.65rem] md:text-xs flex-wrap hidden md:flex">
                         <span class="text-gray-700 dark:text-gray-300">
                           {{ formatTime(trip.return.departure_time) }} - {{ formatTime(trip.return.arrival_time) }}
                         </span>
-                        <span class="text-gray-500 dark:text-gray-400 hidden md:inline">
+                        <span class="text-gray-500 dark:text-gray-400">
                           {{ trip.return.duration }}
                         </span>
                         <span class="text-green-600 dark:text-green-400 font-semibold">
@@ -286,19 +297,19 @@ const paginatedTrips = computed(() => {
 })
 
 // Methods
-const formatDateRange = (trip) => {
-  const formatDateLocal = (dateStr) => {
-    const date = new Date(dateStr)
-    const day = String(date.getDate()).padStart(2, '0')
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    const year = date.getFullYear()
-    return `${day}.${month}.${year}`
-  }
+const formatDateOnly = (dateStr) => {
+  const date = new Date(dateStr)
+  const day = String(date.getDate()).padStart(2, '0')
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const year = date.getFullYear()
+  return `${day}.${month}.${year}`
+}
 
-  const outboundDate = formatDateLocal(trip.outbound.date_out)
+const formatDateRange = (trip) => {
+  const outboundDate = formatDateOnly(trip.outbound.date_out)
 
   if (props.twoWayRoutes && trip.return) {
-    const returnDate = formatDateLocal(trip.return.date_out)
+    const returnDate = formatDateOnly(trip.return.date_out)
     return `${outboundDate}-${returnDate}`
   }
 
