@@ -1410,6 +1410,42 @@ async def startup_event():
         logger.success(f"✓ MongoDB connected - {flight_count} flights in database")
     except Exception as e:
         logger.error(f"✗ MongoDB connection failed: {e}")
+        return
+
+    # Create performance indexes for round-trips-batch endpoint
+    logger.info("=" * 60)
+    logger.info("Ensuring MongoDB indexes for optimal performance...")
+    try:
+        # Index 1: Optimizes outbound flight queries (origin filter)
+        flights_collection.create_index(
+            [("origin", ASCENDING), ("date_out", ASCENDING), ("departure_time", ASCENDING)],
+            name="origin_date_departure_idx",
+            background=True
+        )
+        logger.success("✓ Index: origin_date_departure_idx")
+
+        # Index 2: Optimizes return flight queries (destination filter)
+        flights_collection.create_index(
+            [("destination", ASCENDING), ("date_out", ASCENDING), ("departure_time", ASCENDING)],
+            name="destination_date_departure_idx",
+            background=True
+        )
+        logger.success("✓ Index: destination_date_departure_idx")
+
+        # Index 3: Optimizes specific route queries
+        flights_collection.create_index(
+            [("origin", ASCENDING), ("destination", ASCENDING), ("date_out", ASCENDING)],
+            name="origin_dest_date_idx",
+            background=True
+        )
+        logger.success("✓ Index: origin_dest_date_idx")
+
+        logger.info("✓ All performance indexes ready")
+    except Exception as e:
+        # Indexes might already exist, which is fine
+        logger.warning(f"⚠ Index creation note: {e}")
+
+    logger.info("=" * 60)
 
 
 @app.on_event("shutdown")
