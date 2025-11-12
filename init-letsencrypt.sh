@@ -157,7 +157,7 @@ fi
 if [ $RENEW -eq 1 ]; then
     # Force renewal
     echo -e "${YELLOW}Renewing existing certificate...${NC}"
-    docker-compose --profile production run --rm certbot certonly \
+    docker-compose --profile production run --rm --entrypoint certbot certbot certonly \
         --webroot \
         --webroot-path=/var/www/certbot \
         $EMAIL_ARG \
@@ -170,7 +170,7 @@ else
     # New certificate
     echo -e "${YELLOW}Requesting new certificate for $DOMAIN...${NC}"
     echo -e "${YELLOW}This may take a minute...${NC}"
-    docker-compose --profile production run --rm certbot certonly \
+    docker-compose --profile production run --rm --entrypoint certbot certbot certonly \
         --webroot \
         --webroot-path=/var/www/certbot \
         $EMAIL_ARG \
