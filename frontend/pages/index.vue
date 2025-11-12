@@ -1,7 +1,7 @@
 <template>
-  <div class="max-w-full mx-auto p-8 min-h-screen dark:bg-gray-900">
-    <h1 class="text-gray-800 dark:text-gray-100 text-4xl font-bold mb-4">Wyszukiwarka Lotów</h1>
-    <p class="text-gray-600 dark:text-gray-300 text-lg mb-8">
+  <div class="max-w-full mx-auto p-4 md:p-8 min-h-screen dark:bg-gray-900">
+    <h1 class="text-gray-800 dark:text-gray-100 text-2xl md:text-4xl font-bold mb-2 md:mb-4">Wyszukiwarka Lotów</h1>
+    <p class="text-gray-600 dark:text-gray-300 text-sm md:text-lg mb-4 md:mb-8">
       Szukaj lotów w jedną stronę lub w obie strony z elastycznym dopasowaniem tras. Użyj wyszukiwania wsadowego, aby efektywnie znaleźć loty na wielu lotniskach.
     </p>
 
@@ -14,7 +14,7 @@
     </div>
 
     <!-- Main Content: Filters + Results Side by Side on Desktop -->
-    <div class="flex flex-col lg:flex-row lg:items-start gap-6 mt-8">
+    <div class="flex flex-col lg:flex-row lg:items-start gap-3 md:gap-6 mt-4 md:mt-8">
       <!-- Search Form (Left Side on Desktop) -->
       <div class="lg:w-[30%] lg:sticky lg:top-8">
         <TripFilters
