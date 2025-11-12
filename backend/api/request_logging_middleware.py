@@ -149,13 +149,17 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         Returns:
             Response from the route handler
         """
+        # Skip logging for health check endpoints
+        path = request.url.path
+        if path in ["/health", "/api/health", "/api/", "/"]:
+            return await call_next(request)
+
         # Record start time
         start_time = time.time()
 
         # Extract request information
         user_ip = self._get_real_ip(request)
         method = request.method
-        path = request.url.path
         query_params = self._extract_query_params(request)
         headers = self._extract_headers(request)
 

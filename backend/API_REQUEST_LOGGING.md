@@ -4,6 +4,8 @@
 
 All API requests are automatically logged to MongoDB for monitoring, analytics, and debugging purposes. The logging middleware captures comprehensive information about each request including headers, query parameters, real user IP, and response details.
 
+**Excluded Endpoints:** Health check endpoints (`/health`, `/api/health`, `/api/`, `/`) are not logged to reduce noise and storage usage.
+
 ## MongoDB Collection
 
 **Collection Name:** `api_request_logs`
@@ -92,6 +94,30 @@ location /api {
     proxy_set_header X-Forwarded-Proto $scheme;
 }
 ```
+
+## Accessing MongoDB Shell
+
+To connect to MongoDB and query the logs, use the convenient Makefile command:
+
+```bash
+make mongo-shell
+```
+
+This command automatically loads credentials from your `.env` file and connects you to the MongoDB container.
+
+Alternatively, you can connect manually:
+
+```bash
+source .env && docker exec -it flights-scanner-mongo mongosh admin -u $MONGO_USERNAME -p $MONGO_PASSWORD
+```
+
+Once connected, switch to the flights_scanner database:
+
+```javascript
+use flights_scanner
+```
+
+Now you can query the `api_request_logs` collection using the examples below.
 
 ## Query Examples
 
