@@ -94,11 +94,11 @@
                     <div class="flex flex-col gap-0.5 md:gap-1">
                       <div class="flex items-center gap-1 md:gap-2">
                         <a
-                          :href="buildRyanairUrl(trip.outbound)"
+                          :href="isRoundTrip(trip) ? buildRoundTripUrl(trip) : buildRyanairUrl(trip.outbound)"
                           target="_blank"
                           rel="noopener noreferrer"
                           class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors flex-shrink-0"
-                          title="Book on Ryanair"
+                          :title="isRoundTrip(trip) ? 'Book round trip on Ryanair' : 'Book on Ryanair'"
                         >
                           <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -156,7 +156,9 @@
                   <td class="p-1.5 md:p-3 text-gray-800 dark:text-gray-200">
                     <div class="flex flex-col gap-0.5 md:gap-1">
                       <div class="flex items-center gap-1 md:gap-2">
+                        <!-- Only show separate link if not a round trip -->
                         <a
+                          v-if="!isRoundTrip(trip)"
                           :href="buildRyanairUrl(trip.return)"
                           target="_blank"
                           rel="noopener noreferrer"
@@ -320,11 +322,31 @@
               <div class="text-2xl font-bold text-green-600 dark:text-green-400">{{ formatPrice(selectedTrip.total_price) }}</div>
             </div>
 
+            <!-- Booking Link (Combined for round trips, or outbound only) -->
+            <div v-if="isRoundTrip(selectedTrip)" class="mb-4 pb-4 border-b border-gray-200 dark:border-gray-700">
+              <div class="flex items-center gap-2 justify-center">
+                <a
+                  :href="buildRoundTripUrl(selectedTrip)"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white font-medium rounded-md transition-colors"
+                  title="Book round trip on Ryanair"
+                >
+                  <span>Zarezerwuj Powrotny Lot na Ryanair</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                </a>
+              </div>
+            </div>
+
             <!-- Outbound Flight Details -->
             <div class="mb-4 pb-4 border-b border-gray-200 dark:border-gray-700">
               <div class="flex items-center gap-2 mb-3">
                 <div class="text-sm font-semibold text-gray-700 dark:text-gray-300">Lot tam</div>
+                <!-- Show separate link only if not a round trip -->
                 <a
+                  v-if="!isRoundTrip(selectedTrip)"
                   :href="buildRyanairUrl(selectedTrip.outbound)"
                   target="_blank"
                   rel="noopener noreferrer"
@@ -373,7 +395,9 @@
             <div v-if="twoWayRoutes && selectedTrip.return" class="mb-2">
               <div class="flex items-center gap-2 mb-3">
                 <div class="text-sm font-semibold text-gray-700 dark:text-gray-300">Lot z powrotem</div>
+                <!-- Show separate link only if not a round trip -->
                 <a
+                  v-if="!isRoundTrip(selectedTrip)"
                   :href="buildRyanairUrl(selectedTrip.return)"
                   target="_blank"
                   rel="noopener noreferrer"
@@ -545,6 +569,47 @@ const formatDateRange = (trip) => {
   return outboundDate
 }
 
+// Check if trip is a true round-trip (same airports, just reversed)
+const isRoundTrip = (trip) => {
+  if (!trip.return) return false
+  return trip.outbound.origin === trip.return.destination &&
+         trip.outbound.destination === trip.return.origin
+}
+
+// Build combined round-trip URL for Ryanair
+const buildRoundTripUrl = (trip) => {
+  const dateOut = trip.outbound.date_out.split('T')[0]
+  const dateIn = trip.return.date_out.split('T')[0]
+
+  const params = new URLSearchParams({
+    adults: '1',
+    teens: '0',
+    children: '0',
+    infants: '0',
+    dateOut: dateOut,
+    dateIn: dateIn,
+    isConnectedFlight: 'false',
+    discount: '0',
+    promoCode: '',
+    isReturn: 'true',
+    originIata: trip.outbound.origin,
+    destinationIata: trip.outbound.destination,
+    tpAdults: '1',
+    tpTeens: '0',
+    tpChildren: '0',
+    tpInfants: '0',
+    tpStartDate: dateOut,
+    tpEndDate: dateIn,
+    tpDiscount: '0',
+    tpPromoCode: '',
+    tpOriginIata: trip.outbound.origin,
+    tpDestinationIata: trip.outbound.destination
+  })
+
+  return `https://www.ryanair.com/hr/en/trip/flights/select?${params.toString()}`
+}
+
+// Build single flight URL for Ryanair
 const buildRyanairUrl = (flight) => {
   const dateOnly = flight.date_out.split('T')[0]
 
