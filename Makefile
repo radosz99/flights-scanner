@@ -155,15 +155,21 @@ docker-clean-build:
 
 # Docker development commands
 docker-dev-up:
-	docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+	docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
 	@echo ""
 	@echo "Services starting in DEVELOPMENT mode with hot reload:"
 	@echo "  - Backend API: http://localhost:8900 (with hot reload)"
 	@echo "  - Frontend:    http://localhost:8901 (with hot reload)"
 	@echo "  - MongoDB:     mongodb://localhost:8902"
 	@echo ""
+	@echo "Mobile/Network Access:"
+	@echo "  Access from other devices on the same network using your local IP:"
+	@LOCAL_IP=$$(ip route get 1 2>/dev/null | grep -oP 'src \K\S+' || ifconfig 2>/dev/null | grep 'inet ' | grep -v '127.0.0.1' | awk '{print $$2}' | head -1 || echo "Unable to detect IP"); \
+	echo "  - Frontend:    http://$$LOCAL_IP:8901"; \
+	echo "  - Backend API: http://$$LOCAL_IP:8900"
+	@echo ""
 	@echo "Code changes will automatically reload the services."
-	@echo "Run 'make docker-logs' to see logs"
+	@echo "Run 'docker-compose -f docker-compose.yml -f docker-compose.dev.yml logs -f' to see logs"
 
 docker-dev-down:
 	docker-compose -f docker-compose.yml -f docker-compose.dev.yml down

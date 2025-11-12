@@ -27,12 +27,32 @@ services:
       timeout: 10s
       retries: 1
 
-  # Frontend Service - Development Mode (runs in production mode, no hot reload)
-  # Note: Only backend has hot reload in dev mode to avoid complexity with node_modules
+  # Frontend Service - Development Mode with Hot Reload
   frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    env_file:
+      - .env
+    environment:
+      HOST: 0.0.0.0
+      PORT: 8901
+      NODE_ENV: development
+      # Client-side API URL for development
+      NUXT_PUBLIC_API_BASE_URL: http://localhost:8900
+    volumes:
+      # Mount code for hot reload in development
+      - ./frontend:/app
+      # Use named volume for node_modules to avoid platform-specific issues
+      - frontend_node_modules:/app/node_modules
+    command: ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "8901"]
     healthcheck:
       # Disable healthcheck in dev mode for faster startup
       test: ["CMD-SHELL", "exit 0"]
       interval: 1m
       timeout: 10s
       retries: 1
+
+volumes:
+  # Named volume for frontend node_modules
+  frontend_node_modules:
