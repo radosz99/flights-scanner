@@ -30,7 +30,7 @@ nano .env
 
 Update the following sections in your `.env` file:
 
-#### MongoDB Authentication (IMPORTANT - Set Strong Passwords!)
+#### MongoDB Authentication (REQUIRED FOR PRODUCTION!)
 
 ```env
 # MongoDB Authentication
@@ -38,7 +38,12 @@ MONGO_USERNAME=admin
 MONGO_PASSWORD=YOUR_STRONG_PASSWORD_HERE
 ```
 
-**⚠️ Security Note**: Replace `YOUR_STRONG_PASSWORD_HERE` with a strong password. Never commit this file to version control!
+**⚠️ Security Note**:
+- MongoDB authentication is **REQUIRED** for production deployments
+- Replace `YOUR_STRONG_PASSWORD_HERE` with a strong, unique password
+- Never commit this file to version control!
+- These credentials will be used to initialize MongoDB with a root user
+- The backend will use these credentials to connect to MongoDB with `authSource=admin`
 
 #### Port Configuration
 
