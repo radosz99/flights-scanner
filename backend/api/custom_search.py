@@ -265,6 +265,15 @@ class CustomTripSearch:
         outbound_weekdays: Optional[List[int]] = None,
         return_weekdays: Optional[List[int]] = None
     ) -> List[Dict[str, Any]]:
+        import time
+        perf_start_total = time.time()
+
+        logger.info(f"=== BATCH ROUND TRIPS SEARCH STARTED ===")
+        logger.info(f"Parameters: origins={origins}, destinations={destinations}, min_days={min_days}, max_days={max_days}, passengers={passengers}")
+        logger.info(f"Filters: date_from={date_from}, date_to={date_to}, min_price={min_price}, max_price={max_price}")
+        logger.info(f"Constraints: return_from_same_airport={return_from_same_airport}, return_to_same_airport={return_to_same_airport}")
+        logger.info(f"Weekday filters: outbound_weekdays={outbound_weekdays}, return_weekdays={return_weekdays}")
+
         origins_upper = [o.upper() for o in origins]
 
         # Support "anywhere" search when destinations is empty
@@ -302,10 +311,17 @@ class CustomTripSearch:
             outbound_query["date_out"] = date_filter
             return_query["date_out"] = date_filter
 
+        # Query 1: Fetch outbound flights
+        perf_query1_start = time.time()
         outbound_flights = list(self.flights_collection.find(outbound_query).sort("departure_time", ASCENDING))
-        return_flights = list(self.flights_collection.find(return_query).sort("departure_time", ASCENDING))
+        perf_query1_time = time.time() - perf_query1_start
+        logger.info(f"[PERF] Outbound flights query: {perf_query1_time:.3f}s - Found {len(outbound_flights)} flights")
 
-        logger.info(f"Found {len(outbound_flights)} outbound flights and {len(return_flights)} return flights")
+        # Query 2: Fetch return flights
+        perf_query2_start = time.time()
+        return_flights = list(self.flights_collection.find(return_query).sort("departure_time", ASCENDING))
+        perf_query2_time = time.time() - perf_query2_start
+        logger.info(f"[PERF] Return flights query: {perf_query2_time:.3f}s - Found {len(return_flights)} flights")
 
         if len(outbound_flights) > self.MAX_FLIGHTS_PER_DIRECTION:
             raise TooManyFlightsError(
@@ -322,12 +338,27 @@ class CustomTripSearch:
             )
 
         potential_combinations = len(outbound_flights) * len(return_flights)
+        logger.info(f"[PERF] Potential combinations to analyze: {potential_combinations:,} ({len(outbound_flights)} × {len(return_flights)})")
+
         if potential_combinations > self.MAX_TOTAL_COMBINATIONS:
             raise TooManyFlightsError(
                 f"Too many potential combinations ({potential_combinations:,} = {len(outbound_flights)} × {len(return_flights)}). "
                 f"Please narrow your search criteria (e.g., shorter date range, specific destination, weekday filters). "
                 f"Maximum allowed: {self.MAX_TOTAL_COMBINATIONS:,}"
             )
+
+        # Performance counters
+        perf_matching_start = time.time()
+        counters = {
+            "iterations": 0,
+            "filtered_outbound_weekday": 0,
+            "filtered_return_weekday": 0,
+            "filtered_same_airport": 0,
+            "filtered_return_to_same": 0,
+            "filtered_trip_duration": 0,
+            "filtered_price": 0,
+            "valid_trips": 0
+        }
 
         round_trips = []
 
@@ -337,15 +368,20 @@ class CustomTripSearch:
 
             if outbound_weekdays is not None:
                 if outbound_date.weekday() not in outbound_weekdays:
+                    counters["filtered_outbound_weekday"] += 1
                     continue
 
             for return_flight in return_flights:
+                counters["iterations"] += 1
+
                 if return_from_same_airport:
                     if return_flight["origin"] != outbound["destination"]:
+                        counters["filtered_same_airport"] += 1
                         continue
 
                 if return_to_same_airport:
                     if return_flight["destination"] != outbound["origin"]:
+                        counters["filtered_return_to_same"] += 1
                         continue
 
                 return_date_str = return_flight["date_out"]
@@ -353,6 +389,7 @@ class CustomTripSearch:
 
                 if return_weekdays is not None:
                     if return_date.weekday() not in return_weekdays:
+                        counters["filtered_return_weekday"] += 1
                         continue
 
                 trip_duration = (return_date - outbound_date).days
@@ -364,8 +401,10 @@ class CustomTripSearch:
                     total_price = (outbound_price_pln + return_price_pln) * passengers
 
                     if min_price is not None and total_price < min_price:
+                        counters["filtered_price"] += 1
                         continue
                     if max_price is not None and total_price > max_price:
+                        counters["filtered_price"] += 1
                         continue
 
                     outbound_arrival = datetime.fromisoformat(outbound["arrival_time"].replace("Z", "+00:00"))
@@ -413,11 +452,37 @@ class CustomTripSearch:
                         "currency": "PLN"
                     }
 
+                    counters["valid_trips"] += 1
                     round_trips.append(trip_data)
+                else:
+                    counters["filtered_trip_duration"] += 1
 
+        perf_matching_time = time.time() - perf_matching_start
+        logger.info(f"[PERF] Matching/Analysis phase: {perf_matching_time:.3f}s")
+        logger.info(f"[PERF] Analysis stats:")
+        logger.info(f"  - Total iterations: {counters['iterations']:,}")
+        logger.info(f"  - Filtered by outbound weekday: {counters['filtered_outbound_weekday']:,}")
+        logger.info(f"  - Filtered by return weekday: {counters['filtered_return_weekday']:,}")
+        logger.info(f"  - Filtered by same airport constraint: {counters['filtered_same_airport']:,}")
+        logger.info(f"  - Filtered by return to same constraint: {counters['filtered_return_to_same']:,}")
+        logger.info(f"  - Filtered by trip duration: {counters['filtered_trip_duration']:,}")
+        logger.info(f"  - Filtered by price: {counters['filtered_price']:,}")
+        logger.info(f"  - Valid trips found: {counters['valid_trips']:,}")
+
+        # Sorting phase
+        perf_sort_start = time.time()
         round_trips.sort(key=lambda x: x["total_price"])
+        perf_sort_time = time.time() - perf_sort_start
+        logger.info(f"[PERF] Sorting {len(round_trips)} trips: {perf_sort_time:.3f}s")
 
-        logger.info(f"Found {len(round_trips)} valid round trips")
+        perf_total_time = time.time() - perf_start_total
+        logger.info(f"[PERF] === TOTAL TIME: {perf_total_time:.3f}s ===")
+        logger.info(f"[PERF] Breakdown:")
+        logger.info(f"  - Outbound query: {perf_query1_time:.3f}s ({perf_query1_time/perf_total_time*100:.1f}%)")
+        logger.info(f"  - Return query: {perf_query2_time:.3f}s ({perf_query2_time/perf_total_time*100:.1f}%)")
+        logger.info(f"  - Matching/Analysis: {perf_matching_time:.3f}s ({perf_matching_time/perf_total_time*100:.1f}%)")
+        logger.info(f"  - Sorting: {perf_sort_time:.3f}s ({perf_sort_time/perf_total_time*100:.1f}%)")
+        logger.info(f"=== BATCH ROUND TRIPS SEARCH COMPLETED - {len(round_trips)} trips returned ===")
 
         return round_trips
 
