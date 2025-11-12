@@ -389,6 +389,7 @@ class CustomTripSearch:
             "filtered_return_weekday": 0,
             "filtered_same_airport": 0,
             "filtered_return_to_same": 0,
+            "filtered_date_range": 0,  # Pre-filtered before iteration
             "filtered_trip_duration": 0,
             "filtered_price": 0,
             "valid_trips": 0
@@ -433,6 +434,24 @@ class CustomTripSearch:
             else:
                 # Most flexible: no constraints (rare case, fallback to all flights)
                 relevant_return_flights = return_flights
+
+            # Date-based pre-filtering (OPTIMIZATION for flexible routing)
+            # Calculate valid return date range based on trip duration constraints
+            # This eliminates ~95% of iterations that would fail trip_duration check
+            min_return_date = outbound_date + timedelta(days=min_days)
+            max_return_date = outbound_date + timedelta(days=max_days)
+
+            # Filter return flights to only those within valid date range
+            # This is especially effective in flexible mode where we check many return flights
+            date_filtered_returns = []
+            for flight in relevant_return_flights:
+                return_date_for_filter = return_flight_dates[flight["flight_id"]][0]
+                if min_return_date <= return_date_for_filter <= max_return_date:
+                    date_filtered_returns.append(flight)
+                else:
+                    counters["filtered_date_range"] += 1
+
+            relevant_return_flights = date_filtered_returns
 
             for return_flight in relevant_return_flights:
                 counters["iterations"] += 1
@@ -521,6 +540,7 @@ class CustomTripSearch:
         logger.info(f"  - Filtered by return weekday: {counters['filtered_return_weekday']:,}")
         logger.info(f"  - Filtered by same airport constraint: {counters['filtered_same_airport']:,}")
         logger.info(f"  - Filtered by return to same constraint: {counters['filtered_return_to_same']:,}")
+        logger.info(f"  - Filtered by date range (pre-filter): {counters['filtered_date_range']:,}")
         logger.info(f"  - Filtered by trip duration: {counters['filtered_trip_duration']:,}")
         logger.info(f"  - Filtered by price: {counters['filtered_price']:,}")
         logger.info(f"  - Valid trips found: {counters['valid_trips']:,}")
