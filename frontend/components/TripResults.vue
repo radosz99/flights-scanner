@@ -25,7 +25,8 @@
           <table class="w-full border-collapse text-xs md:text-sm">
             <thead class="bg-gray-50 dark:bg-gray-700 border-b-2 border-gray-200 dark:border-gray-600">
               <tr>
-                <th class="p-1.5 md:p-3 text-left font-semibold text-gray-700 dark:text-gray-200 text-xs md:text-sm whitespace-nowrap">
+                <!-- Hide Cel column header on mobile -->
+                <th class="hidden md:table-cell p-1.5 md:p-3 text-left font-semibold text-gray-700 dark:text-gray-200 text-xs md:text-sm whitespace-nowrap">
                   Cel
                 </th>
                 <th class="p-1.5 md:p-3 text-center font-semibold text-gray-700 dark:text-gray-200 text-xs md:text-sm whitespace-nowrap">
@@ -44,6 +45,20 @@
             </thead>
             <tbody class="bg-white dark:bg-gray-800">
               <template v-for="(trip, index) in paginatedTrips" :key="index">
+                <!-- Mobile: Full-width destination header -->
+                <tr class="md:hidden bg-gray-100 dark:bg-gray-800 border-b border-gray-300 dark:border-gray-600">
+                  <td colspan="4" class="p-2 text-center">
+                    <div class="font-bold text-sm text-gray-800 dark:text-gray-200">
+                      <template v-if="twoWayRoutes && trip.return && trip.outbound.destination !== trip.return.origin">
+                        {{ trip.outbound.destination_name }} / {{ trip.return.origin_name }}
+                      </template>
+                      <template v-else>
+                        {{ trip.outbound.destination_name }}
+                      </template>
+                    </div>
+                  </td>
+                </tr>
+
                 <!-- Outbound / One-way Flight Row -->
                 <tr
                   class="border-b border-gray-200 dark:border-gray-700 transition-colors group"
@@ -51,18 +66,19 @@
                   @mouseenter="hoveredTripIndex = index"
                   @mouseleave="hoveredTripIndex = null"
                 >
-                  <td :rowspan="twoWayRoutes && trip.return ? 2 : 1" class="p-1.5 md:p-3 text-center align-middle font-bold text-gray-800 dark:text-gray-200 border-r border-gray-300 dark:border-gray-600">
+                  <!-- Desktop: Show destination column -->
+                  <td :rowspan="twoWayRoutes && trip.return ? 2 : 1" class="hidden md:table-cell p-1.5 md:p-3 text-center align-middle font-bold text-gray-800 dark:text-gray-200 border-r border-gray-300 dark:border-gray-600">
                     <template v-if="twoWayRoutes && trip.return && trip.outbound.destination !== trip.return.origin">
                       <!-- Show both airports when they're different -->
                       <div class="text-xs md:text-sm">{{ trip.outbound.destination }} / {{ trip.return.origin }}</div>
-                      <div class="text-[0.65rem] md:text-xs font-normal text-gray-600 dark:text-gray-400 hidden md:block">
+                      <div class="text-[0.65rem] md:text-xs font-normal text-gray-600 dark:text-gray-400">
                         {{ trip.outbound.destination_name }} / {{ trip.return.origin_name }}
                       </div>
                     </template>
                     <template v-else>
                       <!-- Show single airport -->
                       <div class="text-sm md:text-lg">{{ trip.outbound.destination }}</div>
-                      <div class="text-[0.65rem] md:text-xs font-normal text-gray-600 dark:text-gray-400 hidden md:block">{{ trip.outbound.destination_name }}</div>
+                      <div class="text-[0.65rem] md:text-xs font-normal text-gray-600 dark:text-gray-400">{{ trip.outbound.destination_name }}</div>
                     </template>
                   </td>
                   <td :rowspan="twoWayRoutes && trip.return ? 2 : 1" class="p-1.5 md:p-3 text-center align-middle text-gray-800 dark:text-gray-200">
@@ -180,8 +196,13 @@
                   </td>
                 </tr>
 
-                <!-- One-way flight wider separation -->
-                <tr v-if="!twoWayRoutes" class="h-3 bg-gray-100 dark:bg-gray-900">
+                <!-- Mobile: Separator row after trip -->
+                <tr v-if="!twoWayRoutes" class="md:hidden h-2 bg-gray-200 dark:bg-gray-900">
+                  <td colspan="4" class="p-0"></td>
+                </tr>
+
+                <!-- Desktop: One-way flight separator -->
+                <tr v-if="!twoWayRoutes" class="hidden md:table-row h-3 bg-gray-100 dark:bg-gray-900">
                   <td colspan="4" class="p-0"></td>
                 </tr>
               </template>
