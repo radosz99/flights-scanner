@@ -125,7 +125,7 @@ EOF
 
 # Start services
 echo -e "${GREEN}Starting Docker services...${NC}"
-docker-compose up -d nginx
+docker-compose --profile production up -d nginx
 
 # Wait for nginx to be ready
 echo -e "${GREEN}Waiting for nginx to be ready...${NC}"
@@ -157,7 +157,7 @@ fi
 if [ $RENEW -eq 1 ]; then
     # Force renewal
     echo -e "${YELLOW}Renewing existing certificate...${NC}"
-    docker-compose run --rm certbot certonly \
+    docker-compose --profile production run --rm certbot certonly \
         --webroot \
         --webroot-path=/var/www/certbot \
         $EMAIL_ARG \
@@ -170,7 +170,7 @@ else
     # New certificate
     echo -e "${YELLOW}Requesting new certificate for $DOMAIN...${NC}"
     echo -e "${YELLOW}This may take a minute...${NC}"
-    docker-compose run --rm certbot certonly \
+    docker-compose --profile production run --rm certbot certonly \
         --webroot \
         --webroot-path=/var/www/certbot \
         $EMAIL_ARG \
@@ -285,11 +285,11 @@ EOF
 
 # Reload nginx with new configuration
 echo -e "${GREEN}Reloading nginx with SSL configuration...${NC}"
-docker-compose exec nginx nginx -s reload
+docker-compose --profile production exec nginx nginx -s reload
 
 # Start certbot for auto-renewal
 echo -e "${GREEN}Starting certbot auto-renewal service...${NC}"
-docker-compose up -d certbot
+docker-compose --profile production up -d certbot
 
 echo ""
 echo -e "${GREEN}=======================================${NC}"
