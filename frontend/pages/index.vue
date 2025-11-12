@@ -110,6 +110,7 @@ const showScrollTop = ref(false)
 
 // List of Polish airport codes
 const POLISH_AIRPORT_CODES = [
+  'BER', // Berlin
   'BZG', // Bydgoszcz
   'GDN', // Gdańsk
   'KRK', // Krakow
