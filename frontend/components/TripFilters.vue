@@ -279,7 +279,7 @@
             :options="weekdayOptions"
             :selected-values="filters.outboundWeekdays"
             @update:selected-values="updateFilter('outboundWeekdays', $event)"
-            placeholder="Any day"
+            placeholder="Dowolny dzień"
             :searchable="false"
             :show-selected-items="false"
           />

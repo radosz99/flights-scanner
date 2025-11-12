@@ -6,10 +6,12 @@
         <div class="flex-shrink-0">
           <NuxtLink
             to="/"
-            class="flex items-center gap-3 text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-all duration-200 hover:-translate-y-0.5"
+            class="flex items-center gap-2 text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-all duration-200 hover:-translate-y-0.5"
           >
-            <span class="text-3xl">✈️</span>
-            <span class="text-xl font-bold">Skaner Lotów</span>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+            </svg>
+            <span class="text-xl font-bold">wylot.eu</span>
           </NuxtLink>
         </div>
 
@@ -28,13 +30,6 @@
             :class="{ 'bg-blue-50 dark:bg-gray-700 text-blue-600 dark:text-blue-400 font-semibold': $route.path === '/price-chart' }"
           >
             Wykres Cen
-          </NuxtLink>
-          <NuxtLink
-            to="/trip-search"
-            class="px-4 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 font-medium"
-            :class="{ 'bg-blue-50 dark:bg-gray-700 text-blue-600 dark:text-blue-400 font-semibold': $route.path === '/trip-search' }"
-          >
-            Wyszukiwarka Tras
           </NuxtLink>
 
           <!-- Dark Mode Toggle -->
@@ -91,14 +86,6 @@
           :class="{ 'bg-blue-50 dark:bg-gray-700 text-blue-600 dark:text-blue-400 font-semibold': $route.path === '/price-chart' }"
         >
           Wykres Cen
-        </NuxtLink>
-        <NuxtLink
-          to="/trip-search"
-          @click="mobileMenuOpen = false"
-          class="block px-4 py-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 font-medium"
-          :class="{ 'bg-blue-50 dark:bg-gray-700 text-blue-600 dark:text-blue-400 font-semibold': $route.path === '/trip-search' }"
-        >
-          Wyszukiwarka Tras
         </NuxtLink>
       </div>
     </div>
