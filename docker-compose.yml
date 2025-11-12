@@ -101,7 +101,7 @@ services:
     environment:
       API_URL: http://backend:8900
       TRIP_DURATION_DAYS: 7
-      SCAN_UNTIL_DAYS: 455  # Days from now (~2026-03-31)
+      SCAN_UNTIL_DAYS: 140  # Days from now
     volumes:
       - scheduler_logs:/app/logs
     depends_on:

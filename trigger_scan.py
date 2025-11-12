@@ -15,7 +15,7 @@ from loguru import logger
 # Configuration
 API_URL = os.getenv("API_URL", "http://localhost:8000")
 TRIP_DURATION_DAYS = int(os.getenv("TRIP_DURATION_DAYS", "7"))
-SCAN_UNTIL_DAYS = int(os.getenv("SCAN_UNTIL_DAYS", "365"))  # Days from now
+SCAN_UNTIL_DAYS = int(os.getenv("SCAN_UNTIL_DAYS", "140"))  # Days from now
 
 
 def trigger_scan():
