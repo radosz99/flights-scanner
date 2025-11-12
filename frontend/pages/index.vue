@@ -636,14 +636,15 @@ onMounted(async () => {
 
   // Try to load from URL first, then fall back to localStorage
   const hasUrlParams = parseUrlParams()
+  let loadedFromLocalStorage = false
 
   if (!hasUrlParams) {
     // No URL params, try to load from localStorage
-    loadFiltersFromLocalStorage()
+    loadedFromLocalStorage = loadFiltersFromLocalStorage()
   }
 
-  // Auto-search if URL has valid search parameters
-  if (route.query && Object.keys(route.query).length > 0 && canSearch.value) {
+  // Auto-search if URL has valid search parameters OR if filters were loaded from localStorage
+  if (canSearch.value && (hasUrlParams || loadedFromLocalStorage)) {
     await searchTrips()
   }
 
