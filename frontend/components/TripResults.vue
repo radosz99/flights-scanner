@@ -61,10 +61,11 @@
 
                 <!-- Outbound / One-way Flight Row -->
                 <tr
-                  class="border-b border-gray-200 dark:border-gray-700 transition-colors group"
+                  class="border-b border-gray-200 dark:border-gray-700 transition-colors group md:cursor-default cursor-pointer active:bg-gray-100 dark:active:bg-gray-600"
                   :class="{ 'bg-gray-50 dark:bg-gray-700': hoveredTripIndex === index }"
                   @mouseenter="hoveredTripIndex = index"
                   @mouseleave="hoveredTripIndex = null"
+                  @click="() => { if (window.innerWidth < 768) openTripModal(trip) }"
                 >
                   <!-- Desktop: Show destination column -->
                   <td :rowspan="twoWayRoutes && trip.return ? 2 : 1" class="hidden md:table-cell p-1.5 md:p-3 text-center align-middle font-bold text-gray-800 dark:text-gray-200 border-r border-gray-300 dark:border-gray-600">
@@ -83,10 +84,10 @@
                   </td>
                   <td :rowspan="twoWayRoutes && trip.return ? 2 : 1" class="p-1.5 md:p-3 text-center align-middle text-gray-800 dark:text-gray-200">
                     <div class="flex flex-col text-[0.65rem] md:text-sm font-semibold">
-                      <span>{{ formatDateOnly(trip.outbound.date_out) }}</span>
-                      <span v-if="twoWayRoutes && trip.return" class="md:hidden">{{ formatDateOnly(trip.return.date_out) }}</span>
+                      <span>{{ formatDateWithWeekdayShort(trip.outbound.date_out) }}</span>
+                      <span v-if="twoWayRoutes && trip.return" class="md:hidden">{{ formatDateWithWeekdayShort(trip.return.date_out) }}</span>
                       <span v-if="twoWayRoutes && trip.return" class="hidden md:inline">-</span>
-                      <span v-if="twoWayRoutes && trip.return" class="hidden md:inline">{{ formatDateOnly(trip.return.date_out) }}</span>
+                      <span v-if="twoWayRoutes && trip.return" class="hidden md:inline">{{ formatDateWithWeekdayShort(trip.return.date_out) }}</span>
                     </div>
                   </td>
                   <td class="p-1.5 md:p-3 text-gray-800 dark:text-gray-200">
@@ -146,10 +147,11 @@
                 <!-- Return Flight Row (only for two-way routes) -->
                 <tr
                   v-if="twoWayRoutes && trip.return"
-                  class="border-b-4 border-gray-400 dark:border-gray-500 transition-colors"
+                  class="border-b-4 border-gray-400 dark:border-gray-500 transition-colors md:cursor-default cursor-pointer active:bg-gray-100 dark:active:bg-gray-600"
                   :class="{ 'bg-gray-50 dark:bg-gray-700': hoveredTripIndex === index }"
                   @mouseenter="hoveredTripIndex = index"
                   @mouseleave="hoveredTripIndex = null"
+                  @click="() => { if (window.innerWidth < 768) openTripModal(trip) }"
                 >
                   <td class="p-1.5 md:p-3 text-gray-800 dark:text-gray-200">
                     <div class="flex flex-col gap-0.5 md:gap-1">
@@ -254,6 +256,181 @@
         <p>Nie znaleziono lotów spełniających Twoje kryteria. Spróbuj dostosować parametry wyszukiwania.</p>
       </div>
     </div>
+
+    <!-- Mobile Trip Details Modal -->
+    <Teleport to="body">
+      <div
+        v-if="showMobileTripModal && selectedTrip"
+        class="fixed inset-0 z-50 flex items-start justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto"
+        @click.self="closeTripModal"
+      >
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-2xl w-full max-w-lg my-8 overflow-hidden">
+          <!-- Modal Header -->
+          <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-750">
+            <h3 class="text-lg font-bold text-gray-800 dark:text-gray-100">Szczegóły Lotu</h3>
+            <button
+              @click="closeTripModal"
+              class="p-2 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <!-- Modal Content -->
+          <div class="p-4">
+            <!-- Destination -->
+            <div class="mb-4 pb-4 border-b border-gray-200 dark:border-gray-700">
+              <div class="text-sm text-gray-600 dark:text-gray-400 mb-1">Cel podróży</div>
+              <div class="text-xl font-bold text-gray-800 dark:text-gray-100">
+                <template v-if="twoWayRoutes && selectedTrip.return && selectedTrip.outbound.destination !== selectedTrip.return.origin">
+                  {{ selectedTrip.outbound.destination }} / {{ selectedTrip.return.origin }}
+                </template>
+                <template v-else>
+                  {{ selectedTrip.outbound.destination }}
+                </template>
+              </div>
+              <div class="text-sm text-gray-600 dark:text-gray-400">
+                <template v-if="twoWayRoutes && selectedTrip.return && selectedTrip.outbound.destination !== selectedTrip.return.origin">
+                  {{ selectedTrip.outbound.destination_name }} / {{ selectedTrip.return.origin_name }}
+                </template>
+                <template v-else>
+                  {{ selectedTrip.outbound.destination_name }}
+                </template>
+              </div>
+            </div>
+
+            <!-- Trip Duration and Price -->
+            <div v-if="twoWayRoutes && selectedTrip.return" class="mb-4 pb-4 border-b border-gray-200 dark:border-gray-700 flex justify-between">
+              <div>
+                <div class="text-sm text-gray-600 dark:text-gray-400 mb-1">Czas trwania</div>
+                <div class="text-lg font-bold text-gray-800 dark:text-gray-100">{{ selectedTrip.trip_duration_days }} dni</div>
+                <div class="text-xs text-gray-500 dark:text-gray-400">{{ selectedTrip.stay_duration }}</div>
+              </div>
+              <div class="text-right">
+                <div class="text-sm text-gray-600 dark:text-gray-400 mb-1">Łączna cena</div>
+                <div class="text-2xl font-bold text-green-600 dark:text-green-400">{{ formatPrice(selectedTrip.total_price) }}</div>
+              </div>
+            </div>
+
+            <!-- One-way total price -->
+            <div v-if="!twoWayRoutes" class="mb-4 pb-4 border-b border-gray-200 dark:border-gray-700">
+              <div class="text-sm text-gray-600 dark:text-gray-400 mb-1">Cena</div>
+              <div class="text-2xl font-bold text-green-600 dark:text-green-400">{{ formatPrice(selectedTrip.total_price) }}</div>
+            </div>
+
+            <!-- Outbound Flight Details -->
+            <div class="mb-4 pb-4 border-b border-gray-200 dark:border-gray-700">
+              <div class="flex items-center gap-2 mb-3">
+                <div class="text-sm font-semibold text-gray-700 dark:text-gray-300">Lot tam</div>
+                <a
+                  :href="buildRyanairUrl(selectedTrip.outbound)"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
+                  title="Book on Ryanair"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                </a>
+              </div>
+
+              <div class="space-y-2 text-sm">
+                <div class="flex justify-between">
+                  <span class="text-gray-600 dark:text-gray-400">Trasa:</span>
+                  <span class="font-semibold text-gray-800 dark:text-gray-100">{{ selectedTrip.outbound.origin }} → {{ selectedTrip.outbound.destination }}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-600 dark:text-gray-400">Lotniska:</span>
+                  <span class="text-gray-800 dark:text-gray-100 text-right">{{ selectedTrip.outbound.origin_name }} → {{ selectedTrip.outbound.destination_name }}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-600 dark:text-gray-400">Data:</span>
+                  <span class="font-semibold text-gray-800 dark:text-gray-100">{{ formatDateWithWeekdayShort(selectedTrip.outbound.date_out) }}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-600 dark:text-gray-400">Godziny:</span>
+                  <span class="font-semibold text-gray-800 dark:text-gray-100">{{ formatTime(selectedTrip.outbound.departure_time) }} - {{ formatTime(selectedTrip.outbound.arrival_time) }}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-600 dark:text-gray-400">Czas lotu:</span>
+                  <span class="text-gray-800 dark:text-gray-100">{{ selectedTrip.outbound.duration }}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-600 dark:text-gray-400">Cena:</span>
+                  <span class="font-semibold text-green-600 dark:text-green-400">{{ formatPrice(twoWayRoutes ? selectedTrip.outbound.current_price : selectedTrip.outbound.price_per_person) }}</span>
+                </div>
+                <div v-if="selectedTrip.outbound.last_seen" class="flex justify-between text-xs">
+                  <span class="text-gray-500 dark:text-gray-500">Ostatnia aktualizacja:</span>
+                  <span class="text-gray-600 dark:text-gray-400">{{ formatDateTime(selectedTrip.outbound.last_seen) }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Return Flight Details -->
+            <div v-if="twoWayRoutes && selectedTrip.return" class="mb-2">
+              <div class="flex items-center gap-2 mb-3">
+                <div class="text-sm font-semibold text-gray-700 dark:text-gray-300">Lot z powrotem</div>
+                <a
+                  :href="buildRyanairUrl(selectedTrip.return)"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
+                  title="Book on Ryanair"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                </a>
+              </div>
+
+              <div class="space-y-2 text-sm">
+                <div class="flex justify-between">
+                  <span class="text-gray-600 dark:text-gray-400">Trasa:</span>
+                  <span class="font-semibold text-gray-800 dark:text-gray-100">{{ selectedTrip.return.origin }} → {{ selectedTrip.return.destination }}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-600 dark:text-gray-400">Lotniska:</span>
+                  <span class="text-gray-800 dark:text-gray-100 text-right">{{ selectedTrip.return.origin_name }} → {{ selectedTrip.return.destination_name }}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-600 dark:text-gray-400">Data:</span>
+                  <span class="font-semibold text-gray-800 dark:text-gray-100">{{ formatDateWithWeekdayShort(selectedTrip.return.date_out) }}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-600 dark:text-gray-400">Godziny:</span>
+                  <span class="font-semibold text-gray-800 dark:text-gray-100">{{ formatTime(selectedTrip.return.departure_time) }} - {{ formatTime(selectedTrip.return.arrival_time) }}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-600 dark:text-gray-400">Czas lotu:</span>
+                  <span class="text-gray-800 dark:text-gray-100">{{ selectedTrip.return.duration }}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-600 dark:text-gray-400">Cena:</span>
+                  <span class="font-semibold text-green-600 dark:text-green-400">{{ formatPrice(selectedTrip.return.current_price) }}</span>
+                </div>
+                <div v-if="selectedTrip.return.last_seen" class="flex justify-between text-xs">
+                  <span class="text-gray-500 dark:text-gray-500">Ostatnia aktualizacja:</span>
+                  <span class="text-gray-600 dark:text-gray-400">{{ formatDateTime(selectedTrip.return.last_seen) }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Modal Footer -->
+          <div class="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-750">
+            <button
+              @click="closeTripModal"
+              class="w-full px-4 py-2 bg-gray-600 hover:bg-gray-700 dark:bg-gray-600 dark:hover:bg-gray-500 text-white font-medium rounded-md transition-colors"
+            >
+              Zamknij
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -263,6 +440,24 @@ import { formatPrice, formatDate, formatTime, formatDateTime, formatDateWithWeek
 
 // Hover state for highlighting trip rows
 const hoveredTripIndex = ref(null)
+
+// Modal state for mobile trip details
+const selectedTrip = ref(null)
+const showMobileTripModal = ref(false)
+
+const openTripModal = (trip) => {
+  selectedTrip.value = trip
+  showMobileTripModal.value = true
+  // Prevent body scroll when modal is open
+  document.body.style.overflow = 'hidden'
+}
+
+const closeTripModal = () => {
+  showMobileTripModal.value = false
+  selectedTrip.value = null
+  // Restore body scroll
+  document.body.style.overflow = ''
+}
 
 const props = defineProps({
   results: {
@@ -324,6 +519,19 @@ const formatDateOnly = (dateStr) => {
   const month = String(date.getMonth() + 1).padStart(2, '0')
   const year = date.getFullYear()
   return `${day}.${month}.${year}`
+}
+
+const formatDateWithWeekdayShort = (dateStr) => {
+  const date = new Date(dateStr)
+  const day = String(date.getDate()).padStart(2, '0')
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const year = date.getFullYear()
+
+  // Polish weekday abbreviations: Mon-Sun
+  const weekdays = ['Ndz.', 'Pon.', 'Wt.', 'Śr.', 'Czw.', 'Pt.', 'Sob.']
+  const weekday = weekdays[date.getDay()]
+
+  return `${day}.${month}.${year} ${weekday}`
 }
 
 const formatDateRange = (trip) => {

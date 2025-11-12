@@ -40,7 +40,7 @@
         <!-- Filters Changed Overlay -->
         <div
           v-if="filtersChanged && results"
-          class="absolute inset-0 bg-gray-900/50 dark:bg-gray-950/70 backdrop-blur-sm z-20 flex items-start justify-center pt-16"
+          class="absolute inset-0 -mx-4 md:mx-0 bg-gray-900/50 dark:bg-gray-950/70 backdrop-blur-sm z-20 flex items-start justify-center pt-16"
         >
           <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 max-w-md mx-4">
             <h3 class="text-xl font-bold text-gray-800 dark:text-gray-100 mb-3">
