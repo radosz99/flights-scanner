@@ -14,6 +14,7 @@ from loguru import logger
 
 # Configuration
 API_URL = os.getenv("API_URL", "http://localhost:8000")
+API_KEY = os.getenv("API_KEY", "")
 TRIP_DURATION_DAYS = int(os.getenv("TRIP_DURATION_DAYS", "7"))
 SCAN_UNTIL_DAYS = int(os.getenv("SCAN_UNTIL_DAYS", "140"))  # Days from now
 
@@ -36,10 +37,19 @@ def trigger_scan():
     logger.info(f"Scan Until: {scan_until_date}")
     logger.info("=" * 60)
 
+    # Prepare headers with API key
+    headers = {}
+    if API_KEY:
+        headers["X-API-Key"] = API_KEY
+        logger.info("Using API key for authentication")
+    else:
+        logger.warning("No API key configured - request may fail if authentication is required")
+
     try:
         response = requests.post(
             f"{API_URL}/scans/run",
             json=payload,
+            headers=headers,
             timeout=30
         )
         response.raise_for_status()

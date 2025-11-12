@@ -102,10 +102,13 @@ services:
       dockerfile: Dockerfile.scheduler
     container_name: flights-scanner-scheduler
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       API_URL: http://backend:8900
       TRIP_DURATION_DAYS: 7
       SCAN_UNTIL_DAYS: 140  # Days from now
+      API_KEY: ${API_KEY}
     volumes:
       - scheduler_logs:/app/logs
     depends_on:
