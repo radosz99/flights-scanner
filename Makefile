@@ -1,4 +1,4 @@
-.PHONY: help backend backend-dev frontend install-backend install-frontend test test-api test-all docker-build docker-up docker-down docker-dev-up docker-dev-down docker-logs docker-backend-logs docker-restart clean
+.PHONY: help backend backend-dev frontend install-backend install-frontend test test-api test-all docker-build docker-up docker-down docker-dev-up docker-dev-down docker-logs docker-backend-logs docker-restart docker-rebuild docker-rebuild-backend docker-clean-build clean
 
 # Default target
 help:
@@ -15,12 +15,15 @@ help:
 	@echo "    make test-all            - Run all tests with coverage report"
 	@echo ""
 	@echo "  Docker commands (Production):"
-	@echo "    make docker-build        - Build all Docker images"
-	@echo "    make docker-up           - Start all services with Docker Compose (production mode)"
-	@echo "    make docker-down         - Stop all services"
-	@echo "    make docker-logs         - Show logs from all services"
-	@echo "    make docker-backend-logs - Show backend logs (last 100 lines, follow)"
-	@echo "    make docker-restart      - Restart all services"
+	@echo "    make docker-build            - Build all Docker images"
+	@echo "    make docker-up               - Start all services with Docker Compose (production mode)"
+	@echo "    make docker-down             - Stop all services"
+	@echo "    make docker-rebuild          - Stop, rebuild ALL images (no cache), and start"
+	@echo "    make docker-rebuild-backend  - Stop, rebuild BACKEND only (no cache), and start"
+	@echo "    make docker-clean-build      - Clean rebuild of ALL services (removes volumes)"
+	@echo "    make docker-logs             - Show logs from all services"
+	@echo "    make docker-backend-logs     - Show backend logs (last 100 lines, follow)"
+	@echo "    make docker-restart          - Restart all services (without rebuilding)"
 	@echo ""
 	@echo "  Docker commands (Development):"
 	@echo "    make docker-dev-up       - Start all services in development mode with hot reload"
@@ -94,6 +97,39 @@ docker-backend-logs:
 
 docker-restart:
 	docker-compose --profile production restart
+
+docker-rebuild:
+	@echo "Stopping all services..."
+	docker-compose --profile production down
+	@echo "Rebuilding all images (no cache)..."
+	docker-compose --profile production build --no-cache
+	@echo "Starting services..."
+	docker-compose --profile production up -d
+	@echo ""
+	@echo "✓ All services rebuilt and started"
+	@echo "Run 'make docker-logs' to see logs"
+
+docker-rebuild-backend:
+	@echo "Stopping backend service..."
+	docker-compose --profile production stop backend
+	@echo "Rebuilding backend image (no cache)..."
+	docker-compose --profile production build --no-cache backend
+	@echo "Starting backend service..."
+	docker-compose --profile production up -d backend
+	@echo ""
+	@echo "✓ Backend rebuilt and started"
+	@echo "Run 'make docker-backend-logs' to see logs"
+
+docker-clean-build:
+	@echo "WARNING: This will remove all containers, images, and volumes!"
+	@echo "Press Ctrl+C to cancel, or wait 5 seconds to continue..."
+	@sleep 5
+	docker-compose --profile production down -v
+	docker-compose --profile production build --no-cache
+	docker-compose --profile production up -d
+	@echo ""
+	@echo "✓ Clean rebuild complete (volumes removed)"
+	@echo "Run 'make docker-logs' to see logs"
 
 # Docker development commands
 docker-dev-up:
