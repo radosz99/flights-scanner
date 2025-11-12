@@ -9,7 +9,7 @@ services:
     ports:
       - "${MONGO_EXTERNAL_PORT:-8902}:27017"
     env_file:
-      - mongo.env
+      - .env
     environment:
       MONGO_INITDB_DATABASE: ${MONGO_DATABASE:-flights_scanner}
     volumes:
@@ -34,7 +34,7 @@ services:
     ports:
       - "${BACKEND_PORT:-8900}:8900"
     env_file:
-      - mongo.env
+      - .env
     environment:
       # Python settings
       PYTHONUNBUFFERED: 1

@@ -102,9 +102,9 @@ git clone <your-repository-url> .
 
 #### Configure Environment
 
-1. **Create MongoDB configuration** (`mongo.env`):
+1. **MongoDB configuration is now in .env`):
    ```bash
-   nano mongo.env
+   # MongoDB configuration is now in .env
    ```
 
    Add:
@@ -159,7 +159,7 @@ git clone <your-repository-url> .
 
 3. **Set secure file permissions**:
    ```bash
-   chmod 600 .env mongo.env
+   chmod 600 .env .env
    ```
 
 ### 4. Start the Application
@@ -351,14 +351,14 @@ docker-compose run --rm certbot certonly --webroot \
 # Check MongoDB is running
 docker-compose exec mongodb mongosh --eval "db.adminCommand('ping')"
 
-# Verify credentials in mongo.env match
+# Verify credentials in .env match
 # Restart MongoDB
 docker-compose restart mongodb
 ```
 
 ## Security Checklist
 
-- [x] Strong password set in mongo.env
+- [x] Strong password set in .env
 - [x] MongoDB external port disabled (not exposed publicly)
 - [x] SSL/HTTPS enabled and working
 - [x] Firewall configured (only ports 22, 80, 443 open)

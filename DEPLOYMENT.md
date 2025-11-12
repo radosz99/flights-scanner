@@ -57,7 +57,7 @@ cd flights-scanner
 
 # Copy environment files
 cp .env.example .env
-cp mongo.env.example mongo.env
+
 
 # Start all services
 docker-compose up -d
@@ -140,7 +140,7 @@ git clone <repository-url> .
 
 # Create environment files from examples
 cp .env.example .env
-cp mongo.env.example mongo.env
+
 ```
 
 #### Edit Environment Files
@@ -160,10 +160,10 @@ NUXT_PUBLIC_API_BASE_URL=https://your-domain.com/api
 # Optional: Analytics, monitoring, etc.
 ```
 
-**Edit `mongo.env`** (Database configuration):
+**Edit `.env`** (Database configuration):
 
 ```bash
-nano mongo.env
+# MongoDB configuration is now in .env
 ```
 
 Update MongoDB credentials:
@@ -215,11 +215,11 @@ WORKER_TIMEOUT=300
    #   - "${MONGO_EXTERNAL_PORT:-8902}:27017"
    ```
 
-2. **Use strong passwords** in `mongo.env`
+2. **Use strong passwords** in `.env`
 
 3. **Set appropriate file permissions**:
    ```bash
-   chmod 600 .env mongo.env
+   chmod 600 .env .env
    ```
 
 #### Performance Tuning
@@ -513,7 +513,7 @@ For more SSL troubleshooting, see [SSL_SETUP.md](SSL_SETUP.md#troubleshooting)
 # Check if MongoDB is running
 docker-compose exec mongodb mongosh --eval "db.adminCommand('ping')"
 
-# Check connection string in mongo.env
+# Check connection string in .env
 # Verify username/password are correct
 
 # Restart MongoDB
@@ -562,7 +562,7 @@ mkdir -p /backup/flights-scanner
 
 # Backup configuration
 cp -r /opt/flights-scanner/.env /backup/flights-scanner/
-cp -r /opt/flights-scanner/mongo.env /backup/flights-scanner/
+cp -r /opt/flights-scanner/.env /backup/flights-scanner/
 cp -r /opt/flights-scanner/nginx /backup/flights-scanner/
 
 # Backup database
@@ -584,7 +584,7 @@ cd flights-scanner
 
 # Restore configuration
 cp /backup/flights-scanner/.env .
-cp /backup/flights-scanner/mongo.env .
+cp /backup/flights-scanner/.env .
 cp -r /backup/flights-scanner/nginx .
 
 # Restore SSL certificates (if you have a backup)
@@ -642,7 +642,7 @@ docker-compose exec -T mongodb mongorestore \
 
 ## Security Checklist
 
-- [ ] Strong passwords in `mongo.env`
+- [ ] Strong passwords in `.env`
 - [ ] MongoDB external port disabled in production
 - [ ] SSL/TLS certificates configured and auto-renewing
 - [ ] Firewall configured (only 22, 80, 443 open)

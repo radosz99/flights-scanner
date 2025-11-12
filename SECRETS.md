@@ -4,13 +4,11 @@ This document describes all environment variables and configuration files needed
 
 ## Configuration Files Overview
 
-The application uses multiple configuration files for different deployment scenarios:
+The application uses a single configuration file for all services:
 
 | File | Purpose | Location |
 |------|---------|----------|
-| `.env` | Main environment configuration for Docker Compose | Project root |
-| `mongo.env` | MongoDB-specific configuration for Docker | Project root |
-| `secrets.json` | Local development secrets (Python backend) | Project root |
+| `.env` | Main environment configuration for all services (MongoDB, Backend, Frontend) | Project root |
 
 ## Required Configuration Files
 
@@ -51,58 +49,25 @@ MAX_SCAN_WORKERS=4                    # Thread pool size for background scans (d
 WORKER_TIMEOUT=300                    # Worker timeout in seconds (default: 300)
 ```
 
-### 2. `mongo.env` (MongoDB Docker Configuration)
-
-MongoDB-specific configuration for Docker container.
-
-```bash
-MONGO_HOST=mongodb                    # Docker service name for MongoDB
-MONGO_PORT=27017                      # MongoDB port
-MONGO_DATABASE=flights_scanner        # Database name
-MONGO_USERNAME=                       # Optional: Leave empty for no authentication
-MONGO_PASSWORD=                       # Optional: Leave empty for no authentication
-```
-
-### 3. `secrets.json` (Local Development Only)
-
-For running backend locally without Docker. Used by `backend/scrapper/config.py` only.
-
-```json
-{
-  "MONGO_HOST": "localhost",
-  "MONGO_PORT": 27017,
-  "MONGO_DATABASE": "flights_scanner",
-  "MONGO_USERNAME": "",
-  "MONGO_PASSWORD": "",
-  "RYANAIR_AIRLINE_ID": 39,
-  "WIZZAIR_AIRLINE_IDS": "52,6002,6092"
-}
-```
+**Note:** All MongoDB, Backend, and Frontend configuration is now consolidated in the `.env` file. No separate configuration files are needed.
 
 ## Configuration Priority
 
-The backend configuration system (`backend/config.py`) loads settings in this order:
+The application loads settings in this order:
 1. Environment variables (highest priority)
 2. `.env` file
 3. Default values in code (lowest priority)
-
-The scrapper configuration (`backend/scrapper/config.py`) loads:
-1. Environment variables (highest priority)
-2. `.env` file
-3. `secrets.json` file
-4. Default values (lowest priority)
 
 ## Deployment Scenarios
 
 ### Docker Deployment (Production)
 
 **Required files:**
-- `.env` - main configuration
-- `mongo.env` - MongoDB configuration
+- `.env` - main configuration for all services
 
 **Start services:**
 ```bash
-docker-compose up -d
+docker-compose --profile production up -d
 ```
 
 **Access points:**
@@ -113,7 +78,7 @@ docker-compose up -d
 ### Local Development
 
 **Required files:**
-- `.env` or `secrets.json` - backend configuration
+- `.env` - configuration for all services
 
 **Setup:**
 
@@ -185,8 +150,8 @@ npm run dev
 
 ## Security Notes
 
-1. **Never commit** `.env` or `secrets.json` files to git (already in `.gitignore`)
-2. Use `.env.example` and `secrets.json.example` as templates
+1. **Never commit** `.env` file to git (already in `.gitignore`)
+2. Use `.env.example` as a template
 3. For production with authentication:
    ```bash
    MONGO_USERNAME=your_username
@@ -273,9 +238,8 @@ RYANAIR_REQUEST_DELAY=0.5
 ## Quick Start Checklist
 
 - [ ] Copy `.env.example` to `.env`
-- [ ] Copy `secrets.json.example` to `secrets.json` (local dev only)
 - [ ] Update `MONGO_HOST` based on deployment (mongodb for Docker, localhost for local)
 - [ ] Update `API_BASE_URL` based on deployment
-- [ ] Set MongoDB credentials if using authentication
+- [ ] Set MongoDB credentials if using authentication (optional)
 - [ ] Adjust ports if defaults are already in use
-- [ ] Verify `.env` and `secrets.json` are in `.gitignore`
+- [ ] Verify `.env` is in `.gitignore`
