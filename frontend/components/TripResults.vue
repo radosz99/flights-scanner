@@ -29,7 +29,7 @@
                 <th class="hidden md:table-cell p-1.5 md:p-3 text-left font-semibold text-gray-700 dark:text-gray-200 text-xs md:text-sm whitespace-nowrap">
                   Cel
                 </th>
-                <th class="p-1.5 md:p-3 text-center font-semibold text-gray-700 dark:text-gray-200 text-xs md:text-sm whitespace-nowrap">
+                <th class="p-1.5 md:p-3 text-left font-semibold text-gray-700 dark:text-gray-200 text-xs md:text-sm whitespace-nowrap">
                   Daty
                 </th>
                 <th class="p-1.5 md:p-3 text-left font-semibold text-gray-700 dark:text-gray-200 text-xs md:text-sm whitespace-nowrap">
@@ -82,7 +82,7 @@
                       <div class="text-[0.65rem] md:text-xs font-normal text-gray-600 dark:text-gray-400">{{ trip.outbound.destination_name }}</div>
                     </template>
                   </td>
-                  <td :rowspan="twoWayRoutes && trip.return ? 2 : 1" class="p-1.5 md:p-3 text-center align-middle text-gray-800 dark:text-gray-200">
+                  <td :rowspan="twoWayRoutes && trip.return ? 2 : 1" class="p-1.5 md:p-3 text-left align-middle text-gray-800 dark:text-gray-200">
                     <div class="flex flex-col text-[0.65rem] md:text-sm font-semibold">
                       <span>{{ formatDateWithWeekdayShort(trip.outbound.date_out) }}</span>
                       <span v-if="twoWayRoutes && trip.return" class="md:hidden">{{ formatDateWithWeekdayShort(trip.return.date_out) }}</span>
