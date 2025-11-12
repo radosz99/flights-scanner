@@ -400,8 +400,9 @@ class CustomTripSearch:
         # This allows early pruning of expensive flights that won't make the cut
         import heapq
         MAX_RESULTS = 500
-        top_trips_heap = []  # Max-heap of (-total_price, trip_data)
+        top_trips_heap = []  # Max-heap of (-total_price, counter, trip_data)
         price_cutoff = float('inf')  # Current 500th-best price (worst in heap)
+        trip_counter = 0  # Unique counter for tiebreaking when prices are equal
 
         round_trips = []
 
@@ -549,21 +550,23 @@ class CustomTripSearch:
                     counters["valid_trips"] += 1
 
                     # Top-500 optimization: Use heap to keep only best 500 trips
+                    trip_counter += 1
                     if len(top_trips_heap) < MAX_RESULTS:
                         # Still building up to 500 trips
-                        heapq.heappush(top_trips_heap, (-total_price, trip_data))
+                        heapq.heappush(top_trips_heap, (-total_price, trip_counter, trip_data))
                         if len(top_trips_heap) == MAX_RESULTS:
                             # Just filled up - set cutoff to worst price
                             price_cutoff = -top_trips_heap[0][0]
                     elif total_price < price_cutoff:
                         # Better than worst in heap - replace it
-                        heapq.heapreplace(top_trips_heap, (-total_price, trip_data))
+                        heapq.heapreplace(top_trips_heap, (-total_price, trip_counter, trip_data))
                         price_cutoff = -top_trips_heap[0][0]  # Update cutoff
                 else:
                     counters["filtered_trip_duration"] += 1
 
         # Extract trips from heap and sort (heap is max-heap with negative prices)
-        round_trips = [trip_data for _, trip_data in sorted(top_trips_heap, key=lambda x: -x[0])]
+        # The heap contains tuples: (-price, counter, trip_data)
+        round_trips = [trip_data for _, _, trip_data in sorted(top_trips_heap, key=lambda x: -x[0])]
 
         perf_matching_time = time.time() - perf_matching_start
         logger.info(f"[PERF] Matching/Analysis phase: {perf_matching_time:.3f}s")
