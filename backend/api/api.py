@@ -50,6 +50,7 @@ from api_models import (
     UpdateCoordinatesRequest,
     UpdateCoordinatesResponse,
 )
+from request_logging_middleware import setup_request_logging
 
 # Add scrapper directory to path to import scanner modules
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scrapper"))
@@ -114,6 +115,9 @@ client = MongoClient(settings.mongo_uri)
 db = client[settings.MONGO_DATABASE]
 flights_collection = db[FLIGHTS_COLLECTION]
 scan_iterations_collection = db[SCAN_ITERATIONS_COLLECTION]
+
+# Setup request logging middleware (logs all API requests to MongoDB)
+setup_request_logging(app, client, settings.MONGO_DATABASE)
 
 # Initialize API service
 from .api_service import APIService
