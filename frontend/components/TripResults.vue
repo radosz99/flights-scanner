@@ -66,7 +66,12 @@
                     </template>
                   </td>
                   <td :rowspan="twoWayRoutes && trip.return ? 2 : 1" class="p-1.5 md:p-3 text-center align-middle text-gray-800 dark:text-gray-200">
-                    <div class="text-[0.65rem] md:text-sm font-semibold">{{ formatDateRange(trip) }}</div>
+                    <div v-if="twoWayRoutes && trip.return" class="flex flex-col gap-0.5">
+                      <div class="text-[0.65rem] md:text-sm font-semibold">{{ formatDateSimple(trip.outbound.date_out) }}</div>
+                      <div class="text-[0.6rem] md:text-xs text-gray-500 dark:text-gray-400">-</div>
+                      <div class="text-[0.65rem] md:text-sm font-semibold">{{ formatDateSimple(trip.return.date_out) }}</div>
+                    </div>
+                    <div v-else class="text-[0.65rem] md:text-sm font-semibold">{{ formatDateSimple(trip.outbound.date_out) }}</div>
                   </td>
                   <td class="p-1.5 md:p-3 text-gray-800 dark:text-gray-200">
                     <div class="flex flex-col gap-0.5 md:gap-1">
@@ -88,18 +93,21 @@
                         <span class="text-[0.65rem] md:text-xs text-gray-500 dark:text-gray-400 hidden md:inline">
                           {{ formatDateWithWeekday(trip.outbound.date_out) }}
                         </span>
+                        <span class="text-xs text-gray-700 dark:text-gray-300 md:hidden">
+                          {{ formatTime(trip.outbound.departure_time) }}-{{ formatTime(trip.outbound.arrival_time) }}
+                        </span>
                       </div>
                       <div class="text-[0.65rem] md:text-xs text-gray-600 dark:text-gray-400 ml-4 md:ml-7 hidden md:block">
                         {{ trip.outbound.origin_name }} → {{ trip.outbound.destination_name }}
                       </div>
-                      <div class="flex items-center gap-1.5 md:gap-3 ml-4 md:ml-7 text-[0.65rem] md:text-xs flex-wrap">
+                      <div class="flex items-center gap-1.5 md:gap-3 ml-4 md:ml-7 text-[0.65rem] md:text-xs hidden md:flex">
                         <span class="text-gray-700 dark:text-gray-300">
                           {{ formatTime(trip.outbound.departure_time) }} - {{ formatTime(trip.outbound.arrival_time) }}
                         </span>
                         <span class="text-gray-500 dark:text-gray-400 hidden md:inline">
                           {{ trip.outbound.duration }}
                         </span>
-                        <span class="text-green-600 dark:text-green-400 font-semibold">
+                        <span class="text-green-600 dark:text-green-400 font-semibold whitespace-nowrap">
                           {{ formatPrice(twoWayRoutes ? trip.outbound.current_price : trip.outbound.price_per_person) }}
                         </span>
                       </div>
@@ -109,7 +117,7 @@
                     </div>
                   </td>
                   <td :rowspan="twoWayRoutes && trip.return ? 2 : 1" class="p-1.5 md:p-3 text-center align-middle border-l border-gray-200 dark:border-gray-700">
-                    <strong class="text-sm md:text-lg text-green-600 dark:text-green-400">{{ formatPrice(trip.total_price) }}</strong>
+                    <strong class="text-sm md:text-lg text-green-600 dark:text-green-400 whitespace-nowrap">{{ formatPrice(trip.total_price) }}</strong>
                   </td>
                   <td v-if="twoWayRoutes" :rowspan="trip.return ? 2 : 1" class="p-1.5 md:p-3 text-center align-middle border-l border-gray-200 dark:border-gray-700">
                     <div class="flex flex-col gap-0.5 md:gap-1">
@@ -147,18 +155,21 @@
                         <span class="text-[0.65rem] md:text-xs text-gray-500 dark:text-gray-400 hidden md:inline">
                           {{ formatDateWithWeekday(trip.return.date_out) }}
                         </span>
+                        <span class="text-xs text-gray-700 dark:text-gray-300 md:hidden">
+                          {{ formatTime(trip.return.departure_time) }}-{{ formatTime(trip.return.arrival_time) }}
+                        </span>
                       </div>
                       <div class="text-[0.65rem] md:text-xs text-gray-600 dark:text-gray-400 ml-4 md:ml-7 hidden md:block">
                         {{ trip.return.origin_name }} → {{ trip.return.destination_name }}
                       </div>
-                      <div class="flex items-center gap-1.5 md:gap-3 ml-4 md:ml-7 text-[0.65rem] md:text-xs flex-wrap">
+                      <div class="flex items-center gap-1.5 md:gap-3 ml-4 md:ml-7 text-[0.65rem] md:text-xs hidden md:flex">
                         <span class="text-gray-700 dark:text-gray-300">
                           {{ formatTime(trip.return.departure_time) }} - {{ formatTime(trip.return.arrival_time) }}
                         </span>
                         <span class="text-gray-500 dark:text-gray-400 hidden md:inline">
                           {{ trip.return.duration }}
                         </span>
-                        <span class="text-green-600 dark:text-green-400 font-semibold">
+                        <span class="text-green-600 dark:text-green-400 font-semibold whitespace-nowrap">
                           {{ formatPrice(trip.return.current_price) }}
                         </span>
                       </div>
@@ -286,23 +297,12 @@ const paginatedTrips = computed(() => {
 })
 
 // Methods
-const formatDateRange = (trip) => {
-  const formatDateLocal = (dateStr) => {
-    const date = new Date(dateStr)
-    const day = String(date.getDate()).padStart(2, '0')
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    const year = date.getFullYear()
-    return `${day}.${month}.${year}`
-  }
-
-  const outboundDate = formatDateLocal(trip.outbound.date_out)
-
-  if (props.twoWayRoutes && trip.return) {
-    const returnDate = formatDateLocal(trip.return.date_out)
-    return `${outboundDate}-${returnDate}`
-  }
-
-  return outboundDate
+const formatDateSimple = (dateStr) => {
+  const date = new Date(dateStr)
+  const day = String(date.getDate()).padStart(2, '0')
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const year = date.getFullYear()
+  return `${day}.${month}.${year}`
 }
 
 const buildRyanairUrl = (flight) => {
