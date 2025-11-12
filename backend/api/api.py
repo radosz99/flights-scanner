@@ -50,7 +50,7 @@ from api_models import (
     UpdateCoordinatesRequest,
     UpdateCoordinatesResponse,
 )
-from request_logging_middleware import setup_request_logging
+from .request_logging_middleware import setup_request_logging
 
 # Add scrapper directory to path to import scanner modules
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scrapper"))
