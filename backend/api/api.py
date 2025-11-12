@@ -103,8 +103,13 @@ api_service = APIService(client, settings.MONGO_DATABASE)
 
 @app.get("/")
 async def root():
-    """Root endpoint - redirects to API documentation."""
-    return RedirectResponse(url="/docs")
+    """Root endpoint - API information."""
+    return {
+        "name": "Ryanair Flight Scanner API",
+        "version": "1.0.0",
+        "docs": "/api/docs",
+        "health": "/api/health"
+    }
 
 
 @app.get("/flights", response_model=FlightListResponse)
