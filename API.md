@@ -132,24 +132,62 @@ Configured to allow all origins in development. Restrict in production.
 
 ### API Documentation Access Control
 
-**By default, API documentation (Swagger/ReDoc) is DISABLED in production for security.**
+**API documentation (Swagger/ReDoc) is protected by HTTP Basic Authentication at the nginx level.**
 
-To enable documentation access, set the environment variable:
-
-```bash
-ENABLE_API_DOCS=true
-```
-
-When enabled:
+By default, docs are **enabled** but require username/password to access:
 - Swagger UI: `/api/docs`
 - ReDoc: `/api/redoc`
 - OpenAPI Schema: `/api/openapi.json`
 
-When disabled (default):
-- All documentation endpoints return 404
-- The root endpoint (`/api/`) will not include docs links
+#### Setting up HTTP Basic Auth
 
-**Recommendation**: Keep docs disabled in production and only enable temporarily when needed.
+1. **Create credentials** using the provided script:
+   ```bash
+   cd nginx
+   ./create-htpasswd.sh
+   ```
+
+   This will prompt you for a username and password.
+
+2. **Alternative manual setup** (if htpasswd is not available):
+   ```bash
+   # Generate password hash online at: https://httpd.apache.org/docs/current/programs/htpasswd.html
+   # Or use: openssl passwd -apr1
+   echo "username:$apr1$hashed_password_here" > nginx/.htpasswd
+   ```
+
+3. **Restart nginx** to apply changes:
+   ```bash
+   make docker-restart
+   ```
+
+4. **Access docs** in browser - you'll be prompted for username/password:
+   - URL: `https://wylot.eu/api/docs`
+   - Enter the credentials you created
+
+#### Managing users
+
+```bash
+# Add or update a user
+cd nginx && ./create-htpasswd.sh
+
+# Remove a user
+htpasswd -D nginx/.htpasswd username
+
+# List users
+cat nginx/.htpasswd
+```
+
+#### Disable docs completely (optional)
+
+To completely disable documentation endpoints:
+
+```bash
+# In .env file
+ENABLE_API_DOCS=false
+```
+
+When disabled, all documentation endpoints return 404.
 
 ### API Key Authentication
 
@@ -172,9 +210,10 @@ Configure the API key via the `API_KEY` environment variable.
 
 ## Error Handling
 
-- `404` - Resource not found
 - `400` - Invalid parameters
+- `401` - Unauthorized (HTTP Basic Auth required for docs endpoints)
 - `403` - Missing or invalid API key
+- `404` - Resource not found
 - `500` - Internal server error
 
-All errors return JSON with `detail` field.
+All errors return JSON with `detail` field (except 401 which is handled by nginx).

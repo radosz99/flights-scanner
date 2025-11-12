@@ -72,9 +72,10 @@ API_KEY = os.getenv("API_KEY", "")
 api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 
 # Swagger/OpenAPI docs access control
-# Set ENABLE_API_DOCS=true in environment to enable public docs access
-# By default, docs are disabled in production for security
-ENABLE_API_DOCS = os.getenv("ENABLE_API_DOCS", "false").lower() in ["true", "1", "yes"]
+# Docs are protected by HTTP Basic Auth at nginx level (see nginx/.htpasswd)
+# Set ENABLE_API_DOCS=false to completely disable docs
+# Default: true (enabled, but protected by nginx basic auth)
+ENABLE_API_DOCS = os.getenv("ENABLE_API_DOCS", "true").lower() in ["true", "1", "yes"]
 
 def verify_api_key(api_key: str = Security(api_key_header)):
     """
@@ -1392,12 +1393,13 @@ async def startup_event():
 
     # Log API docs status
     if ENABLE_API_DOCS:
-        logger.warning("⚠ API Documentation is ENABLED and publicly accessible")
-        logger.warning("  - Swagger UI: /api/docs")
-        logger.warning("  - ReDoc: /api/redoc")
-        logger.warning("  - OpenAPI Schema: /api/openapi.json")
+        logger.success("✓ API Documentation is ENABLED (protected by nginx basic auth)")
+        logger.info("  - Swagger UI: /api/docs")
+        logger.info("  - ReDoc: /api/redoc")
+        logger.info("  - OpenAPI Schema: /api/openapi.json")
+        logger.info("  - Requires username/password configured in nginx/.htpasswd")
     else:
-        logger.success("✓ API Documentation is DISABLED (production mode)")
+        logger.info("✓ API Documentation is DISABLED")
         logger.info("  Set ENABLE_API_DOCS=true to enable docs")
 
     logger.info("=" * 60)
