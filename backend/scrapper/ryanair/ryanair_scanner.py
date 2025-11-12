@@ -474,8 +474,13 @@ def scan_flights(
         "successful_queries": 0,
         "failed_queries": 0,
         "flights_saved": 0,
-        "flights_updated": 0
+        "flights_updated": 0,
+        "consecutive_4xx_errors": 0
     }
+
+    # Track consecutive 4xx errors to stop scanning if too many occur
+    consecutive_4xx_errors = 0
+    MAX_CONSECUTIVE_4XX_ERRORS = 10
 
     # Scan each departure airport
     for airport_idx, airport_code in enumerate(departure_airports, 1):
@@ -491,6 +496,13 @@ def scan_flights(
 
         # Query each destination
         for i, dest_code in enumerate(destinations, 1):
+            # Check if we should stop due to too many consecutive 4xx errors
+            if consecutive_4xx_errors >= MAX_CONSECUTIVE_4XX_ERRORS:
+                logger.error(f"🛑 STOPPING SCAN: {consecutive_4xx_errors} consecutive 4xx errors detected")
+                logger.error(f"This usually indicates authentication issues or rate limiting")
+                stats["consecutive_4xx_errors"] = consecutive_4xx_errors
+                return stats
+
             dest_airport = database.get_airport_by_code(dest_code)
             dest_name = dest_airport.name if dest_airport else dest_code
 
@@ -508,6 +520,8 @@ def scan_flights(
                 )
 
                 stats["successful_queries"] += 1
+                # Reset consecutive error counter on successful query
+                consecutive_4xx_errors = 0
 
                 # Process each trip -> date -> flight
                 for trip in flights.trips:
@@ -526,8 +540,26 @@ def scan_flights(
                 logger.success(f"✓ {airport_code} → {dest_code}: {len(flights.trips)} trips processed")
 
             except Exception as e:
-                logger.error(f"✗ {airport_code} → {dest_code}: {str(e)[:100]}")
+                error_msg = str(e)
                 stats["failed_queries"] += 1
+
+                # Check if this is a 4xx HTTP error
+                is_4xx_error = False
+                if hasattr(e, 'response') and hasattr(e.response, 'status_code'):
+                    status_code = e.response.status_code
+                    if 400 <= status_code < 500:
+                        is_4xx_error = True
+                        consecutive_4xx_errors += 1
+                        logger.error(f"✗ {airport_code} → {dest_code}: HTTP {status_code} - {error_msg[:100]}")
+                        logger.warning(f"⚠️  Consecutive 4xx errors: {consecutive_4xx_errors}/{MAX_CONSECUTIVE_4XX_ERRORS}")
+                    else:
+                        # Non-4xx error, reset counter
+                        consecutive_4xx_errors = 0
+                        logger.error(f"✗ {airport_code} → {dest_code}: {error_msg[:100]}")
+                else:
+                    # Not an HTTP error, reset counter
+                    consecutive_4xx_errors = 0
+                    logger.error(f"✗ {airport_code} → {dest_code}: {error_msg[:100]}")
 
         # Log progress after each airport
         remaining_airports = len(departure_airports) - airport_idx

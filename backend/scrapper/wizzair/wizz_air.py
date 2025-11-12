@@ -234,9 +234,11 @@ class WizzAirAPI:
 
         # Search for flights on each date
         results = []
+        consecutive_4xx_errors = 0
+        MAX_CONSECUTIVE_4XX_ERRORS = 10
 
-        def search_for_date(departure_date: str) -> Optional[SearchResponse]:
-            """Search flights for a specific date."""
+        def search_for_date(departure_date: str) -> tuple[Optional[SearchResponse], Optional[Exception]]:
+            """Search flights for a specific date. Returns (result, exception)."""
             try:
                 # Calculate return date if round trip
                 return_date = None
@@ -258,11 +260,11 @@ class WizzAirAPI:
                       f"{len(search_result.outboundFlights)} outbound, "
                       f"{len(search_result.returnFlights)} return")
 
-                return search_result
+                return (search_result, None)
             except Exception as e:
                 date_str = departure_date.split("T")[0]
                 print(f"✗ Error searching flights for {date_str}: {e}")
-                return None
+                return (None, e)
 
         # Search in parallel
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
@@ -272,13 +274,41 @@ class WizzAirAPI:
             }
 
             for future in as_completed(future_to_date):
-                result = future.result()
+                # Check if we should stop due to too many consecutive 4xx errors
+                if consecutive_4xx_errors >= MAX_CONSECUTIVE_4XX_ERRORS:
+                    print(f"🛑 STOPPING SCAN: {consecutive_4xx_errors} consecutive 4xx errors detected")
+                    print(f"This usually indicates authentication issues or rate limiting")
+                    # Cancel remaining futures
+                    for f in future_to_date:
+                        f.cancel()
+                    break
+
+                result, exception = future.result()
+
                 if result:
                     results.append(result)
+                    # Reset consecutive error counter on successful query
+                    consecutive_4xx_errors = 0
+                elif exception:
+                    # Check if this is a 4xx HTTP error
+                    if hasattr(exception, 'response') and hasattr(exception.response, 'status_code'):
+                        status_code = exception.response.status_code
+                        if 400 <= status_code < 500:
+                            consecutive_4xx_errors += 1
+                            print(f"⚠️  Consecutive 4xx errors: {consecutive_4xx_errors}/{MAX_CONSECUTIVE_4XX_ERRORS}")
+                        else:
+                            # Non-4xx error, reset counter
+                            consecutive_4xx_errors = 0
+                    else:
+                        # Not an HTTP error, reset counter
+                        consecutive_4xx_errors = 0
+
                 # Small delay to avoid rate limiting
                 time.sleep(0.2)
 
         print(f"\nSuccessfully retrieved {len(results)} flight search results")
+        if consecutive_4xx_errors >= MAX_CONSECUTIVE_4XX_ERRORS:
+            print(f"⚠️  Scan stopped early due to {consecutive_4xx_errors} consecutive 4xx errors")
         return results
 
 
