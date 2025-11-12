@@ -1,4 +1,4 @@
-.PHONY: help backend backend-dev frontend install-backend install-frontend test test-api test-all docker-build docker-up docker-down docker-dev-up docker-dev-down docker-logs docker-backend-logs docker-restart docker-rebuild docker-rebuild-backend docker-clean-build clean
+.PHONY: help backend backend-dev frontend install-backend install-frontend test test-api test-all docker-build docker-up docker-down docker-dev-up docker-dev-down docker-logs docker-backend-logs docker-restart docker-rebuild docker-rebuild-backend docker-clean-build docker-deploy clean
 
 # Default target
 help:
@@ -18,6 +18,7 @@ help:
 	@echo "    make docker-build            - Build all Docker images"
 	@echo "    make docker-up               - Start all services with Docker Compose (production mode)"
 	@echo "    make docker-down             - Stop all services"
+	@echo "    make docker-deploy           - Complete deployment: build, start, and restart all services"
 	@echo "    make docker-rebuild          - Stop, rebuild ALL images (no cache), and start"
 	@echo "    make docker-rebuild-backend  - Stop, rebuild BACKEND only (no cache), and start"
 	@echo "    make docker-clean-build      - Clean rebuild of ALL services (removes volumes)"
@@ -97,6 +98,27 @@ docker-backend-logs:
 
 docker-restart:
 	docker-compose --profile production restart
+
+docker-deploy:
+	@echo "Starting complete deployment..."
+	@echo "Step 1/3: Building all images..."
+	docker-compose --profile production build
+	@echo ""
+	@echo "Step 2/3: Starting all services..."
+	docker-compose --profile production up -d
+	@echo ""
+	@echo "Step 3/3: Restarting all services to ensure proper initialization..."
+	docker-compose --profile production restart
+	@echo ""
+	@echo "✓ Deployment complete!"
+	@echo ""
+	@echo "Services running in PRODUCTION mode:"
+	@echo "  - Backend API: http://localhost:8900"
+	@echo "  - Frontend:    http://localhost:8901"
+	@echo "  - MongoDB:     mongodb://localhost:8902"
+	@echo "  - Nginx:       http://localhost:80 (HTTPS: 443)"
+	@echo ""
+	@echo "Run 'make docker-logs' to see logs"
 
 docker-rebuild:
 	@echo "Stopping all services..."

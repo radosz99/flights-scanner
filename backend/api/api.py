@@ -19,7 +19,8 @@ Example queries:
     GET /flights/price-history/{flight_id}
 """
 
-from fastapi import FastAPI, Query, HTTPException, BackgroundTasks
+from fastapi import FastAPI, Query, HTTPException, BackgroundTasks, Security, Depends
+from fastapi.security import APIKeyHeader
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from pymongo import MongoClient, ASCENDING, DESCENDING
@@ -64,6 +65,29 @@ SCAN_ITERATIONS_COLLECTION = "scan_iterations"
 # This prevents blocking the async event loop
 MAX_SCAN_WORKERS = int(os.getenv("MAX_SCAN_WORKERS", "4"))
 scan_executor = ThreadPoolExecutor(max_workers=MAX_SCAN_WORKERS, thread_name_prefix="scanner")
+
+# API Key authentication for non-GET endpoints
+API_KEY = os.getenv("API_KEY", "")
+api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
+
+def verify_api_key(api_key: str = Security(api_key_header)):
+    """
+    Verify API key for protected endpoints.
+
+    This dependency checks if the provided API key matches the configured API_KEY.
+    If no API_KEY is set in environment, access is denied for security.
+    """
+    if not API_KEY:
+        raise HTTPException(
+            status_code=500,
+            detail="API key not configured on server. Please set API_KEY environment variable."
+        )
+    if api_key != API_KEY:
+        raise HTTPException(
+            status_code=403,
+            detail="Invalid or missing API key. Provide valid X-API-Key header."
+        )
+    return api_key
 
 # ============================================================================
 # FASTAPI APPLICATION
@@ -928,7 +952,7 @@ async def get_airports_with_coordinates(
 
 
 @app.post("/airports/populate")
-async def populate_airports(background_tasks: BackgroundTasks):
+async def populate_airports(background_tasks: BackgroundTasks, api_key: str = Depends(verify_api_key)):
     """
     Populate the airport database with Ryanair and Wizz Air routes.
 
@@ -981,7 +1005,8 @@ async def populate_airports(background_tasks: BackgroundTasks):
 @app.post("/airports/update-coordinates", response_model=UpdateCoordinatesResponse)
 async def update_airport_coordinates(
     request: UpdateCoordinatesRequest,
-    background_tasks: BackgroundTasks
+    background_tasks: BackgroundTasks,
+    api_key: str = Depends(verify_api_key)
 ):
     """
     Update airport coordinates (latitude/longitude) for all airports.
@@ -1059,7 +1084,8 @@ async def update_airport_coordinates(
 
 @app.delete("/airports/clear")
 async def clear_airports(
-    airline: Optional[str] = Query(None, description="Clear specific airline (ryanair/wizzair) or all if not specified")
+    airline: Optional[str] = Query(None, description="Clear specific airline (ryanair/wizzair) or all if not specified"),
+    api_key: str = Depends(verify_api_key)
 ):
     """
     Clear airport database collections.
@@ -1243,7 +1269,7 @@ def run_scanner_background(
 
 
 @app.post("/scans/run", response_model=ScanTriggerResponse)
-async def trigger_scan(scan_request: ScanRequest):
+async def trigger_scan(scan_request: ScanRequest, api_key: str = Depends(verify_api_key)):
     """
     Trigger a new flight scan.
 

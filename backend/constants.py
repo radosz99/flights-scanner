@@ -23,4 +23,5 @@ POLISH_AIRPORTS = [
     "RZE",  # Rzeszów-Jasionka Airport
     "SZY",  # Szczytno-Szymany Airport
     "BZG",  # Bydgoszcz Ignacy Jan Paderewski Airport
+    "BER",  # Berlin Brandenburg Airport
 ]
