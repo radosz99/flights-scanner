@@ -4,6 +4,20 @@ A Python application for fetching and analyzing flight data from Ryanair, Wizz A
 
 ## 🚀 Quick Start with Docker
 
+**⚠️ IMPORTANT - First Time Setup:**
+Before starting the application for the first time, you MUST create the HTTP Basic Auth credentials file:
+
+```bash
+cd nginx
+cp .htpasswd.example .htpasswd
+```
+
+This creates default credentials (username: `admin`, password: `changeme`). **Change these immediately after deployment!**
+
+See [nginx/SETUP.md](nginx/SETUP.md) for details.
+
+---
+
 The easiest way to run the entire application:
 
 ```bash
