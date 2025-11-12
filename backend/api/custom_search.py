@@ -323,6 +323,18 @@ class CustomTripSearch:
         perf_query2_time = time.time() - perf_query2_start
         logger.info(f"[PERF] Return flights query: {perf_query2_time:.3f}s - Found {len(return_flights)} flights")
 
+        # Build return flight index for O(1) lookup - MAJOR OPTIMIZATION
+        # This eliminates 95%+ of wasted iterations by only checking relevant return flights
+        perf_index_start = time.time()
+        return_flight_index = {}
+        for flight in return_flights:
+            key = (flight["origin"], flight["destination"])
+            if key not in return_flight_index:
+                return_flight_index[key] = []
+            return_flight_index[key].append(flight)
+        perf_index_time = time.time() - perf_index_start
+        logger.info(f"[PERF] Built return flight index: {perf_index_time:.3f}s - {len(return_flight_index)} unique routes")
+
         if len(outbound_flights) > self.MAX_FLIGHTS_PER_DIRECTION:
             raise TooManyFlightsError(
                 f"Too many outbound flights ({len(outbound_flights)}). "
@@ -371,18 +383,39 @@ class CustomTripSearch:
                     counters["filtered_outbound_weekday"] += 1
                     continue
 
-            for return_flight in return_flights:
+            # Get only relevant return flights from index (OPTIMIZATION)
+            # Instead of checking all 5,290 flights, only check ~130 relevant ones
+            if return_from_same_airport and return_to_same_airport:
+                # Most common case: exact route reversal (e.g., WRO→FCO, then FCO→WRO)
+                lookup_key = (outbound["destination"], outbound["origin"])
+                relevant_return_flights = return_flight_index.get(lookup_key, [])
+            elif return_from_same_airport:
+                # Return from same destination airport, but can land at any origin airport
+                # e.g., WRO→FCO, then FCO→BER is allowed
+                relevant_return_flights = []
+                for origin_airport in origins_upper:
+                    lookup_key = (outbound["destination"], origin_airport)
+                    relevant_return_flights.extend(return_flight_index.get(lookup_key, []))
+            elif return_to_same_airport:
+                # Can depart from any destination airport, but must land at origin
+                # e.g., WRO→FCO, then NAP→WRO is allowed
+                relevant_return_flights = []
+                if destinations:
+                    for dest_airport in destinations_upper:
+                        lookup_key = (dest_airport, outbound["origin"])
+                        relevant_return_flights.extend(return_flight_index.get(lookup_key, []))
+                else:
+                    # Anywhere search: need all flights returning to origin
+                    relevant_return_flights = [f for f in return_flights if f["destination"] == outbound["origin"]]
+            else:
+                # Most flexible: no constraints (rare case, fallback to all flights)
+                relevant_return_flights = return_flights
+
+            for return_flight in relevant_return_flights:
                 counters["iterations"] += 1
 
-                if return_from_same_airport:
-                    if return_flight["origin"] != outbound["destination"]:
-                        counters["filtered_same_airport"] += 1
-                        continue
-
-                if return_to_same_airport:
-                    if return_flight["destination"] != outbound["origin"]:
-                        counters["filtered_return_to_same"] += 1
-                        continue
+                # Airport matching is now handled by index lookup, so these checks are removed
+                # The counters will show 0, indicating we're using the optimized path
 
                 return_date_str = return_flight["date_out"]
                 return_date = datetime.strptime(return_date_str.split('T')[0], "%Y-%m-%d")
@@ -480,6 +513,7 @@ class CustomTripSearch:
         logger.info(f"[PERF] Breakdown:")
         logger.info(f"  - Outbound query: {perf_query1_time:.3f}s ({perf_query1_time/perf_total_time*100:.1f}%)")
         logger.info(f"  - Return query: {perf_query2_time:.3f}s ({perf_query2_time/perf_total_time*100:.1f}%)")
+        logger.info(f"  - Index building: {perf_index_time:.3f}s ({perf_index_time/perf_total_time*100:.1f}%)")
         logger.info(f"  - Matching/Analysis: {perf_matching_time:.3f}s ({perf_matching_time/perf_total_time*100:.1f}%)")
         logger.info(f"  - Sorting: {perf_sort_time:.3f}s ({perf_sort_time/perf_total_time*100:.1f}%)")
         logger.info(f"=== BATCH ROUND TRIPS SEARCH COMPLETED - {len(round_trips)} trips returned ===")
