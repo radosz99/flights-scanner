@@ -9,8 +9,11 @@ export default defineNuxtConfig({
     preset: 'node-server'
   },
   runtimeConfig: {
+    // Server-only config (SSR) - uses Docker internal URL
+    apiBaseUrl: process.env.API_BASE_URL || 'http://localhost:8900',
     public: {
-      apiBaseUrl: process.env.API_BASE_URL || 'http://localhost:8900'
+      // Client-side config (browser) - uses relative URL proxied by nginx
+      apiBaseUrl: process.env.CLIENT_API_BASE_URL || (process.env.NODE_ENV === 'production' ? '/api' : 'http://localhost:8900')
     }
   }
 })

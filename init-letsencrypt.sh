@@ -45,6 +45,34 @@ mkdir -p certbot/conf
 mkdir -p certbot/www
 mkdir -p nginx/conf.d
 
+# Pre-flight checks
+echo -e "${GREEN}Running pre-flight checks...${NC}"
+echo -e "${YELLOW}1. Checking if domain resolves...${NC}"
+if command -v dig &> /dev/null; then
+    RESOLVED_IP=$(dig +short $DOMAIN | tail -n1)
+    if [ -z "$RESOLVED_IP" ]; then
+        echo -e "${RED}ERROR: Domain $DOMAIN does not resolve to any IP${NC}"
+        echo "Please ensure your DNS records are configured correctly"
+        exit 1
+    fi
+    echo -e "   Domain resolves to: ${GREEN}$RESOLVED_IP${NC}"
+else
+    echo -e "   ${YELLOW}Skipping DNS check (dig not available)${NC}"
+fi
+
+echo -e "${YELLOW}2. Checking if port 80 is accessible...${NC}"
+if command -v nc &> /dev/null; then
+    if nc -z localhost 80; then
+        echo -e "   Port 80 is ${GREEN}accessible${NC}"
+    else
+        echo -e "   ${RED}ERROR: Port 80 is not accessible${NC}"
+        echo "Please ensure nginx is running and port 80 is not blocked"
+        exit 1
+    fi
+else
+    echo -e "   ${YELLOW}Skipping port check (nc not available)${NC}"
+fi
+
 # Check if certificate already exists
 if [ -d "certbot/conf/live/$DOMAIN" ]; then
     echo -e "${YELLOW}Certificate for $DOMAIN already exists!${NC}"
@@ -103,6 +131,19 @@ docker-compose up -d nginx
 echo -e "${GREEN}Waiting for nginx to be ready...${NC}"
 sleep 5
 
+# Test ACME challenge accessibility
+echo -e "${GREEN}Testing ACME challenge accessibility...${NC}"
+mkdir -p certbot/www/.well-known/acme-challenge
+echo "test" > certbot/www/.well-known/acme-challenge/test.txt
+sleep 2
+if curl -f -s http://localhost/.well-known/acme-challenge/test.txt > /dev/null 2>&1; then
+    echo -e "   ${GREEN}ACME challenge path is accessible${NC}"
+else
+    echo -e "   ${YELLOW}WARNING: ACME challenge path may not be accessible${NC}"
+    echo "   This might cause certificate validation to fail"
+fi
+rm -f certbot/www/.well-known/acme-challenge/test.txt
+
 # Obtain certificate
 echo -e "${GREEN}Obtaining SSL certificate from Let's Encrypt...${NC}"
 
@@ -115,32 +156,50 @@ fi
 
 if [ $RENEW -eq 1 ]; then
     # Force renewal
+    echo -e "${YELLOW}Renewing existing certificate...${NC}"
     docker-compose run --rm certbot certonly \
         --webroot \
         --webroot-path=/var/www/certbot \
         $EMAIL_ARG \
         --agree-tos \
         --force-renewal \
+        --verbose \
         $STAGING_ARG \
         -d $DOMAIN
 else
     # New certificate
+    echo -e "${YELLOW}Requesting new certificate for $DOMAIN...${NC}"
+    echo -e "${YELLOW}This may take a minute...${NC}"
     docker-compose run --rm certbot certonly \
         --webroot \
         --webroot-path=/var/www/certbot \
         $EMAIL_ARG \
         --agree-tos \
         --no-eff-email \
+        --verbose \
+        --keep-until-expiring \
         $STAGING_ARG \
         -d $DOMAIN
 fi
 
 if [ $? -ne 0 ]; then
     echo -e "${RED}Failed to obtain certificate!${NC}"
-    echo -e "${YELLOW}Make sure:${NC}"
-    echo "  1. Your domain $DOMAIN points to this server's IP address"
-    echo "  2. Ports 80 and 443 are open in your firewall"
-    echo "  3. No other service is using port 80"
+    echo ""
+    echo -e "${YELLOW}Common issues:${NC}"
+    echo "  1. Domain $DOMAIN doesn't point to this server's IP address"
+    echo "  2. Port 80 is not accessible from the internet (firewall/security group)"
+    echo "  3. DNS hasn't propagated yet (wait 5-10 minutes after DNS changes)"
+    echo "  4. Another service is using port 80"
+    echo ""
+    echo -e "${YELLOW}Checking certbot logs for more details:${NC}"
+    if [ -f "certbot/conf/logs/letsencrypt.log" ]; then
+        tail -20 certbot/conf/logs/letsencrypt.log
+    else
+        echo "No log file found at certbot/conf/logs/letsencrypt.log"
+    fi
+    echo ""
+    echo -e "${YELLOW}You can also check the log with:${NC}"
+    echo "  docker-compose logs certbot"
     exit 1
 fi
 

@@ -79,6 +79,8 @@ services:
       HOST: 0.0.0.0
       PORT: 8901
       NODE_ENV: production
+      # Client-side API URL (browser) - uses relative path proxied by nginx
+      CLIENT_API_BASE_URL: /api
     depends_on:
       backend:
         condition: service_started  # Changed from service_healthy to service_started
