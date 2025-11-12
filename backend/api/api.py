@@ -71,6 +71,11 @@ scan_executor = ThreadPoolExecutor(max_workers=MAX_SCAN_WORKERS, thread_name_pre
 API_KEY = os.getenv("API_KEY", "")
 api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 
+# Swagger/OpenAPI docs access control
+# Set ENABLE_API_DOCS=true in environment to enable public docs access
+# By default, docs are disabled in production for security
+ENABLE_API_DOCS = os.getenv("ENABLE_API_DOCS", "false").lower() in ["true", "1", "yes"]
+
 def verify_api_key(api_key: str = Security(api_key_header)):
     """
     Verify API key for protected endpoints.
@@ -98,7 +103,11 @@ app = FastAPI(
     title="Ryanair Flight Scanner API",
     description="REST API for filtering and sorting Ryanair flight data with price tracking",
     version="1.0.0",
-    root_path="/api"  # Required when behind nginx proxy at /api path
+    root_path="/api",  # Required when behind nginx proxy at /api path
+    # Disable docs in production for security unless explicitly enabled
+    docs_url="/docs" if ENABLE_API_DOCS else None,
+    redoc_url="/redoc" if ENABLE_API_DOCS else None,
+    openapi_url="/openapi.json" if ENABLE_API_DOCS else None
 )
 
 # Enable CORS for web frontend
@@ -132,12 +141,16 @@ api_service = APIService(client, settings.MONGO_DATABASE)
 @app.get("/")
 async def root():
     """Root endpoint - API information."""
-    return {
+    response = {
         "name": "Ryanair Flight Scanner API",
         "version": "1.0.0",
-        "docs": "/api/docs",
         "health": "/api/health"
     }
+    # Only include docs link if documentation is enabled
+    if ENABLE_API_DOCS:
+        response["docs"] = "/api/docs"
+        response["redoc"] = "/api/redoc"
+    return response
 
 
 @app.get("/flights", response_model=FlightListResponse)
@@ -1376,6 +1389,17 @@ async def startup_event():
     logger.info(f"Database: {settings.MONGO_DATABASE}")
     logger.info(f"Flights Collection: {FLIGHTS_COLLECTION}")
     logger.info(f"Scan Thread Pool Workers: {MAX_SCAN_WORKERS}")
+
+    # Log API docs status
+    if ENABLE_API_DOCS:
+        logger.warning("⚠ API Documentation is ENABLED and publicly accessible")
+        logger.warning("  - Swagger UI: /api/docs")
+        logger.warning("  - ReDoc: /api/redoc")
+        logger.warning("  - OpenAPI Schema: /api/openapi.json")
+    else:
+        logger.success("✓ API Documentation is DISABLED (production mode)")
+        logger.info("  Set ENABLE_API_DOCS=true to enable docs")
+
     logger.info("=" * 60)
 
     try:

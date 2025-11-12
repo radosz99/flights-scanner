@@ -128,10 +128,53 @@ from constants import POLISH_AIRPORTS
 
 Configured to allow all origins in development. Restrict in production.
 
+## Security
+
+### API Documentation Access Control
+
+**By default, API documentation (Swagger/ReDoc) is DISABLED in production for security.**
+
+To enable documentation access, set the environment variable:
+
+```bash
+ENABLE_API_DOCS=true
+```
+
+When enabled:
+- Swagger UI: `/api/docs`
+- ReDoc: `/api/redoc`
+- OpenAPI Schema: `/api/openapi.json`
+
+When disabled (default):
+- All documentation endpoints return 404
+- The root endpoint (`/api/`) will not include docs links
+
+**Recommendation**: Keep docs disabled in production and only enable temporarily when needed.
+
+### API Key Authentication
+
+Protected endpoints (POST, DELETE operations) require an API key:
+
+```bash
+X-API-Key: your-secret-key-here
+```
+
+Configure the API key via the `API_KEY` environment variable.
+
+**Protected endpoints:**
+- `POST /scans/run` - Trigger flight scan
+- `DELETE /flights/{flight_id}` - Delete flight data
+- `POST /airports/populate` - Populate airport database
+- Other write operations
+
+**Public endpoints:**
+- All GET endpoints (flights, airports, stats, etc.)
+
 ## Error Handling
 
 - `404` - Resource not found
 - `400` - Invalid parameters
+- `403` - Missing or invalid API key
 - `500` - Internal server error
 
 All errors return JSON with `detail` field.
