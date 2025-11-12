@@ -164,7 +164,7 @@ docker-dev-up:
 	@echo ""
 	@echo "Mobile/Network Access:"
 	@echo "  Access from other devices on the same network using your local IP:"
-	@LOCAL_IP=$$(ip route get 1 2>/dev/null | grep -oP 'src \K\S+' || ifconfig 2>/dev/null | grep 'inet ' | grep -v '127.0.0.1' | awk '{print $$2}' | head -1 || echo "Unable to detect IP"); \
+	@LOCAL_IP=$$(ifconfig 2>/dev/null | grep 'inet ' | grep -v '127.0.0.1' | awk '{print $$2}' | head -1 || ip route get 1 2>/dev/null | awk '{print $$7}' | head -1 || echo "Unable to detect IP"); \
 	echo "  - Frontend:    http://$$LOCAL_IP:8901"; \
 	echo "  - Backend API: http://$$LOCAL_IP:8900"
 	@echo ""
