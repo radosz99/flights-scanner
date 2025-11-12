@@ -177,7 +177,7 @@ else
         --agree-tos \
         --no-eff-email \
         --verbose \
-        --keep-until-expiring \
+        --force-renewal \
         $STAGING_ARG \
         -d $DOMAIN
 fi
