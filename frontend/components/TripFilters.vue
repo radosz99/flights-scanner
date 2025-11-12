@@ -1,7 +1,7 @@
 <template>
   <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md flex flex-col max-h-[calc(100vh-6rem)]">
-    <!-- Header and Buttons (Sticky) -->
-    <div class="p-3 md:p-6 pb-2 md:pb-4 sticky top-0 bg-white dark:bg-gray-800 z-10 rounded-t-lg">
+    <!-- Desktop: Buttons at top (Sticky) -->
+    <div class="hidden md:block p-3 md:p-6 pb-2 md:pb-4 sticky top-0 bg-white dark:bg-gray-800 z-10 rounded-t-lg">
       <!-- Action Buttons -->
       <div class="flex gap-2 md:gap-3 pb-2 md:pb-4 border-b border-gray-200 dark:border-gray-700">
         <button
@@ -21,7 +21,7 @@
     </div>
 
     <!-- Scrollable Filters -->
-    <div class="overflow-y-auto px-3 md:px-6 pb-3 md:pb-6">
+    <div class="overflow-y-auto px-3 md:px-6 pb-3 md:pb-6 pt-3 md:pt-0">
       <div class="flex flex-col gap-3 md:gap-4 pt-2 md:pt-4">
         <!-- Trip Type Toggle -->
         <div class="flex flex-col">
@@ -108,7 +108,7 @@
               ]"
               title="Szukaj wszystkich miejsc docelowych z wybranego lotniska"
             >
-              🌍 Gdziekolwiek
+              Gdziekolwiek
             </button>
           </div>
 
@@ -283,6 +283,23 @@
             :searchable="false"
             :show-selected-items="false"
           />
+        </div>
+
+        <!-- Mobile: Action Buttons at bottom -->
+        <div class="md:hidden flex gap-2 pt-3 mt-3 border-t border-gray-200 dark:border-gray-700">
+          <button
+            @click="$emit('search')"
+            :disabled="!canSearch || loading"
+            class="flex-1 py-2 px-3 bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700 text-white font-semibold rounded-lg transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed text-sm"
+          >
+            🔍 Szukaj Lotów
+          </button>
+          <button
+            @click="$emit('clear')"
+            class="flex-1 py-2 px-3 bg-red-600 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700 text-white font-semibold rounded-lg transition-all duration-200 text-sm"
+          >
+            🗑️ Wyczyść
+          </button>
         </div>
       </div>
     </div>
