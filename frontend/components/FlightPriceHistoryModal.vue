@@ -4,10 +4,9 @@
       <div
         v-if="isOpen"
         class="fixed inset-0 z-[100] flex items-center justify-center p-4"
-        @click.self="closeModal"
       >
         <!-- Backdrop -->
-        <div class="absolute inset-0 bg-black/50 dark:bg-black/70"></div>
+        <div class="absolute inset-0 bg-black/50 dark:bg-black/70" @click="closeModal"></div>
 
         <!-- Modal Content -->
         <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto">

@@ -38,7 +38,7 @@
         </thead>
         <tbody>
           <tr
-            v-for="item in chartData.data"
+            v-for="item in paginatedFlights"
             :key="item.date"
             class="border-b border-gray-200 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-gray-700 transition-colors cursor-pointer"
             @click="$emit('date-click', item.date)"
@@ -65,11 +65,54 @@
         </tbody>
       </table>
     </div>
+
+    <!-- Pagination Controls -->
+    <div v-if="totalPages > 1" class="mt-6 flex items-center justify-center gap-2">
+      <button
+        @click="goToPage(currentPage - 1)"
+        :disabled="currentPage === 1"
+        class="px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+      >
+        ← Poprzednia
+      </button>
+
+      <div class="flex gap-1">
+        <button
+          v-for="page in totalPages"
+          :key="page"
+          @click="goToPage(page)"
+          :class="[
+            'px-4 py-2 rounded-lg transition-colors',
+            page === currentPage
+              ? 'bg-blue-600 text-white font-semibold'
+              : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+          ]"
+        >
+          {{ page }}
+        </button>
+      </div>
+
+      <button
+        @click="goToPage(currentPage + 1)"
+        :disabled="currentPage === totalPages"
+        class="px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+      >
+        Następna →
+      </button>
+    </div>
+
+    <!-- No future flights message -->
+    <div
+      v-if="futureFlights.length === 0"
+      class="mt-4 p-4 bg-yellow-50 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 rounded-lg border border-yellow-200 dark:border-yellow-700 text-center"
+    >
+      Brak przyszłych lotów. Wszystkie loty są z przeszłości.
+    </div>
   </div>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { formatPrice, formatDate } from '~/utils/formatters'
 
 const props = defineProps({
@@ -78,12 +121,44 @@ const props = defineProps({
 
 defineEmits(['date-click'])
 
-const overallStats = computed(() => {
+const currentPage = ref(1)
+const itemsPerPage = 20
+
+// Filter to show only future flights (from tomorrow onwards)
+const futureFlights = computed(() => {
   if (!props.chartData || !props.chartData.data || props.chartData.data.length === 0) {
+    return []
+  }
+
+  const tomorrow = new Date()
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  tomorrow.setHours(0, 0, 0, 0)
+  const tomorrowStr = tomorrow.toISOString().split('T')[0]
+
+  return props.chartData.data.filter(item => item.date >= tomorrowStr)
+})
+
+// Pagination
+const totalPages = computed(() => Math.ceil(futureFlights.value.length / itemsPerPage))
+
+const paginatedFlights = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage
+  const end = start + itemsPerPage
+  return futureFlights.value.slice(start, end)
+})
+
+const goToPage = (page) => {
+  if (page >= 1 && page <= totalPages.value) {
+    currentPage.value = page
+  }
+}
+
+const overallStats = computed(() => {
+  if (futureFlights.value.length === 0) {
     return { minPrice: 'N/A', maxPrice: 'N/A', avgPrice: 'N/A' }
   }
 
-  const data = props.chartData.data
+  const data = futureFlights.value
   const minPrice = Math.min(...data.map(d => d.min_price))
   const maxPrice = Math.max(...data.map(d => d.max_price))
   const avgPrice = data.reduce((sum, d) => sum + d.avg_price, 0) / data.length
