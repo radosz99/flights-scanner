@@ -620,35 +620,6 @@ async def get_one_way_flights_batch(
     }
 
 
-@app.get("/flights/{flight_id}", response_model=FlightResponse)
-async def get_flight(flight_id: str):
-    """
-    Get detailed information about a specific flight including full price history.
-    """
-    flight = api_service.get_flight_by_id(flight_id)
-
-    if not flight:
-        raise HTTPException(status_code=404, detail=f"Flight {flight_id} not found")
-
-    return FlightResponse(**flight)
-
-
-@app.get("/flights/price-history/{flight_id}")
-async def get_flight_price_history(flight_id: str):
-    """
-    Get price history for a specific flight across multiple scans.
-
-    Returns the flight's price changes over time, useful for tracking
-    how a specific flight's price has changed across different scans.
-    """
-    price_history = api_service.get_flight_price_history(flight_id)
-
-    if not price_history:
-        raise HTTPException(status_code=404, detail=f"Flight {flight_id} not found")
-
-    return price_history
-
-
 @app.get("/flights/for-date")
 async def get_flights_for_date(
     origin: str = Query(..., description="Origin airport code (e.g., WRO)"),
@@ -675,6 +646,35 @@ async def get_flights_for_date(
         "flights": flights,
         "total": len(flights)
     }
+
+
+@app.get("/flights/price-history/{flight_id}")
+async def get_flight_price_history(flight_id: str):
+    """
+    Get price history for a specific flight across multiple scans.
+
+    Returns the flight's price changes over time, useful for tracking
+    how a specific flight's price has changed across different scans.
+    """
+    price_history = api_service.get_flight_price_history(flight_id)
+
+    if not price_history:
+        raise HTTPException(status_code=404, detail=f"Flight {flight_id} not found")
+
+    return price_history
+
+
+@app.get("/flights/{flight_id}", response_model=FlightResponse)
+async def get_flight(flight_id: str):
+    """
+    Get detailed information about a specific flight including full price history.
+    """
+    flight = api_service.get_flight_by_id(flight_id)
+
+    if not flight:
+        raise HTTPException(status_code=404, detail=f"Flight {flight_id} not found")
+
+    return FlightResponse(**flight)
 
 
 @app.get("/flights/stats/summary", response_model=StatsResponse)
