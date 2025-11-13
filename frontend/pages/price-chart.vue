@@ -83,14 +83,22 @@ const chartData = ref(null)
 const isModalOpen = ref(false)
 const selectedDateForModal = ref('')
 
+// Flag to prevent watcher from clearing destination during URL init
+const isInitializing = ref(false)
+
 // Initialize from URL query parameters
 const initFromUrl = () => {
+  isInitializing.value = true
   if (route.query.skad) {
     selectedOrigin.value = route.query.skad.toString().toUpperCase()
   }
   if (route.query.dokad) {
     selectedDestination.value = route.query.dokad.toString().toUpperCase()
   }
+  // Reset flag after a short delay to allow watchers to process
+  setTimeout(() => {
+    isInitializing.value = false
+  }, 100)
 }
 
 // Update URL when selections change
@@ -157,7 +165,10 @@ const loadDestinationsFromOrigin = async (origin) => {
 
 // Watch origin changes
 watch(() => selectedOrigin.value, async (newOrigin) => {
-  selectedDestination.value = ''
+  // Don't reset destination during URL initialization
+  if (!isInitializing.value) {
+    selectedDestination.value = ''
+  }
   chartData.value = null
 
   if (newOrigin) {
@@ -166,7 +177,10 @@ watch(() => selectedOrigin.value, async (newOrigin) => {
     availableDestinations.value = []
   }
 
-  updateUrl()
+  // Only update URL if not initializing
+  if (!isInitializing.value) {
+    updateUrl()
+  }
 })
 
 // Watch destination changes - auto-load when both are selected
@@ -175,7 +189,10 @@ watch(() => selectedDestination.value, (newDest) => {
     loadChartData()
   }
 
-  updateUrl()
+  // Only update URL if not initializing
+  if (!isInitializing.value) {
+    updateUrl()
+  }
 })
 
 const loadChartData = async () => {
