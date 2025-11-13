@@ -280,6 +280,18 @@ const renderHistoryChart = () => {
   const prices = priceHistory.map(entry => entry.price)
   const changes = priceHistory.map(entry => entry.change)
 
+  // Detect dark mode
+  const isDark = document.documentElement.classList.contains('dark')
+
+  // Define colors based on theme
+  const colors = {
+    line: isDark ? '#60a5fa' : '#007bff',
+    lineBackground: isDark ? 'rgba(96, 165, 250, 0.1)' : 'rgba(0, 123, 255, 0.1)',
+    text: isDark ? '#e5e7eb' : '#374151',
+    grid: isDark ? 'rgba(107, 114, 128, 0.3)' : 'rgba(0, 0, 0, 0.1)',
+    tooltipBg: isDark ? 'rgba(31, 41, 55, 0.95)' : 'rgba(0, 0, 0, 0.8)'
+  }
+
   const ctx = historyChartCanvas.value.getContext('2d')
 
   historyChartInstance = new Chart(ctx, {
@@ -290,11 +302,13 @@ const renderHistoryChart = () => {
         {
           label: 'Cena',
           data: prices,
-          borderColor: '#007bff',
-          backgroundColor: 'rgba(0, 123, 255, 0.1)',
+          borderColor: colors.line,
+          backgroundColor: colors.lineBackground,
           borderWidth: 3,
           pointRadius: 5,
           pointHoverRadius: 7,
+          pointBackgroundColor: colors.line,
+          pointBorderColor: colors.line,
           tension: 0.1,
           fill: true
         }
@@ -313,6 +327,7 @@ const renderHistoryChart = () => {
           display: true,
           position: 'top',
           labels: {
+            color: colors.text,
             font: {
               size: 14,
               weight: '600'
@@ -324,6 +339,7 @@ const renderHistoryChart = () => {
         title: {
           display: true,
           text: `Historia cen: ${flightHistory.value.flight_number} (${flightHistory.value.origin} → ${flightHistory.value.destination})`,
+          color: colors.text,
           font: {
             size: 16,
             weight: 'bold'
@@ -331,7 +347,9 @@ const renderHistoryChart = () => {
           padding: 20
         },
         tooltip: {
-          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          backgroundColor: colors.tooltipBg,
+          titleColor: '#ffffff',
+          bodyColor: '#ffffff',
           titleFont: {
             size: 14,
             weight: 'bold'
@@ -360,41 +378,51 @@ const renderHistoryChart = () => {
       scales: {
         x: {
           display: true,
-          title: {
-            display: true,
-            text: 'Czas skanowania',
-            font: {
-              size: 14,
-              weight: 'bold'
-            }
+          grid: {
+            color: colors.grid
           },
           ticks: {
+            color: colors.text,
             maxRotation: 45,
             minRotation: 45,
             font: {
               size: 10
             }
-          }
-        },
-        y: {
-          display: true,
+          },
           title: {
             display: true,
-            text: `Cena (${flightHistory.value.currency})`,
+            text: 'Czas skanowania',
+            color: colors.text,
             font: {
               size: 14,
               weight: 'bold'
             }
+          }
+        },
+        y: {
+          display: true,
+          grid: {
+            color: colors.grid
           },
-          beginAtZero: false,
           ticks: {
+            color: colors.text,
             font: {
               size: 12
             },
             callback: function(value) {
               return value.toFixed(2) + ` ${flightHistory.value.currency}`
             }
-          }
+          },
+          title: {
+            display: true,
+            text: `Cena (${flightHistory.value.currency})`,
+            color: colors.text,
+            font: {
+              size: 14,
+              weight: 'bold'
+            }
+          },
+          beginAtZero: false
         }
       }
     }
