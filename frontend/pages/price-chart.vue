@@ -37,14 +37,18 @@
     <PriceChart :chart-data="chartData" />
 
     <!-- Price Stats Table -->
-    <PriceStatsTable :chart-data="chartData" />
+    <PriceStatsTable
+      :chart-data="chartData"
+      @date-click="handleDateClick"
+    />
 
-    <!-- Flight Price History -->
-    <FlightPriceHistory
-      v-if="chartData && chartData.data && chartData.data.length > 0"
-      :show="true"
+    <!-- Flight Price History Modal -->
+    <FlightPriceHistoryModal
+      :is-open="isModalOpen"
       :origin="selectedOrigin"
       :destination="selectedDestination"
+      :selected-date="selectedDateForModal"
+      @close="closeModal"
     />
 
     <!-- No Data Message -->
@@ -74,6 +78,10 @@ const availableDestinations = ref([])
 const selectedOrigin = ref('')
 const selectedDestination = ref('')
 const chartData = ref(null)
+
+// Modal state
+const isModalOpen = ref(false)
+const selectedDateForModal = ref('')
 
 // Initialize from URL query parameters
 const initFromUrl = () => {
@@ -208,5 +216,16 @@ const clearSelection = () => {
   availableDestinations.value = []
   chartData.value = null
   error.value = null
+}
+
+// Modal handlers
+const handleDateClick = (date) => {
+  selectedDateForModal.value = date
+  isModalOpen.value = true
+}
+
+const closeModal = () => {
+  isModalOpen.value = false
+  selectedDateForModal.value = ''
 }
 </script>
