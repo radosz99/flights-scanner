@@ -98,8 +98,8 @@
                   <span class="ml-2 text-gray-900 dark:text-gray-100">{{ flightHistory.origin }} → {{ flightHistory.destination }}</span>
                 </div>
                 <div>
-                  <span class="font-medium text-gray-700 dark:text-gray-300">Data:</span>
-                  <span class="ml-2 text-gray-900 dark:text-gray-100">{{ flightHistory.date_out }}</span>
+                  <span class="font-medium text-gray-700 dark:text-gray-300">Data wylotu:</span>
+                  <span class="ml-2 text-gray-900 dark:text-gray-100">{{ formatDate(flightHistory.departure_time) }}</span>
                 </div>
                 <div>
                   <span class="font-medium text-gray-700 dark:text-gray-300">Godzina:</span>
@@ -144,7 +144,7 @@
 </template>
 
 <script setup>
-import { ref, watch, nextTick, onBeforeUnmount } from 'vue'
+import { ref, watch, nextTick, onBeforeUnmount, onMounted } from 'vue'
 import { Chart, registerables } from 'chart.js'
 
 Chart.register(...registerables)
@@ -176,6 +176,31 @@ const formatTime = (timeStr) => {
   const match = timeStr.match(/T(\d{2}:\d{2})/)
   return match ? match[1] : timeStr
 }
+
+const formatDate = (dateTimeStr) => {
+  if (!dateTimeStr) return ''
+  // Extract date from ISO format (YYYY-MM-DDTHH:MM:SS)
+  const match = dateTimeStr.match(/(\d{4}-\d{2}-\d{2})/)
+  return match ? match[1] : dateTimeStr
+}
+
+// Handle ESC key to close modal
+const handleKeyDown = (event) => {
+  if (event.key === 'Escape' && props.isOpen) {
+    closeModal()
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', handleKeyDown)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handleKeyDown)
+  if (historyChartInstance) {
+    historyChartInstance.destroy()
+  }
+})
 
 const closeModal = () => {
   emit('close')
@@ -440,12 +465,6 @@ watch(() => props.isOpen, (newVal) => {
 watch(() => props.selectedDate, (newDate) => {
   if (props.isOpen && newDate) {
     loadFlightsForDate()
-  }
-})
-
-onBeforeUnmount(() => {
-  if (historyChartInstance) {
-    historyChartInstance.destroy()
   }
 })
 </script>
