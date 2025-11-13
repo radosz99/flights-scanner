@@ -37,7 +37,19 @@
     <PriceChart :chart-data="chartData" />
 
     <!-- Price Stats Table -->
-    <PriceStatsTable :chart-data="chartData" />
+    <PriceStatsTable
+      :chart-data="chartData"
+      @date-click="handleDateClick"
+    />
+
+    <!-- Flight Price History Modal -->
+    <FlightPriceHistoryModal
+      :is-open="isModalOpen"
+      :origin="selectedOrigin"
+      :destination="selectedDestination"
+      :selected-date="selectedDateForModal"
+      @close="closeModal"
+    />
 
     <!-- No Data Message -->
     <div
@@ -54,6 +66,8 @@ import { ref, watch, onMounted } from 'vue'
 
 const config = useRuntimeConfig()
 const apiBaseUrl = config.public.apiBaseUrl
+const route = useRoute()
+const router = useRouter()
 
 const loading = ref(false)
 const loadingMessage = ref('Loading...')
@@ -65,9 +79,52 @@ const selectedOrigin = ref('')
 const selectedDestination = ref('')
 const chartData = ref(null)
 
+// Modal state
+const isModalOpen = ref(false)
+const selectedDateForModal = ref('')
+
+// Flag to prevent watcher from clearing destination during URL init
+const isInitializing = ref(false)
+
+// Initialize from URL query parameters
+const initFromUrl = () => {
+  isInitializing.value = true
+  if (route.query.skad) {
+    selectedOrigin.value = route.query.skad.toString().toUpperCase()
+  }
+  if (route.query.dokad) {
+    selectedDestination.value = route.query.dokad.toString().toUpperCase()
+  }
+  // Reset flag after a short delay to allow watchers to process
+  setTimeout(() => {
+    isInitializing.value = false
+  }, 100)
+}
+
+// Update URL when selections change
+const updateUrl = () => {
+  const query = {}
+  if (selectedOrigin.value) {
+    query.skad = selectedOrigin.value
+  }
+  if (selectedDestination.value) {
+    query.dokad = selectedDestination.value
+  }
+  router.push({ query })
+}
+
 // Load origins on mount
 onMounted(async () => {
   await loadAirports()
+  initFromUrl()
+
+  // If both origin and destination are in URL, load destinations and chart
+  if (selectedOrigin.value) {
+    await loadDestinationsFromOrigin(selectedOrigin.value)
+    if (selectedDestination.value) {
+      await loadChartData()
+    }
+  }
 })
 
 const loadAirports = async () => {
@@ -108,7 +165,10 @@ const loadDestinationsFromOrigin = async (origin) => {
 
 // Watch origin changes
 watch(() => selectedOrigin.value, async (newOrigin) => {
-  selectedDestination.value = ''
+  // Don't reset destination during URL initialization
+  if (!isInitializing.value) {
+    selectedDestination.value = ''
+  }
   chartData.value = null
 
   if (newOrigin) {
@@ -116,12 +176,22 @@ watch(() => selectedOrigin.value, async (newOrigin) => {
   } else {
     availableDestinations.value = []
   }
+
+  // Only update URL if not initializing
+  if (!isInitializing.value) {
+    updateUrl()
+  }
 })
 
 // Watch destination changes - auto-load when both are selected
 watch(() => selectedDestination.value, (newDest) => {
   if (newDest && selectedOrigin.value) {
     loadChartData()
+  }
+
+  // Only update URL if not initializing
+  if (!isInitializing.value) {
+    updateUrl()
   }
 })
 
@@ -163,5 +233,16 @@ const clearSelection = () => {
   availableDestinations.value = []
   chartData.value = null
   error.value = null
+}
+
+// Modal handlers
+const handleDateClick = (date) => {
+  selectedDateForModal.value = date
+  isModalOpen.value = true
+}
+
+const closeModal = () => {
+  isModalOpen.value = false
+  selectedDateForModal.value = ''
 }
 </script>
