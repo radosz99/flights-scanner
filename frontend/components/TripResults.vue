@@ -128,8 +128,8 @@
                           {{ formatPrice(twoWayRoutes ? trip.outbound.current_price : trip.outbound.price_per_person) }}
                         </span>
                       </div>
-                      <div v-if="trip.outbound.last_seen" class="ml-4 md:ml-7 text-[0.65rem] md:text-xs text-green-600 dark:text-green-400 hidden md:block">
-                        Ostatni sync - {{ getHoursAgo(trip.outbound.last_seen) }}h
+                      <div v-if="trip.outbound.last_seen" class="ml-4 md:ml-7 text-[0.6rem] md:text-[0.65rem] text-gray-500 dark:text-gray-400 uppercase hidden md:block">
+                        Ostatni sync. - {{ getHoursAgo(trip.outbound.last_seen) }}h temu
                       </div>
                     </div>
                   </td>
@@ -193,8 +193,8 @@
                           {{ formatPrice(trip.return.current_price) }}
                         </span>
                       </div>
-                      <div v-if="trip.return.last_seen" class="ml-4 md:ml-7 text-[0.65rem] md:text-xs text-green-600 dark:text-green-400 hidden md:block">
-                        Ostatni sync - {{ getHoursAgo(trip.return.last_seen) }}h
+                      <div v-if="trip.return.last_seen" class="ml-4 md:ml-7 text-[0.6rem] md:text-[0.65rem] text-gray-500 dark:text-gray-400 uppercase hidden md:block">
+                        Ostatni sync. - {{ getHoursAgo(trip.return.last_seen) }}h temu
                       </div>
                     </div>
                   </td>
@@ -384,8 +384,8 @@
                   <span class="text-gray-600 dark:text-gray-400">Cena:</span>
                   <span class="font-semibold text-green-600 dark:text-green-400">{{ formatPrice(twoWayRoutes ? selectedTrip.outbound.current_price : selectedTrip.outbound.price_per_person) }}</span>
                 </div>
-                <div v-if="selectedTrip.outbound.last_seen" class="flex justify-between text-xs">
-                  <span class="text-green-600 dark:text-green-400">Ostatni sync - {{ getHoursAgo(selectedTrip.outbound.last_seen) }}h</span>
+                <div v-if="selectedTrip.outbound.last_seen" class="flex justify-between text-[0.65rem]">
+                  <span class="text-gray-500 dark:text-gray-400 uppercase">Ostatni sync. - {{ getHoursAgo(selectedTrip.outbound.last_seen) }}h temu</span>
                 </div>
               </div>
             </div>
@@ -434,8 +434,8 @@
                   <span class="text-gray-600 dark:text-gray-400">Cena:</span>
                   <span class="font-semibold text-green-600 dark:text-green-400">{{ formatPrice(selectedTrip.return.current_price) }}</span>
                 </div>
-                <div v-if="selectedTrip.return.last_seen" class="flex justify-between text-xs">
-                  <span class="text-green-600 dark:text-green-400">Ostatni sync - {{ getHoursAgo(selectedTrip.return.last_seen) }}h</span>
+                <div v-if="selectedTrip.return.last_seen" class="flex justify-between text-[0.65rem]">
+                  <span class="text-gray-500 dark:text-gray-400 uppercase">Ostatni sync. - {{ getHoursAgo(selectedTrip.return.last_seen) }}h temu</span>
                 </div>
               </div>
             </div>
