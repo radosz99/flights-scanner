@@ -62,6 +62,8 @@ import { ref, watch, onMounted } from 'vue'
 
 const config = useRuntimeConfig()
 const apiBaseUrl = config.public.apiBaseUrl
+const route = useRoute()
+const router = useRouter()
 
 const loading = ref(false)
 const loadingMessage = ref('Loading...')
@@ -73,9 +75,40 @@ const selectedOrigin = ref('')
 const selectedDestination = ref('')
 const chartData = ref(null)
 
+// Initialize from URL query parameters
+const initFromUrl = () => {
+  if (route.query.skad) {
+    selectedOrigin.value = route.query.skad.toString().toUpperCase()
+  }
+  if (route.query.do) {
+    selectedDestination.value = route.query.do.toString().toUpperCase()
+  }
+}
+
+// Update URL when selections change
+const updateUrl = () => {
+  const query = {}
+  if (selectedOrigin.value) {
+    query.skad = selectedOrigin.value
+  }
+  if (selectedDestination.value) {
+    query.do = selectedDestination.value
+  }
+  router.push({ query })
+}
+
 // Load origins on mount
 onMounted(async () => {
   await loadAirports()
+  initFromUrl()
+
+  // If both origin and destination are in URL, load destinations and chart
+  if (selectedOrigin.value) {
+    await loadDestinationsFromOrigin(selectedOrigin.value)
+    if (selectedDestination.value) {
+      await loadChartData()
+    }
+  }
 })
 
 const loadAirports = async () => {
@@ -124,6 +157,8 @@ watch(() => selectedOrigin.value, async (newOrigin) => {
   } else {
     availableDestinations.value = []
   }
+
+  updateUrl()
 })
 
 // Watch destination changes - auto-load when both are selected
@@ -131,6 +166,8 @@ watch(() => selectedDestination.value, (newDest) => {
   if (newDest && selectedOrigin.value) {
     loadChartData()
   }
+
+  updateUrl()
 })
 
 const loadChartData = async () => {

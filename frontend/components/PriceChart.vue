@@ -3,23 +3,23 @@
     <!-- Header -->
     <div class="mb-6">
       <h2 class="text-2xl font-semibold text-gray-800 dark:text-gray-100 mb-2">
-        Price Trends: {{ chartData.origin }} → {{ chartData.destination }}
+        Trendy Cenowe: {{ chartData.origin }} → {{ chartData.destination }}
       </h2>
       <div class="flex flex-wrap gap-6 text-sm text-gray-600 dark:text-gray-400">
         <span class="flex gap-2">
-          <strong class="text-gray-800 dark:text-gray-300">Total Dates:</strong>
+          <strong class="text-gray-800 dark:text-gray-300">Łącznie dat:</strong>
           {{ chartData.total_dates }}
         </span>
         <span class="flex gap-2">
-          <strong class="text-gray-800 dark:text-gray-300">Date Range:</strong>
-          {{ chartData.data[0].date }} to {{ chartData.data[chartData.data.length - 1].date }}
+          <strong class="text-gray-800 dark:text-gray-300">Zakres dat:</strong>
+          {{ chartData.data[0].date }} do {{ chartData.data[chartData.data.length - 1].date }}
         </span>
       </div>
     </div>
 
     <!-- Tip -->
     <div class="bg-blue-50 dark:bg-blue-900 border-2 border-blue-300 dark:border-blue-700 rounded-lg p-3 mb-6 text-blue-800 dark:text-blue-200 text-sm text-center">
-      💡 <strong>Tip:</strong> Click on any legend item to show/hide that price line on the chart
+      💡 <strong>Wskazówka:</strong> Kliknij na element legendy, aby pokazać/ukryć daną linię cen na wykresie
     </div>
 
     <!-- Chart Canvas -->
@@ -65,7 +65,7 @@ const renderChart = () => {
       labels: labels,
       datasets: [
         {
-          label: 'Minimum Price',
+          label: 'Cena minimalna',
           data: minPrices,
           borderColor: '#28a745',
           backgroundColor: 'rgba(40, 167, 69, 0.1)',
@@ -75,7 +75,7 @@ const renderChart = () => {
           tension: 0.1
         },
         {
-          label: 'Current Price',
+          label: 'Cena aktualna',
           data: currentPrices,
           borderColor: '#ffc107',
           backgroundColor: 'rgba(255, 193, 7, 0.1)',
@@ -85,7 +85,7 @@ const renderChart = () => {
           tension: 0.1
         },
         {
-          label: 'Average Price',
+          label: 'Cena średnia',
           data: avgPrices,
           borderColor: '#007bff',
           backgroundColor: 'rgba(0, 123, 255, 0.1)',
@@ -95,7 +95,7 @@ const renderChart = () => {
           tension: 0.1
         },
         {
-          label: 'Maximum Price',
+          label: 'Cena maksymalna',
           data: maxPrices,
           borderColor: '#dc3545',
           backgroundColor: 'rgba(220, 53, 69, 0.1)',
@@ -136,7 +136,7 @@ const renderChart = () => {
         },
         title: {
           display: true,
-          text: `Price Trends: ${props.chartData.origin} → ${props.chartData.destination}`,
+          text: `Trendy cenowe: ${props.chartData.origin} → ${props.chartData.destination}`,
           font: {
             size: 18,
             weight: 'bold'
@@ -168,7 +168,7 @@ const renderChart = () => {
           display: true,
           title: {
             display: true,
-            text: 'Date',
+            text: 'Data',
             font: {
               size: 14,
               weight: 'bold'
@@ -186,7 +186,7 @@ const renderChart = () => {
           display: true,
           title: {
             display: true,
-            text: 'Price (PLN)',
+            text: 'Cena (PLN)',
             font: {
               size: 14,
               weight: 'bold'

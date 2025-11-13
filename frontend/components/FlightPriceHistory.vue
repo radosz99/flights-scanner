@@ -3,10 +3,10 @@
     <!-- Header -->
     <div class="mb-6">
       <h2 class="text-2xl font-semibold text-gray-800 dark:text-gray-100 mb-2">
-        Flight Price History
+        Historia Cen Konkretnego Lotu
       </h2>
       <p class="text-sm text-gray-600 dark:text-gray-400">
-        View price changes for a specific flight across multiple scans
+        Zobacz jak zmieniała się cena wybranego lotu w kolejnych skanowaniach
       </p>
     </div>
 
@@ -15,7 +15,7 @@
       <!-- Date Input -->
       <div>
         <label for="date-input" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Select Date
+          Wybierz Datę
         </label>
         <input
           id="date-input"
@@ -29,7 +29,7 @@
       <!-- Flight Selector -->
       <div v-if="availableFlights.length > 0">
         <label for="flight-select" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Select Flight ({{ availableFlights.length }} available)
+          Wybierz Lot (dostępne: {{ availableFlights.length }})
         </label>
         <select
           id="flight-select"
@@ -37,13 +37,13 @@
           class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           @change="loadFlightPriceHistory"
         >
-          <option value="">-- Select a flight --</option>
+          <option value="">-- Wybierz lot --</option>
           <option
             v-for="flight in availableFlights"
             :key="flight.flight_id"
             :value="flight.flight_id"
           >
-            {{ flight.flight_number }} | {{ formatTime(flight.departure_time) }} - {{ formatTime(flight.arrival_time) }} | {{ flight.duration }} | {{ flight.current_price }} {{ flight.currency }} | Scans: {{ flight.scan_count }}
+            {{ flight.flight_number }} | {{ formatTime(flight.departure_time) }} - {{ formatTime(flight.arrival_time) }} | {{ flight.duration }} | {{ flight.current_price }} {{ flight.currency }} | Skanów: {{ flight.scan_count }}
           </option>
         </select>
       </div>
@@ -53,7 +53,7 @@
         v-if="selectedDate && !loadingFlights && availableFlights.length === 0"
         class="p-4 bg-yellow-50 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 rounded-lg border border-yellow-200 dark:border-yellow-700"
       >
-        No flights found for this date. Try selecting a different date.
+        Brak lotów dla tej daty. Spróbuj wybrać inną datę.
       </div>
     </div>
 
@@ -62,7 +62,7 @@
       v-if="loadingFlights || loadingHistory"
       class="p-4 bg-blue-50 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-lg border border-blue-200 dark:border-blue-700 text-center"
     >
-      {{ loadingFlights ? 'Loading flights...' : 'Loading price history...' }}
+      {{ loadingFlights ? 'Ładowanie lotów...' : 'Ładowanie historii cen...' }}
     </div>
 
     <!-- Error -->
@@ -70,7 +70,7 @@
       v-if="error"
       class="p-4 bg-red-50 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-lg border border-red-200 dark:border-red-700"
     >
-      <strong>Error:</strong> {{ error }}
+      <strong>Błąd:</strong> {{ error }}
     </div>
 
     <!-- Flight Info Card -->
@@ -79,39 +79,39 @@
       class="mb-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg"
     >
       <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-3">
-        Flight Details
+        Szczegóły Lotu
       </h3>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
         <div>
-          <span class="font-medium text-gray-700 dark:text-gray-300">Flight:</span>
+          <span class="font-medium text-gray-700 dark:text-gray-300">Lot:</span>
           <span class="ml-2 text-gray-900 dark:text-gray-100">{{ flightHistory.flight_number }}</span>
         </div>
         <div>
-          <span class="font-medium text-gray-700 dark:text-gray-300">Route:</span>
+          <span class="font-medium text-gray-700 dark:text-gray-300">Trasa:</span>
           <span class="ml-2 text-gray-900 dark:text-gray-100">{{ flightHistory.origin }} → {{ flightHistory.destination }}</span>
         </div>
         <div>
-          <span class="font-medium text-gray-700 dark:text-gray-300">Date:</span>
+          <span class="font-medium text-gray-700 dark:text-gray-300">Data:</span>
           <span class="ml-2 text-gray-900 dark:text-gray-100">{{ flightHistory.date_out }}</span>
         </div>
         <div>
-          <span class="font-medium text-gray-700 dark:text-gray-300">Time:</span>
+          <span class="font-medium text-gray-700 dark:text-gray-300">Godzina:</span>
           <span class="ml-2 text-gray-900 dark:text-gray-100">{{ formatTime(flightHistory.departure_time) }} - {{ formatTime(flightHistory.arrival_time) }}</span>
         </div>
         <div>
-          <span class="font-medium text-gray-700 dark:text-gray-300">Duration:</span>
+          <span class="font-medium text-gray-700 dark:text-gray-300">Czas lotu:</span>
           <span class="ml-2 text-gray-900 dark:text-gray-100">{{ flightHistory.duration }}</span>
         </div>
         <div>
-          <span class="font-medium text-gray-700 dark:text-gray-300">Current Price:</span>
+          <span class="font-medium text-gray-700 dark:text-gray-300">Aktualna cena:</span>
           <span class="ml-2 text-gray-900 dark:text-gray-100 font-semibold">{{ flightHistory.current_price }} {{ flightHistory.currency }}</span>
         </div>
         <div>
-          <span class="font-medium text-gray-700 dark:text-gray-300">Total Scans:</span>
+          <span class="font-medium text-gray-700 dark:text-gray-300">Łącznie skanów:</span>
           <span class="ml-2 text-gray-900 dark:text-gray-100">{{ flightHistory.scan_count }}</span>
         </div>
         <div>
-          <span class="font-medium text-gray-700 dark:text-gray-300">Price Points:</span>
+          <span class="font-medium text-gray-700 dark:text-gray-300">Punkty cenowe:</span>
           <span class="ml-2 text-gray-900 dark:text-gray-100">{{ flightHistory.price_history.length }}</span>
         </div>
       </div>
@@ -127,7 +127,7 @@
       v-if="flightHistory && flightHistory.price_history.length === 0"
       class="p-4 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-center"
     >
-      No price history available for this flight yet. The flight needs to be scanned multiple times to build price history.
+      Brak dostępnej historii cen dla tego lotu. Lot musi być wielokrotnie skanowany, aby zbudować historię cen.
     </div>
   </div>
 </template>
@@ -262,7 +262,7 @@ const renderHistoryChart = () => {
       labels: labels,
       datasets: [
         {
-          label: 'Price',
+          label: 'Cena',
           data: prices,
           borderColor: '#007bff',
           backgroundColor: 'rgba(0, 123, 255, 0.1)',
@@ -297,7 +297,7 @@ const renderHistoryChart = () => {
         },
         title: {
           display: true,
-          text: `Price History: ${flightHistory.value.flight_number} (${flightHistory.value.origin} → ${flightHistory.value.destination})`,
+          text: `Historia cen: ${flightHistory.value.flight_number} (${flightHistory.value.origin} → ${flightHistory.value.destination})`,
           font: {
             size: 16,
             weight: 'bold'
@@ -326,7 +326,7 @@ const renderHistoryChart = () => {
               } else if (change < 0) {
                 changeText = ` (${change.toFixed(2)} ${flightHistory.value.currency})`
               }
-              return `Price: ${price.toFixed(2)} ${flightHistory.value.currency}${changeText}`
+              return `Cena: ${price.toFixed(2)} ${flightHistory.value.currency}${changeText}`
             }
           }
         }
@@ -336,7 +336,7 @@ const renderHistoryChart = () => {
           display: true,
           title: {
             display: true,
-            text: 'Scan Time',
+            text: 'Czas skanowania',
             font: {
               size: 14,
               weight: 'bold'
@@ -354,7 +354,7 @@ const renderHistoryChart = () => {
           display: true,
           title: {
             display: true,
-            text: `Price (${flightHistory.value.currency})`,
+            text: `Cena (${flightHistory.value.currency})`,
             font: {
               size: 14,
               weight: 'bold'
