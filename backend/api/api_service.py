@@ -550,13 +550,23 @@ class APIService:
         Returns:
             List of flights with basic info
         """
-        query = {
-            "origin": origin.upper(),
-            "destination": destination.upper(),
-            "date_out": date
-        }
+        # Use aggregation pipeline to match on date extracted from departure_time
+        # This ensures consistency with the price chart which uses the same approach
+        pipeline = [
+            {"$match": {
+                "origin": origin.upper(),
+                "destination": destination.upper()
+            }},
+            {"$addFields": {
+                "departure_date": {"$substr": ["$departure_time", 0, 10]}
+            }},
+            {"$match": {
+                "departure_date": date
+            }},
+            {"$sort": {"current_price": ASCENDING}}
+        ]
 
-        flights = list(self.flights_collection.find(query).sort("current_price", ASCENDING))
+        flights = list(self.flights_collection.aggregate(pipeline))
 
         return [
             {
