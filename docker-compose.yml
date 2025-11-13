@@ -60,7 +60,7 @@ services:
       - flights-scanner-network
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8900/health').read()"]
-      interval: 30s
+      interval: 5m
       timeout: 10s
       retries: 3
       start_period: 40s
@@ -90,7 +90,7 @@ services:
       - flights-scanner-network
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:8901', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})"]
-      interval: 30s
+      interval: 5m
       timeout: 10s
       retries: 3
       start_period: 40s
@@ -142,7 +142,7 @@ services:
       - flights-scanner-network
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/api/health"]
-      interval: 30s
+      interval: 5m
       timeout: 10s
       retries: 3
       start_period: 10s

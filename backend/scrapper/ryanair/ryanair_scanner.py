@@ -685,6 +685,16 @@ def main():
 
             logger.info(f"Range completed in {range_duration:.1f}s: {stats.get('successful_queries', 0)} successful, {stats.get('failed_queries', 0)} failed")
 
+            # Check if scan was stopped due to consecutive 4xx errors
+            if stats.get('consecutive_4xx_errors', 0) >= 10:
+                logger.error("=" * 80)
+                logger.error("🛑 STOPPING ENTIRE SCAN: Too many consecutive 4xx errors detected")
+                logger.error("This usually indicates authentication issues or rate limiting")
+                logger.error(f"Completed {idx}/{len(date_ranges)} date ranges before stopping")
+                logger.error("=" * 80)
+                scan_manager.complete_scan(scan_id, success=False)
+                return False
+
         # Mark scan as completed
         scan_manager.complete_scan(scan_id, success=True)
         overall_duration = (datetime.now() - overall_start).total_seconds()
