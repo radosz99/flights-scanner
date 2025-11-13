@@ -88,8 +88,8 @@ const initFromUrl = () => {
   if (route.query.skad) {
     selectedOrigin.value = route.query.skad.toString().toUpperCase()
   }
-  if (route.query.do) {
-    selectedDestination.value = route.query.do.toString().toUpperCase()
+  if (route.query.dokad) {
+    selectedDestination.value = route.query.dokad.toString().toUpperCase()
   }
 }
 
@@ -100,7 +100,7 @@ const updateUrl = () => {
     query.skad = selectedOrigin.value
   }
   if (selectedDestination.value) {
-    query.do = selectedDestination.value
+    query.dokad = selectedDestination.value
   }
   router.push({ query })
 }

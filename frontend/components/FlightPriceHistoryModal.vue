@@ -3,16 +3,16 @@
     <Transition name="modal">
       <div
         v-if="isOpen"
-        class="fixed inset-0 z-50 flex items-center justify-center p-4"
+        class="fixed inset-0 z-[100] flex items-center justify-center p-4"
         @click.self="closeModal"
       >
         <!-- Backdrop -->
-        <div class="absolute inset-0 bg-black bg-opacity-50 dark:bg-opacity-70"></div>
+        <div class="absolute inset-0 bg-black/50 dark:bg-black/70"></div>
 
         <!-- Modal Content -->
         <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto">
           <!-- Header -->
-          <div class="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex justify-between items-center">
+          <div class="sticky top-0 z-10 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex justify-between items-center">
             <div>
               <h2 class="text-2xl font-semibold text-gray-800 dark:text-gray-100">
                 Historia Cen Konkretnego Lotu
@@ -34,8 +34,8 @@
 
           <!-- Content -->
           <div class="p-6">
-            <!-- Flight Selector -->
-            <div class="mb-6">
+            <!-- Flight Selector - only show if more than one flight -->
+            <div v-if="availableFlights.length > 1" class="mb-6">
               <label for="modal-flight-select" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Wybierz Lot (dostępne: {{ availableFlights.length }})
               </label>
@@ -211,6 +211,12 @@ const loadFlightsForDate = async () => {
     })
 
     availableFlights.value = response.flights || []
+
+    // Auto-select and load if only one flight
+    if (availableFlights.value.length === 1) {
+      selectedFlightId.value = availableFlights.value[0].flight_id
+      await loadFlightPriceHistory()
+    }
   } catch (e) {
     if (e.statusCode === 404) {
       error.value = `Brak lotów dla ${props.origin} → ${props.destination} w dniu ${props.selectedDate}`
