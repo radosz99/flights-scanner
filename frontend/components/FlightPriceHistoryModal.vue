@@ -304,8 +304,8 @@ const renderHistoryChart = () => {
   const prices = priceHistory.map(entry => entry.price)
   const changes = priceHistory.map(entry => entry.change)
 
-  // Detect dark mode
-  const isDark = document.documentElement.classList.contains('dark')
+  // Detect dark mode from localStorage (since modal is teleported outside the dark mode div)
+  const isDark = typeof window !== 'undefined' && localStorage.getItem('darkMode') === 'true'
 
   // Define colors based on theme
   const colors = {

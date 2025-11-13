@@ -57,8 +57,8 @@ const renderChart = () => {
   const avgPrices = data.map(d => d.avg_price)
   const maxPrices = data.map(d => d.max_price)
 
-  // Detect dark mode
-  const isDark = document.documentElement.classList.contains('dark')
+  // Detect dark mode from localStorage
+  const isDark = typeof window !== 'undefined' && localStorage.getItem('darkMode') === 'true'
 
   // Define colors based on theme
   const colors = {
