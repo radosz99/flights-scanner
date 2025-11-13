@@ -633,6 +633,50 @@ async def get_flight(flight_id: str):
     return FlightResponse(**flight)
 
 
+@app.get("/flights/price-history/{flight_id}")
+async def get_flight_price_history(flight_id: str):
+    """
+    Get price history for a specific flight across multiple scans.
+
+    Returns the flight's price changes over time, useful for tracking
+    how a specific flight's price has changed across different scans.
+    """
+    price_history = api_service.get_flight_price_history(flight_id)
+
+    if not price_history:
+        raise HTTPException(status_code=404, detail=f"Flight {flight_id} not found")
+
+    return price_history
+
+
+@app.get("/flights/for-date")
+async def get_flights_for_date(
+    origin: str = Query(..., description="Origin airport code (e.g., WRO)"),
+    destination: str = Query(..., description="Destination airport code (e.g., BCN)"),
+    date: str = Query(..., description="Date in YYYY-MM-DD format")
+):
+    """
+    Get all flights for a specific route on a specific date.
+
+    This is useful for selecting a specific flight to view its price history.
+    """
+    flights = api_service.get_flights_for_date(origin, destination, date)
+
+    if not flights:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No flights found for {origin.upper()} → {destination.upper()} on {date}"
+        )
+
+    return {
+        "origin": origin.upper(),
+        "destination": destination.upper(),
+        "date": date,
+        "flights": flights,
+        "total": len(flights)
+    }
+
+
 @app.get("/flights/stats/summary", response_model=StatsResponse)
 async def get_stats():
     """

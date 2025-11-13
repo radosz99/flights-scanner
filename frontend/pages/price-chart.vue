@@ -39,6 +39,14 @@
     <!-- Price Stats Table -->
     <PriceStatsTable :chart-data="chartData" />
 
+    <!-- Flight Price History -->
+    <FlightPriceHistory
+      v-if="chartData && chartData.data && chartData.data.length > 0"
+      :show="true"
+      :origin="selectedOrigin"
+      :destination="selectedDestination"
+    />
+
     <!-- No Data Message -->
     <div
       v-if="!loading && selectedOrigin && selectedDestination && (!chartData || !chartData.data || chartData.data.length === 0)"

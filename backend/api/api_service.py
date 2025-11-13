@@ -492,6 +492,86 @@ class APIService:
 
         return destinations
 
+    def get_flight_price_history(self, flight_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Get price history for a specific flight across multiple scans.
+
+        Args:
+            flight_id: Unique flight identifier
+
+        Returns:
+            Dict containing flight info and price history, or None if not found
+        """
+        flight = self.flights_collection.find_one({"flight_id": flight_id})
+
+        if not flight:
+            return None
+
+        # Extract relevant flight info
+        price_history = flight.get("price_history", [])
+
+        # Format timestamps for frontend
+        formatted_history = []
+        for entry in price_history:
+            formatted_history.append({
+                "price": round(entry["price"], 2),
+                "timestamp": entry["timestamp"].isoformat() if hasattr(entry["timestamp"], "isoformat") else str(entry["timestamp"]),
+                "change": round(entry.get("change", 0), 2)
+            })
+
+        return {
+            "flight_id": flight["flight_id"],
+            "flight_number": flight.get("flight_number"),
+            "origin": flight["origin"],
+            "origin_name": flight.get("origin_name"),
+            "destination": flight["destination"],
+            "destination_name": flight.get("destination_name"),
+            "date_out": flight.get("date_out"),
+            "departure_time": flight.get("departure_time"),
+            "arrival_time": flight.get("arrival_time"),
+            "duration": flight.get("duration"),
+            "current_price": round(flight["current_price"], 2),
+            "currency": flight.get("currency"),
+            "first_seen": flight.get("first_seen").isoformat() if flight.get("first_seen") and hasattr(flight.get("first_seen"), "isoformat") else None,
+            "last_seen": flight.get("last_seen").isoformat() if flight.get("last_seen") and hasattr(flight.get("last_seen"), "isoformat") else None,
+            "scan_count": flight.get("scan_count", 0),
+            "price_history": formatted_history
+        }
+
+    def get_flights_for_date(self, origin: str, destination: str, date: str) -> List[Dict[str, Any]]:
+        """
+        Get all flights for a specific route on a specific date.
+
+        Args:
+            origin: Origin airport code
+            destination: Destination airport code
+            date: Date in YYYY-MM-DD format
+
+        Returns:
+            List of flights with basic info
+        """
+        query = {
+            "origin": origin.upper(),
+            "destination": destination.upper(),
+            "date_out": date
+        }
+
+        flights = list(self.flights_collection.find(query).sort("current_price", ASCENDING))
+
+        return [
+            {
+                "flight_id": f["flight_id"],
+                "flight_number": f.get("flight_number"),
+                "departure_time": f.get("departure_time"),
+                "arrival_time": f.get("arrival_time"),
+                "duration": f.get("duration"),
+                "current_price": round(f["current_price"], 2),
+                "currency": f.get("currency"),
+                "scan_count": f.get("scan_count", 0)
+            }
+            for f in flights
+        ]
+
     def find_round_trips(
         self,
         origin: str,
